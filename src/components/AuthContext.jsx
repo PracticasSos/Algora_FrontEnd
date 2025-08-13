@@ -9,7 +9,6 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Función de logout
   const logout = async () => {
     try {
       await supabase.auth.signOut();
@@ -29,27 +28,53 @@ export const AuthProvider = ({ children }) => {
 
     const getSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
 
         if (!isMounted) return;
 
         if (session?.user) {
-          const { data: userData, error: userError } = await supabase
+          let { data: userData, error: userError } = await supabase
             .from('users')
-            .select('*')
+            .select('id, role_id, tenant_id, auth_id, email')
             .eq('auth_id', session.user.id)
             .single();
 
-          if (!isMounted) return;
+          // Si no encontró por auth_id, buscar por email y vincular
+          if (!userData || userError) {
+            const { data: userByEmail } = await supabase
+              .from('users')
+              .select('id, role_id, tenant_id, auth_id, email')
+              .eq('email', session.user.email)
+              .maybeSingle();
 
-          if (userData && !userError) {
-            const fullUser = {
-              ...session.user,
-              ...userData
-            };
+            if (userByEmail) {
+              // Actualizar auth_id en la tabla
+              await supabase
+                .from('users')
+                .update({ auth_id: session.user.id })
+                .eq('id', userByEmail.id);
+
+              userData = { ...userByEmail, auth_id: session.user.id };
+            }
+          }
+
+          if (userData) {
+            // Actualizar tenant_id en metadata si no está
+            if (!session.user.user_metadata?.tenant_id && userData.tenant_id) {
+              const { error: updateError } = await supabase.auth.updateUser({
+                data: { tenant_id: userData.tenant_id }
+              });
+              if (updateError) {
+                console.error('Error actualizando tenant_id en metadata:', updateError);
+              } else {
+                await supabase.auth.refreshSession();
+              }
+            }
+
+            const fullUser = { ...session.user, ...userData };
             setUser(fullUser);
+            localStorage.setItem('user', JSON.stringify(fullUser));
           } else {
-            console.error('Error fetching user data:', userError);
             setUser(null);
           }
         } else {
@@ -57,28 +82,20 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (error) {
         console.error('Session error:', error);
-        if (isMounted) {
-          setUser(null);
-        }
+        setUser(null);
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
     getSession();
 
-    // ✅ CAMBIO PRINCIPAL: Solo escuchar eventos específicos de logout
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (!isMounted) return;
-
-      // Solo redirigir en eventos explícitos de logout
       if (event === 'SIGNED_OUT') {
         setUser(null);
         navigate('/login-form');
-      } 
-      // NO manejar SIGNED_IN aquí para evitar conflictos de navegación
+      }
     });
 
     return () => {

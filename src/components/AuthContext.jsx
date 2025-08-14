@@ -1,120 +1,116 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+// src/context/AuthContext.jsx
+import { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '../api/supabase';
-import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
-  const logout = async () => {
+  const fetchAndSyncUser = async (authUser) => {
+    if (!authUser) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
+
     try {
-      await supabase.auth.signOut();
-      localStorage.clear();
+      // 1) Buscar por auth_id
+      let { data: dbUser, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_id', authUser.id)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error("Error fetch users:", fetchError);
+      }
+
+      // 2) Si no hay usuario, fallback por email
+      if (!dbUser && authUser.email) {
+        const { data: userByEmail, error: emailError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', authUser.email)
+          .maybeSingle();
+
+        if (emailError) {
+          console.error("Error buscando usuario por email:", emailError);
+        }
+
+        if (userByEmail) {
+          // Vincular auth_id
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ auth_id: authUser.id })
+            .eq('id', userByEmail.id);
+
+          if (updateError) {
+            console.error("Error vinculando auth_id:", updateError);
+          }
+
+          dbUser = { ...userByEmail, auth_id: authUser.id };
+        }
+      }
+
+      if (!dbUser) {
+        console.warn("Usuario no encontrado en tabla users:", authUser.email);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      // 3) Validar tenant_id
+      const tenantInJWT = authUser.user_metadata?.tenant_id;
+      if (!tenantInJWT || tenantInJWT !== dbUser.tenant_id) {
+        console.log("Tenant_id faltante o incorrecto en JWT. Corrigiendo...");
+        const { error: updateError } = await supabase.auth.updateUser({
+          data: { tenant_id: dbUser.tenant_id }
+        });
+
+        if (updateError) {
+          console.error("Error actualizando tenant_id en metadata:", updateError);
+        } else {
+          console.log("Tenant_id actualizado. Refrescando sesión...");
+          await supabase.auth.refreshSession();
+          return;
+        }
+      }
+
+      // 4) Guardar usuario fusionado
+      const fullUserData = { ...authUser, ...dbUser };
+      setUser(fullUserData);
+      localStorage.setItem('user', JSON.stringify(fullUserData));
+
+    } catch (err) {
+      console.error("Error sincronizando usuario:", err);
       setUser(null);
-      navigate('/login-form');
-    } catch (error) {
-      console.error('Logout error:', error);
-      localStorage.clear();
-      setUser(null);
-      navigate('/login-form');
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    let isMounted = true;
-
-    const getSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!isMounted) return;
-
-        if (session?.user) {
-          let { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('id, role_id, tenant_id, auth_id, email')
-            .eq('auth_id', session.user.id)
-            .single();
-
-          // Si no encontró por auth_id, buscar por email y vincular
-          if (!userData || userError) {
-            const { data: userByEmail } = await supabase
-              .from('users')
-              .select('id, role_id, tenant_id, auth_id, email')
-              .eq('email', session.user.email)
-              .maybeSingle();
-
-            if (userByEmail) {
-              // Actualizar auth_id en la tabla
-              await supabase
-                .from('users')
-                .update({ auth_id: session.user.id })
-                .eq('id', userByEmail.id);
-
-              userData = { ...userByEmail, auth_id: session.user.id };
-            }
-          }
-
-          if (userData) {
-            // Actualizar tenant_id en metadata si no está
-            if (!session.user.user_metadata?.tenant_id && userData.tenant_id) {
-              const { error: updateError } = await supabase.auth.updateUser({
-                data: { tenant_id: userData.tenant_id }
-              });
-              if (updateError) {
-                console.error('Error actualizando tenant_id en metadata:', updateError);
-              } else {
-                await supabase.auth.refreshSession();
-              }
-            }
-
-            const fullUser = { ...session.user, ...userData };
-            setUser(fullUser);
-            localStorage.setItem('user', JSON.stringify(fullUser));
-          } else {
-            setUser(null);
-          }
-        } else {
-          setUser(null);
-        }
-      } catch (error) {
-        console.error('Session error:', error);
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
+    const initSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      await fetchAndSyncUser(session?.user || null);
     };
 
-    getSession();
+    initSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (!isMounted) return;
-      if (event === 'SIGNED_OUT') {
-        setUser(null);
-        navigate('/login-form');
-      }
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      fetchAndSyncUser(session?.user || null);
     });
 
-    return () => {
-      isMounted = false;
-      subscription?.unsubscribe();
-    };
-  }, [navigate]);
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
+    <AuthContext.Provider value={{ user, loading, setUser }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export const useAuth = () => useContext(AuthContext);

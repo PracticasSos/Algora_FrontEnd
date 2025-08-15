@@ -60,6 +60,11 @@ const LoginForm = () => {
 
       console.log("Auth login exitoso:", user);
 
+      // 👉 Log JWT completo para debug
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log("JWT session completa:", sessionData?.session);
+      console.log("Tenant_id en metadata del JWT:", user.user_metadata?.tenant_id);
+
       // 2) Buscar en tabla users
       let { data: userData, error: userError } = await supabase
         .from('users')
@@ -105,9 +110,8 @@ const LoginForm = () => {
         } else {
           console.log("Tenant_id actualizado en metadata, refrescando sesión...");
           await supabase.auth.refreshSession();
-          // Recarga para usar el nuevo JWT en todas las queries con RLS
           window.location.reload();
-          return; // Se corta aquí porque se recargará la app
+          return;
         }
       }
 

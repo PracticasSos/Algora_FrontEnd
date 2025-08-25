@@ -306,7 +306,7 @@ const HeaderAdmin = ({
                   cursor="pointer"
                   onClick={() => {
                     onToggle();
-                    navigate("/PrintCertificate");
+                    navigate("/print-certificate");
                   }}
                   _hover={{ color: textHoverColor }}
                 >
@@ -317,7 +317,7 @@ const HeaderAdmin = ({
                   cursor="pointer"
                   onClick={() => {
                     onToggle();
-                    navigate("/Egresos");
+                    navigate("/egresos");
                   }}
                   _hover={{ color: textHoverColor }}
                 >

@@ -297,7 +297,7 @@ const HeaderAdmin = ({
                     onToggle();
                     navigate("/");
                   }}
-                  _hover={{ color: textHoverColor }}
+                  _hover={{ color: textHoverColor}}
                 >
                   Inicio
                 </Text>

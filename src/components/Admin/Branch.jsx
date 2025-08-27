@@ -182,6 +182,7 @@ const Branch = () => {
                         <Input
                             type="text"
                             name="cell"
+                            onChange={handleChange}
                             value={formData.cell}
                             _focus={{ borderColor: "#008B94" }}
                         />
@@ -191,6 +192,7 @@ const Branch = () => {
                         <Input
                             type="text"
                             name="ruc"
+                            onChange={handleChange}
                             value={formData.ruc}
                             _focus={{ borderColor: "#008B94" }}
                         />

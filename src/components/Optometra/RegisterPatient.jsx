@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../api/supabase';
-import { Box, Button, FormControl, FormLabel, Input, Select, Textarea, SimpleGrid, useColorModeValue, useColorMode, Heading } from '@chakra-ui/react';
+import { Box, Button, FormControl, FormLabel, Input, Select, Textarea, SimpleGrid, useColorModeValue, useColorMode, Heading, useToast } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
@@ -10,6 +10,7 @@ import SmartHeader from '../header/SmartHeader';
 
 const RegisterPatientForm = () => {
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [formData, setFormData] = useState({
     user_id: '',
@@ -54,10 +55,16 @@ const RegisterPatientForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!formData.user_id || !formData.pt_firstname || !formData.pt_lastname) {
-      alert("Por favor, completa todos los campos obligatorios.");
-      return;
-    }
+    if (!formData.user_id || !formData.pt_firstname?.trim() || !formData.pt_lastname?.trim()) {
+    toast({
+      title: "Campos incompletos",
+      description: "Por favor, completa todos los campos obligatorios.",
+      status: "warning",
+      duration: 3000,
+      isClosable: true,
+    });
+    return;
+  }
 
     try {
       const { data, error } = await supabase
@@ -65,11 +72,22 @@ const RegisterPatientForm = () => {
         .insert([formData]);
 
       if (error) {
-        console.error('Error:', error.message);
-        alert("Ocurrió un error: " + error.message);
+        toast ({
+          title: "Error",
+          description: "No se pudo registrar el paciente.",
+          status: "error",
+          duration: 3000,
+          isClosable: true,
+        });
+        console.error("Error:", error);
       } else {
-        console.log('Paciente registrado:', data);
-        alert("¡Registrado con éxito!");
+        toast ({
+          title: "Exito",
+          description: "Paciente registrado correctamete.",
+          status: "success",
+          duration: 3000,
+          isClosable: true,
+        })
         handleReset(); 
       }
     } catch (err) {
@@ -96,6 +114,8 @@ const RegisterPatientForm = () => {
       date: ''
     });
   };
+
+
 
   const handleNavigate = (route = null) => {
     const user = JSON.parse(localStorage.getItem('user'));

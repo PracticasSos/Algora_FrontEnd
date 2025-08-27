@@ -305,7 +305,7 @@ const HeaderAdmin = ({
                   cursor="pointer"
                   onClick={() => {
                     onToggle();
-                    navigate("/print-certificate");
+                    navigate("/print-certificate" );
                   }}
                   _hover={{ color: textHoverColor }}
                 >

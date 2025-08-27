@@ -136,7 +136,7 @@ const SuperAdminDashBoard = () => {
         navigate('/HistoryMeasureList')
         break;
       case "IMPRIMIR CERTIFICADO":
-        navigate('/PrintCertificate')
+        navigate('/print-certificate')
       break;
       case "HISTORIAL DE VENTAS":
           navigate('/HistoryClinic')

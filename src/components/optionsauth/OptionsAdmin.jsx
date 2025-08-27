@@ -482,7 +482,7 @@ const AdminDashBoard = () => {
                   cursor="pointer"
                   onClick={() => {
                     onToggle();
-                    navigate("/PrintCertificate");
+                    navigate("/print-certificate");
                   }}
                   _hover={{ color: textHoverColor }}
                 >

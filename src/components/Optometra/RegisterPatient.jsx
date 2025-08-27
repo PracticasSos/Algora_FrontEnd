@@ -70,6 +70,7 @@ const RegisterPatientForm = () => {
       } else {
         console.log('Paciente registrado:', data);
         alert("¡Registrado con éxito!");
+        handleReset(); 
       }
     } catch (err) {
       console.error('Error desconocido:', err);
@@ -245,7 +246,6 @@ const RegisterPatientForm = () => {
             {renderTextareaField('Razón de Consulta', 'pt_consultation_reason')}
             {renderTextareaField('Recomendaciones', 'pt_recommendations')}
               <Button type="submit" colorScheme="teal">Guardar</Button>
-              <Button onClick={handleReset} colorScheme="gray">Limpiar</Button>
             </Box>
           </Box>
         </SimpleGrid>
@@ -253,7 +253,7 @@ const RegisterPatientForm = () => {
           <Button
             onClick={() => {
               localStorage.setItem('selectedPatient', JSON.stringify(formData));
-              handleNavigate('/MeasuresFinal');
+              handleNavigate('/measures-final');
             }}
             colorScheme="gray"
           >

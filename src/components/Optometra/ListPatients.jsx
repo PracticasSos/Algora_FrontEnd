@@ -293,7 +293,7 @@ const ListPatients = () => {
                         variant="solid"
                         size="sm"
                         aria-label="Ver XR"
-                        onClick={() => handleNavigate(`/MeasuresFinal/${patient.id}`)}
+                        onClick={() => handleNavigate(`/measures-final/${patient.id}`)}
                       />
                     </>
                   )}

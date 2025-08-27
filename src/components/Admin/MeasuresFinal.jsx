@@ -134,6 +134,35 @@ const MeasuresFinal = () => {
       if (error) throw error;
       console.log("Medidas registradas:", data);
       alert("Medidas registradas exitosamente.");
+      setFormData({
+        patient_id: "",
+        sphere_right: "",
+        cylinder_right: "",
+        axis_right: "",
+        prism_right: "",
+        add_right: "",
+        av_vl_right: "",
+        av_vp_right: "",
+        dnp_right: "",
+        alt_right: "",
+        sphere_left: "",
+        cylinder_left: "",
+        axis_left: "",
+        prism_left: "",
+        add_left: "",
+        av_vl_left: "",
+        av_vp_left: "",
+        dnp_left: "",
+        alt_left: "",
+        diagnosis: "",
+        near_vision: "",
+        needs_lenses_near: false,
+        far_vision: "",
+        needs_lenses_far: false,
+        color_perception: false,
+        color_issues: "",
+        created_at: ""
+      });
   } catch (error) {
       console.error("Error al registrar medidas:", error.message);
       alert("Hubo un error al registar la venta.");
@@ -394,8 +423,7 @@ const MeasuresFinal = () => {
             </Box>
             <Stack direction={{ base: "column", sm: "row" }} spacing={4} justify="center">
               <Button colorScheme="teal" onClick={handleSubmit} width={["100%", "auto"]}>GUARDAR</Button>
-              <Button colorScheme="teal" onClick={() => handleNavigate(`/Sales/${formData.patient_id}`)} width={["100%", "auto"]}>Realizar Venta</Button>
-              <Button colorScheme="red" width={["100%", "auto"]}>ELIMINAR</Button>
+              <Button colorScheme="teal" onClick={() => handleNavigate(`/sales/${formData.patient_id}`)} width={["100%", "auto"]}>Realizar Venta</Button>
             </Stack>
           </Box>
         </Box>

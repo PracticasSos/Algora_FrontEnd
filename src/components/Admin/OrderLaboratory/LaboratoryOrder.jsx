@@ -1,10 +1,10 @@
 import  React, { useEffect, useRef, useState } from "react";
-import { supabase } from "../../api/supabase";
+import { supabase } from "../../../api/supabase";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Box, Heading, Button, FormControl, FormLabel, Input,  Textarea, Select, SimpleGrid, Text, useColorModeValue } from "@chakra-ui/react";
+import { Box, Heading, FormControl, FormLabel, Input,  Textarea, Select, SimpleGrid, Text, useColorModeValue, Table, Thead, Tr, Th, Tbody, Td } from "@chakra-ui/react";
 import PdfLaboratory from "./PdfLaboratory";
-import SmartHeader from "../header/SmartHeader";
-import { m } from "framer-motion";
+import SmartHeader from "../../header/SmartHeader";
+
 
 const LaboratoryOrder = () => {
     const { patientId } = useParams();
@@ -228,36 +228,26 @@ const LaboratoryOrder = () => {
         return fullName.toLowerCase().includes(searchTerm.toLowerCase()); 
     });
 
-    const handleGeneratePdf = async () => {
-        setIsGeneratingPDF(true); // Activa el estado para mostrar la tabla vertical
-      
-        // Espera un breve momento para que el DOM se actualice
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      
-        // Llama a la función para generar el PDF
-        await handleDownloadPdf();
-      
-        setIsGeneratingPDF(false); // Desactiva el estado después de generar el PDF
-      };
+    const data = filteredMeasures.length > 0 ? filteredMeasures[0] : {};
     
-      const moduleSpecificButton = null;
+    const moduleSpecificButton = null;
 
     return (
         <Box ref={salesRef} w="full" px={4}>
           <Box className="sales-form" display="flex" flexDirection="column" alignItems="center" minHeight="100vh">
             <SmartHeader moduleSpecificButton={moduleSpecificButton} />
             <Box w="100%" maxW= "800px" mb={4}>
-                        <Heading 
-                            mb={4} 
-                            textAlign="left" 
-                            size="md"
-                            fontWeight="700"
-                            color={useColorModeValue('teal.600', 'teal.300')}
-                            pb={2}
-                        >
-                            Orden de Laboratorio
-                        </Heading>
-                        </Box>
+                <Heading 
+                    mb={4} 
+                    textAlign="left" 
+                    size="md"
+                    fontWeight="700"
+                    color={useColorModeValue('teal.600', 'teal.300')}
+                    pb={2}
+                >
+                    Orden de Laboratorio
+                </Heading>
+            </Box>
             <Box as="form" width="100%" maxWidth="500px" padding={6} boxShadow="lg" borderRadius="md">
               {patientData && (
                 <Box mb={6} p={4} borderWidth="1px" borderRadius="lg" boxShadow="md">
@@ -276,41 +266,68 @@ const LaboratoryOrder = () => {
                 </Box>
               )}
       
-                <Box maxWidth="500px" mb={4}>
-                    {['OD', 'OI'].map((eye) => (
-                        <Box key={eye} mb={6} p={3} borderWidth="1px" borderRadius="md">
-                        <Heading size="md" mb={3}>
-                            {eye === 'OD' ? 'Ojo Derecho (OD)' : 'Ojo Izquierdo (OI)'}
-                        </Heading>
-                        <SimpleGrid columns={2} spacing={3}>
-                            {[
-                            ["Esfera", "sphere"],
-                            ["Cilindro", "cylinder"],
-                            ["Eje", "axis"],
-                            ["Prisma", "prism"],
-                            ["ADD", "add"],
-                            ["AV VL", "av_vl"],
-                            ["AV VP", "av_vp"],
-                            ["DNP", "dnp"],
-                            ["ALT", "alt"],
-                            ].map(([label, field]) => (
-                            <FormControl key={field}>
-                                <FormLabel fontSize="sm">{label}</FormLabel>
-                                <Input
-                                name={`${field}_${eye === 'OD' ? 'right' : 'left'}`}
-                                value={
-                                    filteredMeasures.length > 0
-                                    ? filteredMeasures[0][`${field}_${eye === 'OD' ? 'right' : 'left'}`] || ""
-                                    : ""
-                                }
-                                isReadOnly
-                                size="sm"
-                                />
-                            </FormControl>
-                            ))}
-                        </SimpleGrid>
-                        </Box>
-                    ))}
+                <Box maxW="700px" borderWidth="1px" borderRadius="md" p={4}>
+                <Heading size="md" mb={4}>
+                    RX Final
+                </Heading>
+
+                {/* Parte superior: Esfera, Cilindro, Eje, Prisma */}
+                <Table size="sm" variant="simple">
+                    <Thead>
+                    <Tr>
+                        <Th>Ojo</Th>
+                        <Th>Esfera</Th>
+                        <Th>Cilindro</Th>
+                        <Th>Eje</Th>
+                        <Th>Prisma</Th>
+                    </Tr>
+                    </Thead>
+                    <Tbody>
+                    <Tr>
+                        <Td>OD</Td>
+                        <Td>{data.sphere_right || "N"}</Td>
+                        <Td>{data.cylinder_right || ""}</Td>
+                        <Td>{data.axis_right || ""}</Td>
+                        <Td>{data.prism_right || ""}</Td>
+                    </Tr>
+                    <Tr>
+                        <Td>OI</Td>
+                        <Td>{data.sphere_left || "N"}</Td>
+                        <Td>{data.cylinder_left || ""}</Td>
+                        <Td>{data.axis_left || ""}</Td>
+                        <Td>{data.prism_left || ""}</Td>
+                    </Tr>
+                    </Tbody>
+                </Table>
+
+                {/* Parte inferior: ADD, AVVL, DNP, ALT */}
+                <Table size="sm" mt={6} variant="simple">
+                    <Thead>
+                    <Tr>
+                        <Th>Ojo</Th>
+                        <Th>ADD</Th>
+                        <Th>AV VL</Th>
+                        <Th>DNP</Th>
+                        <Th>ALT</Th>
+                    </Tr>
+                    </Thead>
+                    <Tbody>
+                    <Tr>
+                        <Td>OD</Td>
+                        <Td>{data.add_right || "-"}</Td>
+                        <Td>{data.av_vl_right || ""}</Td>
+                        <Td>{data.dnp_right || ""}</Td>
+                        <Td>{data.alt_right || ""}</Td>
+                    </Tr>
+                    <Tr>
+                        <Td>OI</Td>
+                        <Td>{data.add_left || "-"}</Td>
+                        <Td>{data.av_vl_left || ""}</Td>
+                        <Td>{data.dnp_left || ""}</Td>
+                        <Td>{data.alt_left || ""}</Td>
+                    </Tr>
+                    </Tbody>
+                </Table>
                 </Box>
                 <Box p={5}>
                 <SimpleGrid columns={[1, 2]} spacing={4}>
@@ -396,12 +413,28 @@ const LaboratoryOrder = () => {
 
                 <Box width="100%" padding={4}>
                     <SimpleGrid columns={1} spacing={4}>
-                    {salesData || patientData ? (
-                        <PdfLaboratory formData={salesData || patientData} targetRef={salesRef} branchPhone={branchPhone} branchName={salesData?.branchs?.name}/>
+                    {salesData && patientData ? (
+                        <PdfLaboratory 
+                            formData={{
+                                // Datos del paciente
+                                ...patientData,
+                                // Datos de la venta
+                                ...salesData,
+                                // Medidas oftálmicas
+                                ...(filteredMeasures[0] || {}),
+                                // Observaciones del formulario
+                                observations: observations,
+                                // Laboratorio seleccionado
+                                selectedLab: selectedLab
+                            }}
+                            targetRef={salesRef} 
+                            branchPhone={branchPhone} 
+                            branchName={salesData?.branchs?.name}
+                        />
                     ) : (
                         <Text>No data available to generate PDF</Text>
                     )}
-                    </SimpleGrid>
+                </SimpleGrid>
                 </Box>
                 </Box>
 

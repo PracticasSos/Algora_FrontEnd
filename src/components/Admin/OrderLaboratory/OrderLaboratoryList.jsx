@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../../api/supabase';
+import { supabase } from '../../../api/supabase';
 import { Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Input, FormControl, FormLabel, Select, Spinner, Grid, useColorModeValue } from "@chakra-ui/react";
 import { useNavigate } from 'react-router-dom';
-import SmartHeader from '../header/SmartHeader';
+import SmartHeader from '../../header/SmartHeader';
 
 const OrderLaboratoryList = () => {
   const [patients, setPatients] = useState([]);

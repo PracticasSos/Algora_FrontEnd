@@ -14,14 +14,13 @@ import ListBranch from "../components/Admin/ListBranch.jsx";
 import Lab from "../components/Admin/Labs.jsx";
 import ListLab from "../components/Admin/ListLab.jsx";
 import CashClousure from "../components/Admin/CashClousure.jsx";
-import SalesForm from "../components/Admin/SalesForm.jsx";
 import RegisterLens from "../components/Admin/RegisterLens.jsx";
 import MeasuresFinal from "../components/Admin/MeasuresFinal.jsx"
 import PatientRecords from "../components/Admin/PatientRecords.jsx"
 import Egresos from "../components/Admin/Egresos.jsx"
 import PatientHistory from "../components/Admin/PatientHistory.jsx"
-import LaboratoryOrder from "../components/Admin/LaboratoryOrder.jsx"
-import OrderLaboratoryList from "../components/Admin/OrderLaboratoryList.jsx"
+import LaboratoryOrder from "../components/Admin/OrderLaboratory/LaboratoryOrder.jsx"
+import OrderLaboratoryList from "../components/Admin/OrderLaboratory/OrderLaboratoryList.jsx"
 import BalancesPatient from "../components/Admin/BalancesPatient.jsx"
 import RetreatsPatients from "../components/Admin/RetreatsPatients.jsx"
 import Retreats from "../components/Admin/Retreats.jsx"

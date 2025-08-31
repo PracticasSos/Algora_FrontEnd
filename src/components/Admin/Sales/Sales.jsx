@@ -54,6 +54,7 @@ const Sales = () => {
   const [patientMeasures, setPatientMeasures] = useState([]);
   const [filteredMeasures, setFilteredMeasures] = useState([]);
   const [saleRegistered, setSaleRegistered] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [saleId, setSaleId] = useState(null);
   const [pdfGenerated, setPdfGenerated] = useState(false);
   const navigate = useNavigate();
@@ -217,7 +218,9 @@ const Sales = () => {
   
 
   const handleSubmit = async () => {
-    if (!formData.payment_in) {
+  if (isSubmitting) return;
+  setIsSubmitting(true);
+  if (!formData.payment_in) {
       toast({
         title: "Error",
         description: "Por favor, seleccione un método de pago.",
@@ -225,7 +228,8 @@ const Sales = () => {
         duration: 5000,
         isClosable: true,
       });
-      return;
+  setIsSubmitting(false);
+  return;
     }
     if (!formData.branchs_id) {
       toast({
@@ -235,12 +239,14 @@ const Sales = () => {
         duration: 5000,
         isClosable: true,
       });
-      return;
+  setIsSubmitting(false);
+  return;
     }
     const signatureDataUrl = formData.signature;
       if (!signatureDataUrl) {
       console.error("La firma no ha sido proporcionada.");
-      return;
+  setIsSubmitting(false);
+  return;
     }
     if (formData.brand_id) {
       const { data: frame, error } = await supabase
@@ -250,7 +256,8 @@ const Sales = () => {
         .single();
       if (error || !frame) {
         console.error("Error obteniendo cantidad:", error);
-        return;
+  setIsSubmitting(false);
+  return; 
       }
       if (frame.quantity > 0) {
         const { error: updateError } = await supabase
@@ -310,9 +317,27 @@ const Sales = () => {
           duration: 5000,
           isClosable: true,
         });
+        // Limpiar formulario
+        setFormData({
+          p_frame: 0,
+          p_lens: 0,
+          discount_frame: 0,
+          discount_lens: 0,
+          total_p_frame: 0,
+          total_p_lens: 0,
+          total: 0,
+          credit: 0,
+          balance: 0,
+          payment_in: "",
+          message: "",
+          measure_id: "",
+          signature: ""
+        });
       }
     } catch (err) {
       console.error("Error al registrar la venta:", err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -544,8 +569,8 @@ const Sales = () => {
           </Button>
           
           {currentStep === totalSteps ? (
-            <Button colorScheme="teal" onClick={handleSubmit}>
-              Registrar Venta
+            <Button colorScheme="teal" onClick={handleSubmit} isDisabled={isSubmitting}>
+              {isSubmitting ? "Registrando..." : "Registrar Venta"}
             </Button>
           ) : (
             <Button onClick={nextStep} colorScheme="teal">

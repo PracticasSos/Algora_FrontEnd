@@ -53,6 +53,16 @@ const PrintCertificate = () => {
   const navigate = useNavigate();
   const [tenantId, setTenantId] = useState(null);
 
+    // Ref para el textarea de diagnóstico
+  const diagnosisRef = useRef(null);
+  // Autoajuste de altura del textarea
+  useEffect(() => {
+    if (diagnosisRef.current) {
+      diagnosisRef.current.style.height = "100px";
+      diagnosisRef.current.style.height = diagnosisRef.current.scrollHeight + "px";
+    }
+  }, [formData.diagnosis]);
+  
   useEffect(() => {
     const fetchUser = async () => {
       const { data, error } = await supabase.auth.getSession();
@@ -361,16 +371,17 @@ const PrintCertificate = () => {
     
           <Box p={[2, 3, 4]} maxWidth="1000px" mx="auto" border="1px solid #ccc" borderRadius="8px">
             <Heading size="md" mb={4}>Su diagnóstico es:</Heading>
-            <Textarea 
-              placeholder="Escriba el diagnóstico del paciente" 
-              value={formData.diagnosis} 
-              onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })} 
-              mb={4}
-              resize="vertical"
-              minHeight="100px"
-              maxHeight="300px"
-              overflowY="auto"
-            />
+              <Textarea
+                ref={diagnosisRef}
+                placeholder="Escriba el diagnóstico del paciente"
+                value={formData.diagnosis}
+                onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })}
+                mb={4}
+                resize="none"
+                minHeight="100px"
+                maxHeight="300px"
+                style={{ overflow: "hidden" }}
+              />
             <Box mb={6}>
               <Heading size="sm" mb={2}>Visión cercana</Heading>
               <Text mb={2} fontSize={["sm", "md"]}>Capacidad de leer como mínimo, las letras de la escala 1 de la carta normalizada Jaeger...</Text>

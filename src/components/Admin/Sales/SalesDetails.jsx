@@ -1,3 +1,5 @@
+
+
 import { useEffect, useState } from "react";
 import { supabase } from "../../../api/supabase";
  import { Box, VStack, SimpleGrid, Flex, Img, FormControl, FormLabel, Input, useBreakpointValue, useColorModeValue } from "@chakra-ui/react";
@@ -30,6 +32,16 @@ const SalesDetails = ({ formData = {}, setFormData = () => {}, onTotalsChange = 
   const formatMoney = (amount) => {
     return Math.round(parseFloat(amount));
   };
+
+    // Sincroniza los inputs de búsqueda con los valores seleccionados en formData
+  useEffect(() => {
+    if (formData.brand && formData.brand !== searchFrame) {
+      setSearchFrame(formData.brand);
+    }
+    if (formData.lens_type_name && formData.lens_type_name !== searchLens) {
+      setSearchLens(formData.lens_type_name);
+    }
+  }, [formData.brand, formData.lens_type_name]);
 
   useEffect(() => {
     fetchData("lens", setLenses);
@@ -77,26 +89,37 @@ const SalesDetails = ({ formData = {}, setFormData = () => {}, onTotalsChange = 
   };
 
   const handleSuggestionClick = (item, type) => {
-  if (type === "frame") {
-    setFormData(prev => ({
-      ...prev,
-      brand_id: item.id,
-      brand: item.brand,
-      p_frame: item.price || 0,
-    }));
-    setSearchFrame(item.brand);
-    setFrameSuggestions([]);
-  } else {
-    setFormData(prev => ({
-      ...prev,
-      lens_id: item.id,
-      lens_type_name: item.lens_type,
-      p_lens: item.lens_price || 0,
-    }));
-    setSearchLens(item.lens_type);
-    setLensSuggestions([]);
-  }
-};
+    if (type === "frame") {
+      setFormData(prev => ({
+        ...prev,
+        brand_id: item.id,
+        brand: item.brand,
+        p_frame: item.price || 0,
+        // Sincroniza el nombre en totals también si existe el callback
+      }));
+      setSearchFrame(item.brand);
+      setFrameSuggestions([]);
+      if (onTotalsChange) {
+        onTotalsChange({
+          frameName: item.brand,
+        });
+      }
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        lens_id: item.id,
+        lens_type_name: item.lens_type,
+        p_lens: item.lens_price || 0,
+      }));
+      setSearchLens(item.lens_type);
+      setLensSuggestions([]);
+      if (onTotalsChange) {
+        onTotalsChange({
+          lensName: item.lens_type,
+        });
+      }
+    }
+  };
 
   useEffect(() => {
   setCalculatedData((prev) => ({
@@ -203,38 +226,30 @@ const SalesDetails = ({ formData = {}, setFormData = () => {}, onTotalsChange = 
 };
 
   useEffect(() => {
-  const totalFrame = calculatedData.total_p_frame !== null && calculatedData.total_p_frame !== undefined
-    ? formatMoney(calculatedData.total_p_frame)
-    : formatMoney(calculatedData.p_frame);
+    const totalFrame = calculatedData.total_p_frame !== null && calculatedData.total_p_frame !== undefined
+      ? formatMoney(calculatedData.total_p_frame)
+      : formatMoney(calculatedData.p_frame);
 
-  const totalLens = calculatedData.total_p_lens !== null && calculatedData.total_p_lens !== undefined
-    ? formatMoney(calculatedData.total_p_lens)
-    : formatMoney(calculatedData.p_lens);
+    const totalLens = calculatedData.total_p_lens !== null && calculatedData.total_p_lens !== undefined
+      ? formatMoney(calculatedData.total_p_lens)
+      : formatMoney(calculatedData.p_lens);
 
-  const totalP = totalFrame + totalLens;
+    const totalP = totalFrame + totalLens;
 
-  setCalculatedData((prev) => ({
-    ...prev,
-    totalP: totalP.toString(), // Sin decimales
-  }));
-
-  setFormData((prev) => ({
-    ...prev,
-    p_frame: formatMoney(calculatedData.p_frame),
-    p_lens: formatMoney(calculatedData.p_lens),
-    discount_frame: calculatedData.discount_frame,
-    discount_lens: calculatedData.discount_lens,
-    total_p_frame: formatMoney(calculatedData.total_p_frame || calculatedData.p_frame),
-    total_p_lens: formatMoney(calculatedData.total_p_lens || calculatedData.p_lens),
-    total: totalP,
-    price: formatMoney(calculatedData.price),
-  }));
-}, [
-  calculatedData.total_p_frame,
-  calculatedData.total_p_lens,
-  calculatedData.p_frame,
-  calculatedData.p_lens,
-]);
+    setCalculatedData((prev) => ({
+      ...prev,
+      totalP: totalP.toString(), // Sin decimales
+    }));
+    // No actualizar formData aquí para evitar bucle
+  }, [
+    calculatedData.total_p_frame,
+    calculatedData.total_p_lens,
+    calculatedData.p_frame,
+    calculatedData.p_lens,
+    calculatedData.discount_frame,
+    calculatedData.discount_lens,
+    calculatedData.price
+  ]);
 
 
 useEffect(() => {

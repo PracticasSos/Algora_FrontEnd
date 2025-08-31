@@ -67,28 +67,35 @@ const Sales = () => {
   const totalSteps = 8; 
 
   const handleFormDataChange = (newFormData) => {
-  setFormData((prevFormData) => ({
-    ...prevFormData,
-    ...newFormData,
-  }));
+    setFormData((prevFormData) => {
+      // Solo actualiza si los valores realmente cambian
+      const updated = { ...prevFormData, ...newFormData };
+      if (JSON.stringify(updated) !== JSON.stringify(prevFormData)) {
+        return updated;
+      }
+      return prevFormData;
+    });
 
-  // Extraer solo las claves relevantes para saleData
-  const saleDataKeys = ["brand_id", "lens_id"];
-  const saleDataUpdates = {};
+    // Extraer solo las claves relevantes para saleData
+    const saleDataKeys = ["brand_id", "lens_id"];
+    const saleDataUpdates = {};
 
-  saleDataKeys.forEach((key) => {
-    if (key in newFormData) {
-      saleDataUpdates[key] = newFormData[key];
+    saleDataKeys.forEach((key) => {
+      if (key in newFormData) {
+        saleDataUpdates[key] = newFormData[key];
+      }
+    });
+
+    if (Object.keys(saleDataUpdates).length > 0) {
+      setSaleData((prevSaleData) => {
+        const updatedSale = { ...prevSaleData, ...saleDataUpdates };
+        if (JSON.stringify(updatedSale) !== JSON.stringify(prevSaleData)) {
+          return updatedSale;
+        }
+        return prevSaleData;
+      });
     }
-  });
-
-  if (Object.keys(saleDataUpdates).length > 0) {
-    setSaleData((prevSaleData) => ({
-      ...prevSaleData,
-      ...saleDataUpdates,
-    }));
-  }
-};
+  };
 
  // Función para navegar entre pasos
   const nextStep = () => {
@@ -355,13 +362,34 @@ const Sales = () => {
   };
 
   const handleTotalsChange = (totals) => {
-  setTotals(totals);
-  setFormData((prev) => ({
-    ...prev,
-    total_p_frame: Number(totals.total_p_frame ?? prev.p_frame ?? 0),
-    total_p_lens: Number(totals.total_p_lens ?? prev.p_lens ?? 0),
-  }));
-};
+    // Solo actualiza los campos si realmente cambiaron, nunca limpia ni reinicia
+    setTotals((prevTotals) => {
+      if (
+        prevTotals.total_p_frame !== totals.total_p_frame ||
+        prevTotals.total_p_lens !== totals.total_p_lens ||
+        prevTotals.frameName !== totals.frameName ||
+        prevTotals.lensName !== totals.lensName
+      ) {
+        return { ...prevTotals, ...totals };
+      }
+      return prevTotals;
+    });
+    setFormData((prev) => {
+      const newTotalFrame = totals.total_p_frame !== undefined ? Number(totals.total_p_frame) : prev.total_p_frame;
+      const newTotalLens = totals.total_p_lens !== undefined ? Number(totals.total_p_lens) : prev.total_p_lens;
+      if (
+        prev.total_p_frame !== newTotalFrame ||
+        prev.total_p_lens !== newTotalLens
+      ) {
+        return {
+          ...prev,
+          total_p_frame: newTotalFrame,
+          total_p_lens: newTotalLens,
+        };
+      }
+      return prev;
+    });
+  };
 
 
   const handleNavigate = (route = null) => {
@@ -432,10 +460,10 @@ const Sales = () => {
             </Text>
             <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
               <TotalUI
-                frameName={totals.frameName}
-                lensName={totals.lensName}
-                total_p_frame={totals.total_p_frame}
-                total_p_lens={totals.total_p_lens}
+                frameName={formData.brand || ""}
+                lensName={formData.lens_type_name || ""}
+                total_p_frame={formData.total_p_frame}
+                total_p_lens={formData.total_p_lens}
                 initialFormData={formData}
                 onFormDataChange={handleFormDataChange}
               />

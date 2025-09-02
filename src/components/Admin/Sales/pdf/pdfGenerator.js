@@ -69,13 +69,14 @@ export const generateContractPDF = async (formData, measureData, patientData, br
       `;
     }
 
-    // Crear sección de observaciones
+    // Crear sección de observaciones (mensaje + imagen)
     let observationsSection = '';
-    if (formData?.message) {
+    if (formData?.message || formData?.observation_img) {
       observationsSection = `
         <div class="info-section">
           <div class="section-title">Observaciones</div>
-          <p>${formData.message}</p>
+          ${formData.message ? `<p>${formData.message}</p>` : ''}
+          ${formData.observation_img ? `<img src="${formData.observation_img}" style="max-width: 200px; max-height: 200px; margin-top: 10px; border-radius: 6px;" alt="Observación" />` : ''}
         </div>
       `;
     }

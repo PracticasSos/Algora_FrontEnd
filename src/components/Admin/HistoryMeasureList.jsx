@@ -24,7 +24,7 @@ const HistoryMeasureList = () => {
                 .from("rx_final")
                 .select(`
                     patient_id,
-                    patients:patients (id, pt_firstname, pt_lastname, pt_ci, pt_occupation)
+                    patients:patients (id, pt_firstname, pt_lastname, pt_ci, pt_occupation, date)
                 `);
             if (error) throw error;
             const uniquePatients = [];
@@ -39,15 +39,28 @@ const HistoryMeasureList = () => {
                         pt_lastname: rx.patients?.pt_lastname || "",
                         pt_ci: rx.patients?.pt_ci || "",
                         pt_occupation: rx.patients?.pt_occupation || "",
-                        created_at: rx.created_at
+                        created_at: rx.created_at,
+                        date: rx.date
                     });
                 }
             });
-             
-            const sortedPatients = uniquePatients.sort((a, b) => a.pt_lastname.localeCompare(b.pt_lastname));
-            setPatients(sortedPatients);
-            setFilteredPatients(sortedPatients);
-        } catch (error) {
+                // Ordenar: primero los que tienen fecha, descendente; luego los que no tienen fecha
+                // Ordenar por fecha de patients.date descendente, los sin fecha al final
+                const sortedPatients = uniquePatients.sort((a, b) => {
+                    const dateA = a.date;
+                    const dateB = b.date;
+                    if (dateA && dateB) {
+                        return new Date(dateB) - new Date(dateA);
+                    } else if (dateA) {
+                        return -1;
+                    } else if (dateB) {
+                        return 1;
+                    } else {
+                        return 0;
+                    }
+                });
+                setPatients(sortedPatients);
+                setFilteredPatients(sortedPatients);
             console.error("Error fetching patients:", error);
         } finally {
             setLoading(false);

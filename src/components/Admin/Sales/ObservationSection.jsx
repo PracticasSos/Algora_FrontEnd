@@ -22,6 +22,31 @@ const ObservationSection = ({ setFormData }) => {
   const [uploading, setUploading] = useState(false);
   const [uploadedUrl, setUploadedUrl] = useState("");
 
+  function resizeImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      if (width > maxWidth) {
+        height *= maxWidth / width;
+        width = maxWidth;
+      }
+      if (height > maxHeight) {
+        width *= maxHeight / height;
+        height = maxHeight;
+      }
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob((blob) => resolve(blob), 'image/jpeg', quality);
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -30,8 +55,8 @@ const ObservationSection = ({ setFormData }) => {
 
     const fileName = `${Date.now()}-${file.name}`;
     const filePath = `observation/${fileName}`;
-
-    const { error } = await supabase.storage.from("observation").upload(filePath, file);
+    const optimizedBlob = await resizeImage(file);
+    const { data: uploadData, error } = await supabase.storage.from("observation").upload(filePath, optimizedBlob);
 
     if (error) {
       console.error("Error al subir la imagen:", error.message);
@@ -42,6 +67,15 @@ const ObservationSection = ({ setFormData }) => {
         ...prev,
         observation_img: data.publicUrl,
       }));
+
+      // Guardar la URL en la columna observation_img de sales si existe el id
+      if (prev && prev.id) {
+        try {
+          await supabase.from('sales').update({ observation_img: data.publicUrl }).eq('id', prev.id);
+        } catch (err) {
+          console.error('Error actualizando observation_img en sales:', err);
+        }
+      }
     }
 
     setUploading(false);

@@ -8,6 +8,17 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Función para cerrar sesión
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      localStorage.removeItem('user');
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
+  };
+
   const fetchAndSyncUser = async (authUser) => {
     if (!authUser) {
       setUser(null);
@@ -107,7 +118,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, loading, setUser }}>
+  <AuthContext.Provider value={{ user, loading, setUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -95,6 +95,7 @@ export const contractTemplate = `
     
     <div class="footer">
         <p>Documento generado el {{currentDate}}</p>
+        <p>Gracias por confiar en {{branchName}}</p>
     </div>
 
     <!-- PÁGINA 2: TÉRMINOS Y CONDICIONES -->

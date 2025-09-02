@@ -83,6 +83,7 @@ const AdminDashBoard = () => {
   const handleLogout = async () => {
     try {
       await logout();
+      navigate('/login-form');
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }

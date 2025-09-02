@@ -8,6 +8,7 @@ import {
   Text,
   useColorModeValue,
 } from "@chakra-ui/react";
+import React from "react";
 
 const Total = ({ formData, setFormData }) => {
 
@@ -17,6 +18,16 @@ const Total = ({ formData, setFormData }) => {
   const total = Number(totalFrame) + Number(totalLens);
   const balance = formData.balance === '' ? 0 : parseFloat(formData.balance);
   const credit = isNaN(balance) ? total : total - balance;
+
+  // Sincronizar total y credit en el estado global cada vez que cambian
+  React.useEffect(() => {
+    setFormData({
+      ...formData,
+      total,
+      credit,
+    });
+    // eslint-disable-next-line
+  }, [total, credit]);
 
   const handleCreditChange = (e) => {
     const value = e.target.value;

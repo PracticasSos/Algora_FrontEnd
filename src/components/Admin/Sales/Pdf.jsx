@@ -93,6 +93,7 @@ const Pdf = ({ formData, onPdfUploaded }) => {
   const handleGeneratePdf = async () => {
     setGenerating(true);
     try {
+      console.log("Datos recibidos en PDF:", formData);
       // Verificar términos aceptados
       if (!formData?.termsAccepted) {
         throw new Error('Debe aceptar los términos y condiciones antes de generar el PDF');

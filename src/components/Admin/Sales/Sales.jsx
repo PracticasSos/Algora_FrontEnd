@@ -49,7 +49,8 @@ const Sales = () => {
     payment_in: "",
     message: "",
     measure_id: "",
-    signature: ""
+    signature: "",
+    termsAccepted: false
   });
   const [patientMeasures, setPatientMeasures] = useState([]);
   const [filteredMeasures, setFilteredMeasures] = useState([]);
@@ -71,6 +72,10 @@ const Sales = () => {
       // Solo actualiza si los valores realmente cambian
       const updated = { ...prevFormData, ...newFormData };
       if (JSON.stringify(updated) !== JSON.stringify(prevFormData)) {
+        // Si el cambio incluye termsAccepted, actualiza ese campo
+        if ('termsAccepted' in newFormData) {
+          updated.termsAccepted = newFormData.termsAccepted;
+        }
         return updated;
       }
       return prevFormData;
@@ -224,133 +229,136 @@ const Sales = () => {
   };
   
 
+    // mergedFormData disponible en todo el componente
+  const mergedFormData = {
+    ...formData,
+    branchs_id: formData.branchs_id && formData.branchs_id !== "" ? formData.branchs_id : saleData.branchs_id,
+    patient_id: formData.patient_id && formData.patient_id !== "" ? formData.patient_id : saleData.patient_id,
+    brand_id: formData.brand_id && formData.brand_id !== "" ? formData.brand_id : saleData.brand_id,
+    lens_id: formData.lens_id && formData.lens_id !== "" ? formData.lens_id : saleData.lens_id,
+    date: formData.date && formData.date !== "" ? formData.date : saleData.date,
+    delivery_time: formData.delivery_time && formData.delivery_time !== "" ? formData.delivery_time : saleData.delivery_time,
+    delivery_datetime: formData.delivery_datetime && formData.delivery_datetime !== "" ? formData.delivery_datetime : saleData.delivery_datetime,
+    balance: (formData.balance !== undefined && formData.balance !== "") ? formData.balance : saleData.balance,
+    credit: (formData.credit !== undefined && formData.credit !== "") ? formData.credit : saleData.credit,
+    payment_in: formData.payment_in && formData.payment_in !== "" ? formData.payment_in : saleData.payment_in,
+    measure_id: formData.measure_id && formData.measure_id !== "" ? formData.measure_id : saleData.measure_id,
+  };
   const handleSubmit = async () => {
   if (isSubmitting) return;
   setIsSubmitting(true);
-  if (!formData.payment_in) {
-      toast({
-        title: "Error",
-        description: "Por favor, seleccione un método de pago.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
-  setIsSubmitting(false);
-  return;
-    }
-    if (!formData.branchs_id) {
-      toast({
-        title: "Error",
-        description: "Por favor, seleccione una sucursal.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
-  setIsSubmitting(false);
-  return;
-    }
-    const signatureDataUrl = formData.signature;
-      if (!signatureDataUrl) {
-      console.error("La firma no ha sido proporcionada.");
-  setIsSubmitting(false);
-  return;
-    }
-    if (formData.brand_id) {
-      const { data: frame, error } = await supabase
-        .from("inventario")
-        .select("quantity")
-        .eq("id", formData.brand_id)
-        .single();
-      if (error || !frame) {
-        console.error("Error obteniendo cantidad:", error);
-  setIsSubmitting(false);
-  return; 
-      }
-      if (frame.quantity > 0) {
-        const { error: updateError } = await supabase
-          .from("inventario")
-          .update({ quantity: frame.quantity - 1 })
-          .eq("id", formData.brand_id);
-  
-        if (updateError) {
-          console.error("Error actualizando cantidad:", updateError);
-        }
-      } else {
-        console.log("No hay suficiente cantidad para el armazón seleccionado.");
-        return; 
-      }
-    }
 
-    const saleDataToSave = {
-      date: formData.date,
-      delivery_time: saleData.delivery_time,
-      delivery_datetime: saleData.delivery_datetime,
-      p_frame: isNaN(parseFloat(formData.p_frame)) ? 0 : parseFloat(formData.p_frame),
-      p_lens: isNaN(parseFloat(formData.p_lens)) ? 0 : parseFloat(formData.p_lens),
-      price: isNaN(parseFloat(formData.total)) ? 0 : parseFloat(formData.total),
-      total: isNaN(parseFloat(formData.total)) ? 0 : parseFloat(formData.total),
-      credit: isNaN(parseFloat(formData.credit)) ? 0 : parseFloat(formData.credit),
-      balance: isNaN(parseFloat(formData.balance)) ? 0 : parseFloat(formData.balance),
-      payment_in: formData.payment_in,
-      patient_id: saleData.patient_id || null,
-      lens_id: formData.lens_id || null,
-      branchs_id: formData.branchs_id,
-      total_p_frame: isNaN(parseFloat(formData.total_p_frame)) ? 0 : parseFloat(formData.total_p_frame),
-      total_p_lens: isNaN(parseFloat(formData.total_p_lens)) ? 0 : parseFloat(formData.total_p_lens),
-      discount_frame: isNaN(parseFloat(formData.discount_frame)) ? 0 : parseFloat(formData.discount_frame),
-      discount_lens: isNaN(parseFloat(formData.discount_lens)) ? 0 : parseFloat(formData.discount_lens),
-      inventario_id: formData.brand_id || null,
-      measure_id: formData.measure_id || null,
-      signature: formData.signature || null,
-    };
 
-    try {
-      console.log("Valor de formData.date:", formData.date);
-      console.log("Objeto saleDataToSave:", saleDataToSave);
+  if (!mergedFormData.payment_in) {
+    toast({
+      title: "Error",
+      description: "Por favor, seleccione un método de pago.",
+      status: "error",
+      duration: 5000,
+      isClosable: true,
+    });
+    setIsSubmitting(false);
+    return;
+  }
+  if (!mergedFormData.branchs_id) {
+    toast({
+      title: "Error",
+      description: "Por favor, seleccione una sucursal.",
+      status: "error",
+      duration: 5000,
+      isClosable: true,
+    });
+    setIsSubmitting(false);
+    return;
+  }
+  const signatureDataUrl = mergedFormData.signature;
+  if (!signatureDataUrl) {
+    console.error("La firma no ha sido proporcionada.");
+    setIsSubmitting(false);
+    return;
+  }
 
-      const { data, error } = await supabase
-        .from("sales")
-        .insert([saleDataToSave])
-        .select();
-      if (error) throw error;
-      setSaleRegistered(true);
-      if (data && data.length > 0) {
-        setSaleId(data[0].id);
-        setPdfGenerated(true);
-        toast({
-          title: "Venta registrada con éxito.",
-          description: "La venta ha sido guardada correctamente.",
-          status: "success",
-          duration: 5000,
-          isClosable: true,
-        });
-        // Limpiar formulario
-        setFormData({
-          p_frame: 0,
-          p_lens: 0,
-          discount_frame: 0,
-          discount_lens: 0,
-          total_p_frame: 0,
-          total_p_lens: 0,
-          total: 0,
-          credit: 0,
-          balance: 0,
-          payment_in: "",
-          message: "",
-          measure_id: "",
-          signature: ""
-        });
-      }
-    } catch (err) {
-      console.error("Error al registrar la venta:", err);
-    } finally {
+  if (mergedFormData.brand_id) {
+    const { data: frame, error } = await supabase
+      .from("inventario")
+      .select("quantity")
+      .eq("id", mergedFormData.brand_id)
+      .single();
+    if (error || !frame) {
+      console.error("Error obteniendo cantidad:", error);
       setIsSubmitting(false);
+      return;
     }
+    if (frame.quantity > 0) {
+      const { error: updateError } = await supabase
+        .from("inventario")
+        .update({ quantity: frame.quantity - 1 })
+        .eq("id", mergedFormData.brand_id);
+      if (updateError) {
+        console.error("Error actualizando cantidad:", updateError);
+      }
+    } else {
+      console.log("No hay suficiente cantidad para el armazón seleccionado.");
+      setIsSubmitting(false);
+      return;
+    }
+  }
+
+  const saleDataToSave = {
+    date: mergedFormData.date,
+    delivery_time: mergedFormData.delivery_time,
+    delivery_datetime: mergedFormData.delivery_datetime,
+    p_frame: isNaN(parseFloat(mergedFormData.p_frame)) ? 0 : parseFloat(mergedFormData.p_frame),
+    p_lens: isNaN(parseFloat(mergedFormData.p_lens)) ? 0 : parseFloat(mergedFormData.p_lens),
+    price: isNaN(parseFloat(mergedFormData.total)) ? 0 : parseFloat(mergedFormData.total),
+    total: isNaN(parseFloat(mergedFormData.total)) ? 0 : parseFloat(mergedFormData.total),
+    credit: isNaN(parseFloat(mergedFormData.credit)) ? 0 : parseFloat(mergedFormData.credit),
+    balance: isNaN(parseFloat(mergedFormData.balance)) ? 0 : parseFloat(mergedFormData.balance),
+    payment_in: mergedFormData.payment_in,
+    patient_id: mergedFormData.patient_id || null,
+    lens_id: mergedFormData.lens_id || null,
+    branchs_id: mergedFormData.branchs_id,
+    total_p_frame: isNaN(parseFloat(mergedFormData.total_p_frame)) ? 0 : parseFloat(mergedFormData.total_p_frame),
+    total_p_lens: isNaN(parseFloat(mergedFormData.total_p_lens)) ? 0 : parseFloat(mergedFormData.total_p_lens),
+    discount_frame: isNaN(parseFloat(mergedFormData.discount_frame)) ? 0 : parseFloat(mergedFormData.discount_frame),
+    discount_lens: isNaN(parseFloat(mergedFormData.discount_lens)) ? 0 : parseFloat(mergedFormData.discount_lens),
+    inventario_id: mergedFormData.brand_id || null,
+    measure_id: mergedFormData.measure_id || null,
+    signature: mergedFormData.signature || null,
   };
 
+  try {
+    console.log("Valor de mergedFormData.date:", mergedFormData.date);
+    console.log("Objeto saleDataToSave:", saleDataToSave);
+
+    const { data, error } = await supabase
+      .from("sales")
+      .insert([saleDataToSave])
+      .select();
+    if (error) throw error;
+    setSaleRegistered(true);
+    if (data && data.length > 0) {
+      setSaleId(data[0].id);
+      setPdfGenerated(true);
+      toast({
+        title: "Venta registrada con éxito.",
+        description: "La venta ha sido guardada correctamente.",
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+  // Limpiar formulario SOLO después de que el PDF se haya generado y subido
+  // Esto lo puedes hacer en el callback onPdfUploaded del componente Pdf
+    }
+  } catch (err) {
+    console.error("Error al registrar la venta:", err);
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
   const pdfData = {
-    ...saleData,
-    ...formData,
+    ...mergedFormData,
     id: saleId,
   };
 
@@ -480,8 +488,6 @@ const Sales = () => {
               <Total
                 formData={formData}
                 setFormData={handleFormDataChange}
-                saleData={saleData}
-                setSaleData={setSaleData}
               />
             </Box>
           </Box>

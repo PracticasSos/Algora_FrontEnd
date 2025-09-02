@@ -8,35 +8,15 @@ import {
   Text,
   useColorModeValue,
 } from "@chakra-ui/react";
-import { useEffect } from "react";
 
 const Total = ({ formData, setFormData }) => {
-  useEffect(() => {
-    setFormData(prevFormData => {
-      const totalFrame = prevFormData.total_p_frame > 0
-        ? prevFormData.total_p_frame
-        : prevFormData.p_frame || 0;
 
-      const totalLens = prevFormData.total_p_lens > 0
-        ? prevFormData.total_p_lens
-        : prevFormData.p_lens || 0;
-
-      const total = Number(totalFrame) + Number(totalLens);
-      const balance = prevFormData.balance === '' ? 0 : parseFloat(prevFormData.balance);
-      const credit = isNaN(balance) ? total : total - balance;
-
-      return {
-        ...prevFormData,
-        total,
-        credit,
-      };
-    });
-  }, [
-    formData.p_frame,
-    formData.p_lens,
-    formData.total_p_frame,
-    formData.total_p_lens,
-  ]);
+  // Calcular los valores directamente en el render
+  const totalFrame = formData.total_p_frame > 0 ? formData.total_p_frame : formData.p_frame || 0;
+  const totalLens = formData.total_p_lens > 0 ? formData.total_p_lens : formData.p_lens || 0;
+  const total = Number(totalFrame) + Number(totalLens);
+  const balance = formData.balance === '' ? 0 : parseFloat(formData.balance);
+  const credit = isNaN(balance) ? total : total - balance;
 
   const handleCreditChange = (e) => {
     const value = e.target.value;
@@ -44,7 +24,6 @@ const Total = ({ formData, setFormData }) => {
       setFormData({
         ...formData,
         balance: value,
-        credit: (formData.total || 0) - (parseFloat(value) || 0),
       });
     }
   };
@@ -123,7 +102,7 @@ const Total = ({ formData, setFormData }) => {
                   placeholder="$150"
                   height="45px"
                   borderRadius="full"
-                  value={Number(formData.total || 0).toFixed(2)}
+                  value={Number(total).toFixed(2)}
                   isReadOnly
                   bg={selectBg}
                   borderColor={borderColor}
@@ -169,7 +148,7 @@ const Total = ({ formData, setFormData }) => {
                   placeholder="$20"
                   borderRadius="full"
                   height="45px"
-                  value={(formData.credit ?? 0).toFixed(2)}
+                  value={Number(credit).toFixed(2)}
                   isReadOnly
                   bg={selectBg}
                   borderColor={borderColor}

@@ -1,5 +1,3 @@
-
-
 import { useEffect, useState } from "react";
 import { supabase } from "../../../api/supabase";
  import { Box, VStack, SimpleGrid, Flex, Img, FormControl, FormLabel, Input, useBreakpointValue, useColorModeValue } from "@chakra-ui/react";

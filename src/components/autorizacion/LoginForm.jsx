@@ -26,7 +26,7 @@ const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const isMobile = useBreakpointValue({ base: true, md: false });  
+  const isMobile = useBreakpointValue({ base: true, md: false });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -60,66 +60,65 @@ const LoginForm = () => {
 
       console.log("Auth login exitoso:", user);
 
-      // 👉 Log JWT completo para debug
-      const { data: sessionData } = await supabase.auth.getSession();
-      console.log("JWT session completa:", sessionData?.session);
-      console.log("Tenant_id en metadata del JWT:", user.user_metadata?.tenant_id);
+      // 2) Esperar un momento para que el auth hook procese
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // 2) Buscar en tabla users
+      // 3) Refrescar la sesión para obtener los claims actualizados
+      const { data: refreshedSession, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError) {
+        console.error("Error refrescando sesión:", refreshError);
+      }
+
+      const currentUser = refreshedSession?.session?.user || user;
+      console.log("Usuario después del refresh:", currentUser);
+      console.log("Claims en JWT:", currentUser.user_metadata);
+
+      // 4) Buscar en tabla users (ahora debería funcionar con las políticas)
       let { data: userData, error: userError } = await supabase
         .from('users')
-        .select('id, role_id, tenant_id, auth_id, email')
-        .eq('auth_id', user.id)
+        .select('id, role_id, tenant_id, auth_id, email, firstname, lastname')
+        .eq('auth_id', currentUser.id)
         .maybeSingle();
 
+      // 5) Si no se encuentra por auth_id, buscar por email y actualizar
       if (!userData) {
         console.log("No se encontró por auth_id, buscando por email...");
         const { data: userByEmail } = await supabase
           .from('users')
-          .select('id, role_id, tenant_id, auth_id, email')
-          .eq('email', user.email)
+          .select('id, role_id, tenant_id, auth_id, email, firstname, lastname')
+          .eq('email', currentUser.email)
           .maybeSingle();
 
         if (userByEmail) {
           console.log("Usuario encontrado por email. Actualizando auth_id...");
-          await supabase
+          const { error: updateError } = await supabase
             .from('users')
-            .update({ auth_id: user.id })
+            .update({ auth_id: currentUser.id })
             .eq('id', userByEmail.id);
 
-          userData = { ...userByEmail, auth_id: user.id };
+          if (updateError) {
+            console.error("Error actualizando auth_id:", updateError);
+          }
+
+          userData = { ...userByEmail, auth_id: currentUser.id };
         }
       }
 
       if (!userData) {
         setErrorMessage('Usuario no encontrado en la base de datos.');
-        console.error("Usuario no encontrado en users:", user.email);
+        console.error("Usuario no encontrado en users:", currentUser.email);
         setLoading(false);
         return;
       }
 
-      // 3) Garantizar tenant_id en metadata
-      const tenantInJWT = user.user_metadata?.tenant_id;
-      if (!tenantInJWT || tenantInJWT !== userData.tenant_id) {
-        console.log("Tenant_id incorrecto o faltante en JWT. Actualizando...");
-        const { error: updateError } = await supabase.auth.updateUser({
-          data: { tenant_id: userData.tenant_id }
-        });
-        if (updateError) {
-          console.error("Error actualizando tenant_id:", updateError);
-        } else {
-          console.log("Tenant_id actualizado en metadata, refrescando sesión...");
-          await supabase.auth.refreshSession();
-          window.location.reload();
-          return;
-        }
-      }
+      console.log("Datos del usuario encontrados:", userData);
 
-      // 4) Guardar en localStorage
-      const fullUserData = { ...authData.user, ...userData };
+      // 6) Guardar en localStorage
+      const fullUserData = { ...currentUser, ...userData };
       localStorage.setItem('user', JSON.stringify(fullUserData));
 
-      // 5) Redirigir según role_id
+      // 7) Redirigir según role_id
       setLoading(false);
       switch (userData.role_id) {
         case 1: navigate('/admin'); break;

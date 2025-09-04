@@ -124,7 +124,15 @@ export const generateContractPDF = async (formData, measureData, patientData, br
       .replace(/{{deliveryTime}}/g, deliveryText)
       .replace(/{{observationsSection}}/g, observationsSection + termsAcceptance)
       .replace(/{{clientSignature}}/g, clientSignature)
-      .replace(/{{currentDate}}/g, new Date().toLocaleDateString('es-ES'));
+        .replace(/{{currentDate}}/g, new Date().toLocaleDateString('es-ES'));
+
+      // Reemplazar el texto de agradecimiento por nombre y dirección de sucursal
+      if (branchData?.address) {
+        finalHtml = finalHtml.replace(
+          /<p>Gracias por confiar en (.*?)<\/p>/,
+          `<p>Gracias por confiar en ${branchData.name || '-'}<br><span style="font-size:9px;color:#555;">${branchData.address}</span></p>`
+        );
+      }
 
     
        // Crear nombre del archivo SIN caracteres especiales

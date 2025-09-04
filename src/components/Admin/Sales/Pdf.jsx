@@ -74,7 +74,7 @@ const Pdf = ({ formData, onPdfUploaded }) => {
     try {
       const { data, error } = await supabase
         .from("branchs")
-        .select("name")
+        .select("name, address")
         .eq("id", branchId)
         .single();
       

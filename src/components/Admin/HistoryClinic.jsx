@@ -1,16 +1,23 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from '../../api/supabase';
-import { Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Input, Select, useColorModeValue } from '@chakra-ui/react';
+import { Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Input, Select, useColorModeValue, useToast, 
+  AlertDialog,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,} from '@chakra-ui/react';
 import SmartHeader from "../header/SmartHeader";
 
 const HistoryClinic = () => {
-    const [patients, setPatients] = useState([]);
-    const [filteredPatients, setFilteredPatients] = useState([]);
-    const [selectedBranch, setSelectedBranch] = useState("");
-    const [search, setSearch] = useState('');
-    const [branches, setBranches] = useState([]);
-    const navigate = useNavigate();
+  const [patients, setPatients] = useState([]);
+  const [filteredPatients, setFilteredPatients] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState("");
+  const [search, setSearch] = useState('');
+  const [branches, setBranches] = useState([]);
+  const navigate = useNavigate();
+
 
     useEffect(() => {
       fetchBranches();

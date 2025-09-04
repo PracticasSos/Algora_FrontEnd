@@ -1,7 +1,12 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../api/supabase';
-import { Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Text, useColorModeValue, HStack} from '@chakra-ui/react';
+import { Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Text, useColorModeValue, HStack, AlertDialog, useToast,
+  AlertDialogOverlay,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter} from '@chakra-ui/react';
 import { FaEye } from 'react-icons/fa';
 import SmartHeader from '../header/SmartHeader';
 
@@ -9,6 +14,12 @@ const PatientHistory = () => {
   const location = useLocation();
   const selectedPatient = location.state?.patientData || null;
   const [sales, setSales] = useState([]);
+    const [loadingDelete, setLoadingDelete] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
+    const [selectedPatients, setSelectedPatient] = useState(null);
+    const cancelRef = React.useRef();
+    const user = JSON.parse(localStorage.getItem('user'));
+    const toast = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,6 +27,7 @@ const PatientHistory = () => {
       fetchSales(selectedPatient.id);
     }
   }, [selectedPatient]);
+
 
   const fetchSales = async (patientId) => {
     const { data, error } = await supabase
@@ -39,6 +51,45 @@ const PatientHistory = () => {
     navigate(`/history-clinic/patient-history/${patientId}/sales-history/${sale.id}`, {
       state: { saleData: sale },
     });
+  };
+
+  const confirmDelete = (patient) => {
+      setSelectedPatient(patient);
+      setIsOpen(true);
+    };
+  
+    const handleDeleteSale = async () => {
+    setLoadingDelete(true);
+    // Eliminar la venta por su id
+    const { error } = await supabase
+      .from('sales')
+      .delete()
+      .match({ id: selectedPatients.id });
+
+    setLoadingDelete(false);
+    setIsOpen(false);
+
+    if (error) {
+      toast({
+        title: 'Error al eliminar',
+        description: error.message,
+        status: 'error',
+        duration: 4000,
+        isClosable: true,
+        position: 'center',
+      });
+    } else {
+      // Actualizar el estado sales para quitar la venta eliminada
+      setSales((prev) => prev.filter((sale) => sale.id !== selectedPatients.id));
+      toast({
+        title: 'Venta eliminada',
+        description: 'La venta ha sido eliminada exitosamente',
+        status: 'success',
+        duration: 4000,
+        isClosable: true,
+        position: 'center',
+      });
+    }
   };
 
   const handleNavigate = (route = null) => {
@@ -137,6 +188,7 @@ const PatientHistory = () => {
                   <Th>Abono</Th>
                   <Th>Saldo</Th>
                   <Th>Pago En</Th>
+                  {user && user.role_id === 1 && <Th>Acciones</Th>}
                 </Tr>
               </Thead>
               <Tbody>
@@ -149,6 +201,21 @@ const PatientHistory = () => {
                     <Td>{sale.credit}</Td>
                     <Td>{sale.balance}</Td>
                     <Td>{sale.payment_in}</Td>
+                    {user && user.role_id === 1 && (
+                        <Td>
+                          <Button
+                            size="sm"
+                            colorScheme="red"
+                            isLoading={loadingDelete}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              confirmDelete(sale);
+                            }}
+                          >
+                            Eliminar
+                          </Button>
+                        </Td>
+                                          )}
                   </Tr>
                 ))}
               </Tbody>
@@ -159,6 +226,33 @@ const PatientHistory = () => {
         <Text fontSize="xl" color="red.500">Error: No se seleccionó ningún paciente</Text>
       )}
     </Box>
+    <AlertDialog
+              isOpen={isOpen}
+              leastDestructiveRef={cancelRef}
+              onClose={() => setIsOpen(false)}
+            >
+              <AlertDialogOverlay>
+                <AlertDialogContent>
+                  <AlertDialogHeader fontSize="lg" fontWeight="bold">
+                    Confirmar eliminación
+                  </AlertDialogHeader>
+    
+                  <AlertDialogBody>
+                    {selectedPatient &&
+                      `¿Seguro que deseas eliminar la venta de ${selectedPatient.pt_firstname} ${selectedPatient.pt_lastname}?`}
+                  </AlertDialogBody>
+    
+                  <AlertDialogFooter>
+                    <Button ref={cancelRef} onClick={() => setIsOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button colorScheme="red" onClick={handleDeleteSale} ml={3} isLoading={loadingDelete}>
+                      Eliminar
+                    </Button>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialogOverlay>
+            </AlertDialog>
     </Box>
   );
 };

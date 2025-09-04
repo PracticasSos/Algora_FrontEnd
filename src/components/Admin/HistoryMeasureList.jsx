@@ -61,7 +61,7 @@ const HistoryMeasureList = () => {
                 });
                 setPatients(sortedPatients);
                 setFilteredPatients(sortedPatients);
-            console.error("Error fetching patients:", error);
+            
         } finally {
             setLoading(false);
         }

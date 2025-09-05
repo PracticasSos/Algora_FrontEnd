@@ -174,24 +174,17 @@ const Pdf = ({ formData, onPdfUploaded }) => {
       return;
     }
 
-    // USAR EL MENSAJE DESDE MessageSection (formData.message)
-    const messageFromSection = formData?.message || "";
-    
-    // Si no hay mensaje personalizado, usar uno por defecto
-    const fallbackMessage = "¡Hola! 👋 Muchas gracias por confiar en nosotros. Te adjuntamos el contrato de servicio.";
-    
-    // Usar el mensaje del MessageSection o el fallback si está vacío
-    const customMessage = messageFromSection.trim() || fallbackMessage;
-    
-    // Crear mensaje completo para WhatsApp
+    // Usar SIEMPRE el mensaje personalizado del MessageSection y reemplazar {{BRANCH}} por el nombre real de la sucursal
+    let branchName = formData?.branch_name || "VEOPTICS";
+    // Si viene de la consulta de branchs, usar ese nombre
+    if (formData?.branchs_id && formData?.branchs_id !== "") {
+      branchName = formData?.branch_name || branchName;
+    }
+    // Reemplazar {{BRANCH}} en el mensaje
+    const customMessage = (formData?.message || "").replace(/{{BRANCH}}/g, branchName).trim();
     const fullMessage = `${customMessage}\n\n📄 *Contrato de Servicio:*\n${pdfUrl}`;
-    
-    // Crear URL de WhatsApp
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(fullMessage)}`;
-    
-    // Abrir WhatsApp
     window.open(whatsappUrl, '_blank');
-
     toast({
       title: "WhatsApp abierto ✅",
       description: "Se envió el mensaje personalizado del MessageSection.",

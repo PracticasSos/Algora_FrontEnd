@@ -37,20 +37,21 @@ const Sales = () => {
     total_p_lens: "",
   });
   const [formData, setFormData] = useState({
-    p_frame: 0,
-    p_lens: 0,
-    discount_frame: 0,
-    discount_lens: 0,
-    total_p_frame: 0,
-    total_p_lens: 0,
-    total: 0,
-    credit: 0,
-    balance: 0,
-    payment_in: "",
-    message: "",
-    measure_id: "",
-    signature: "",
-    termsAccepted: false
+  p_frame: 0,
+  p_lens: 0,
+  discount_frame: 0,
+  discount_lens: 0,
+  total_p_frame: 0,
+  total_p_lens: 0,
+  total: 0,
+  credit: 0,
+  balance: 0,
+  payment_in: "",
+  message: "",
+  termsMessage: "",
+  measure_id: "",
+  signature: "",
+  termsAccepted: false
   });
   const [patientMeasures, setPatientMeasures] = useState([]);
   const [filteredMeasures, setFilteredMeasures] = useState([]);
@@ -243,6 +244,8 @@ const Sales = () => {
     credit: (formData.credit !== undefined && formData.credit !== "") ? formData.credit : saleData.credit,
     payment_in: formData.payment_in && formData.payment_in !== "" ? formData.payment_in : saleData.payment_in,
     measure_id: formData.measure_id && formData.measure_id !== "" ? formData.measure_id : saleData.measure_id,
+    message: formData.message,
+    termsMessage: formData.termsMessage,
   };
   const handleSubmit = async () => {
   if (isSubmitting) return;

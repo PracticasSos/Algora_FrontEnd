@@ -72,13 +72,24 @@ const RegisterPatientForm = () => {
         .insert([formData]);
 
       if (error) {
-        toast ({
-          title: "Error",
-          description: "No se pudo registrar el paciente.",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
+        // Verificar si el error es por cédula repetida (pt_ci debe ser única)
+        if (error.message && error.message.toLowerCase().includes('duplicate') && error.message.toLowerCase().includes('pt_ci')) {
+          toast({
+            title: "Cédula repetida",
+            description: "Ya existe un paciente registrado con esta cédula.",
+            status: "warning",
+            duration: 4000,
+            isClosable: true,
+          });
+        } else {
+          toast ({
+            title: "Error",
+            description: "No se pudo registrar el paciente.",
+            status: "error",
+            duration: 3000,
+            isClosable: true,
+          });
+        }
         console.error("Error:", error);
       } else {
         toast ({

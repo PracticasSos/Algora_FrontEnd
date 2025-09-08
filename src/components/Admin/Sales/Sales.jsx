@@ -5,7 +5,7 @@ import { supabase } from "../../../api/supabase";
 import { Box, Heading, Button, Text, Grid, useColorModeValue  } from "@chakra-ui/react";
 import Total from "./Total";
 import Pdf from "./Pdf";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import {useNavigate, useParams } from "react-router-dom";
 import SignaturePadComponent from "./SignaturePadComponent";
 import { useToast } from "@chakra-ui/react";
 import Delivery from "./Delivery";
@@ -281,31 +281,10 @@ const Sales = () => {
     return;
   }
 
-  if (mergedFormData.brand_id) {
-    const { data: frame, error } = await supabase
-      .from("inventario")
-      .select("quantity")
-      .eq("id", mergedFormData.brand_id)
-      .single();
-    if (error || !frame) {
-      console.error("Error obteniendo cantidad:", error);
-      setIsSubmitting(false);
-      return;
-    }
-    if (frame.quantity > 0) {
-      const { error: updateError } = await supabase
-        .from("inventario")
-        .update({ quantity: frame.quantity - 1 })
-        .eq("id", mergedFormData.brand_id);
-      if (updateError) {
-        console.error("Error actualizando cantidad:", updateError);
-      }
-    } else {
-      console.log("No hay suficiente cantidad para el armazón seleccionado.");
-      setIsSubmitting(false);
-      return;
-    }
-  }
+  await supabase.rpc('descontar_stock', {
+    p_inventario_id: mergedFormData.brand_id,
+    p_cantidad: 1
+  });
 
   const saleDataToSave = {
     date: mergedFormData.date,
@@ -402,38 +381,12 @@ const Sales = () => {
     });
   };
 
-
-  const handleNavigate = (route = null) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (route) {
-      navigate(route);
-      return;
-    }
-    if (!user || !user.role_id) {
-      navigate('/Login');
-      return;
-    }
-    switch (user.role_id) {
-      case 1:
-        navigate('/Admin');
-        break;
-      case 2:
-        navigate('/Optometra');
-        break;
-      case 3:
-        navigate('/Vendedor');
-        break;
-      default:
-        navigate('/');
-    }
-  };
   const moduleSpecificButton = null;
 
   const cardBg = useColorModeValue(
     'rgba(207, 202, 202, 0.5)', // Light: tarjetas blancas
     'rgba(48, 44, 44, 0.2)' // Dark: tu fondo actual
   );
-
 
   // Función para renderizar el contenido según el paso actual
   const renderStepContent = () => {

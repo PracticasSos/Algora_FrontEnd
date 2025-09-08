@@ -4,6 +4,7 @@ import { supabase } from "../../api/supabase.js";
 import { Box, Button, Heading, Input, Table, Tbody, Text, Td, Th, Thead, Tr, Select, useToast, useColorModeValue, HStack } from "@chakra-ui/react";
 import { FaEye } from 'react-icons/fa';
 import SmartHeader from "../header/SmartHeader.jsx";
+import GenerateInventoryReport from "./Inventory/Report.jsx";
 
 const InventarioList = () => {
   const [inventoryList, setInventoryList] = useState([]);
@@ -319,6 +320,8 @@ const InventarioList = () => {
               >
                 <Text fontSize="lg" fontWeight="bold">Stock total en esta sucursal: {totalStock}</Text>
               </Box>
+              <GenerateInventoryReport branchFilter={branchFilter} inventoryList={inventoryList} />
+
             </Box>
           </>
         )

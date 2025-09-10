@@ -71,7 +71,7 @@ const Total = ({ formData, setFormData }) => {
           <SimpleGrid columns={[3, 3]} spacing={4} mb={6}>
             {[
               { src: "/assets/iconometodoefectivo.png",  value: "efectivo" },
-              { src: "/assets/iconometodotargeta.png", value: "datafas" },
+              { src: "/assets/iconometodotargeta.png", value: "datafast" },
               { src: "/assets/iconometododatafast.png", value: "transferencia" },
             ].map(({ src, alt, value }) => (
               <Box

@@ -11,7 +11,6 @@ import { Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, VStack, Textarea
 } from "@chakra-ui/react";
 import { useNavigate } from 'react-router-dom';
 import SearchBar from './SearchBar';
-import HeaderAdmin from '../header/HeaderAdmin';
 import SmartHeader from '../header/SmartHeader';
 import { mod } from '@tensorflow/tfjs';
 
@@ -132,45 +131,53 @@ const RetreatsPatients = () => {
     }
   };
   
-  const handleSearch = (e) => {
-    const value = e.target.value.toLowerCase();
-    setSearchTermPatients(value);
-    const filteredSuggestions = allPatients
-      .filter((patient) => {
+  const filterPatients = ({ searchTerm = '', selectedPatientObj = null, suggestionName = '' } = {}) => {
+    let filtered = allPatients;
+    let suggestionsList = [];
+
+    if (searchTerm) {
+      filtered = filtered.filter((patient) => {
         const fullName = `${patient.pt_firstname} ${patient.pt_lastname}`.toLowerCase();
-        return fullName.includes(value);
-      }).map((patient) => `${patient.pt_firstname} ${patient.pt_lastname}`);
-    setSuggestions(filteredSuggestions);
-    updateFilteredSales(value);
-  };
-  
-  const updateFilteredSales = (searchTerm) => {
-    if (!searchTerm) {
-      setFilteredPatients(allPatients);
+        return fullName.includes(searchTerm.toLowerCase());
+      });
+      suggestionsList = filtered.map((patient) => `${patient.pt_firstname} ${patient.pt_lastname}`);
+      setSuggestions(suggestionsList);
+      setSearchTermPatients(searchTerm);
+      setFilteredPatients(filtered);
       return;
     }
-    const filtered = allPatients.filter((sale) => {
-      const fullName = sale.patients
-        ? `${sale.patients.pt_firstname} ${sale.patients.pt_lastname}`.toLowerCase()
-        : "";
-      return (
-        fullName.includes(searchTerm.toLowerCase()) ||
-        (selectedPatient && sale.patient?.id === selectedPatient.id) 
-      );
-    });
-    setFilteredSales(filtered);
-  } 
 
-  const handlePatientClick = (selectedPatient) => {
-    setSelectedPatient(selectedPatient);
-    setSearchTermPatients(`${selectedPatient.pt_firstname} ${selectedPatient.pt_lastname}`);
-    setShowSearchSuggestions(false);
-    
-    const patientRetiros = allPatients.filter(patient => 
-      patient.pt_firstname === selectedPatient.pt_firstname && 
-      patient.pt_lastname === selectedPatient.pt_lastname
-    );
-    setFilteredPatients(patientRetiros);
+    if (selectedPatientObj) {
+      setSelectedPatient(selectedPatientObj);
+      setSearchTermPatients(`${selectedPatientObj.pt_firstname} ${selectedPatientObj.pt_lastname}`);
+      setShowSearchSuggestions(false);
+      filtered = allPatients.filter(patient =>
+        patient.pt_firstname === selectedPatientObj.pt_firstname &&
+        patient.pt_lastname === selectedPatientObj.pt_lastname
+      );
+      setFilteredPatients(filtered);
+      return;
+    }
+
+    if (suggestionName) {
+      setSearchTermPatients(suggestionName);
+      setSuggestions([]);
+      const foundPatient = allPatients.find(
+        (patient) => `${patient.pt_firstname} ${patient.pt_lastname}`.toLowerCase() === suggestionName.toLowerCase()
+      );
+      if (foundPatient) {
+        setSelectedPatient(foundPatient);
+        filtered = allPatients.filter(
+          (patient) =>
+            patient.pt_firstname === foundPatient.pt_firstname &&
+            patient.pt_lastname === foundPatient.pt_lastname
+        );
+        setFilteredPatients(filtered);
+      }
+      return;
+    }
+
+    setFilteredPatients(filtered);
   };
 
   const mensajeDefault = `Le saludamos desde Veoptics, sus lentes se encuentran listos para que pueda acercarse a retirarlos.
@@ -191,25 +198,17 @@ const RetreatsPatients = () => {
     window.open(whatsappUrl, "_blank");
   };
 
-  const handleSuggestionSelect = (selectedName) => {
-    setSearchTermPatients(selectedName); 
-    setSuggestions([]); 
-    const selectedPatient = allPatients.find(
-        (patient) =>
-            `${patient.pt_firstname} ${patient.pt_lastname}`.toLowerCase() ===
-            selectedName.toLowerCase()
-    );
+  const handleSearch = (e) => {
+    filterPatients({ searchTerm: e.target.value.toLowerCase() });
+  };
 
-    if (selectedPatient) {
-        setSelectedPatient(selectedPatient); 
-        const patientRetiros = allPatients.filter(
-            (patient) =>
-                patient.pt_firstname === selectedPatient.pt_firstname &&
-                patient.pt_lastname === selectedPatient.pt_lastname
-        );
-        setFilteredPatients(patientRetiros); 
-    }
-    };
+  const handlePatientClick = (selectedPatient) => {
+    filterPatients({ selectedPatientObj: selectedPatient });
+  };
+
+  const handleSuggestionSelect = (selectedName) => {
+    filterPatients({ suggestionName: selectedName });
+  };
 
   const sortedPatients = [...filteredPatients].sort((a, b) => {
     // Si alguna fecha es inválida, ponla al final
@@ -217,34 +216,7 @@ const RetreatsPatients = () => {
     if (!b.date) return -1;
     return new Date(b.date) - new Date(a.date);
   }); 
-    const handleNavigate = (route = null) => {
-      const user = JSON.parse(localStorage.getItem('user'));
-      if (route) {
-        navigate(route);
-        return;
-      }
-      if (!user || !user.role_id) {
-        navigate('/LoginForm');
-        return;
-      }
-      switch (user.role_id) {
-        case 1:
-          navigate('/Admin');
-          break;
-        case 2:
-          navigate('/Optometra');
-          break;
-        case 3:
-          navigate('/Vendedor');
-          break;
-        case 4:
-          navigate('/SuperAdmin');
-          break;
-        default:
-        navigate('/');
-      }
-  };
-
+    
   const moduleSpecificButton = null;
 
     const textColor = useColorModeValue('gray.800', 'white');
@@ -252,8 +224,6 @@ const RetreatsPatients = () => {
     const tableBg = useColorModeValue('white', 'gray.700');
     const tableHoverBg = useColorModeValue('gray.100', 'gray.600');
    
-  
-
   return (
     <Box display="flex" flexDirection="column" alignItems="center" minHeight="100vh" p={6}>
       <SmartHeader moduleSpecificButton={moduleSpecificButton} />

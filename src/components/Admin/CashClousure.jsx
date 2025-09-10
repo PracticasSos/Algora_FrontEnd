@@ -86,8 +86,11 @@ const CashClosure = () => {
             credit,
             balance,
             payment_in,
-            patients (pt_firstname, pt_lastname)
-        `).eq("branchs_id", branchId);
+            patients (pt_firstname, pt_lastname),
+            is_refund
+        `)
+        .eq("branchs_id", branchId)
+        .eq("is_refund", false);
 
         if (since && till) {
             query = query.gte("date", since).lte("date", till);
@@ -179,9 +182,11 @@ const CashClosure = () => {
                 patients (pt_firstname, pt_lastname),
                 total,
                 payment_balance,
-                credit
+                credit,
+                is_refund
             `)
-            .eq("branchs_id", branchId);
+            .eq("branchs_id", branchId)
+            .eq("is_refund", false);
     
         try {
             const { data: salesToday, error: salesError } = await salesQuery;

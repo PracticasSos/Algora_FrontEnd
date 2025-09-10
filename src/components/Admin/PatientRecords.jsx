@@ -18,7 +18,7 @@ const PatientRecords = () => {
     const [finalBalance, setFinalBalance] = useState({ EFEC: 0, DATAF: 0, TRANS: 0, total: 0 });
     const [totalAbonosDelDia, setTotalAbonosDelDia] = useState({ EFEC: 0, TRANS: 0, DATAF: 0 });
     const navigate = useNavigate();
-
+    
     useEffect(() => {
         fetchBranches();
     }, []);
@@ -103,10 +103,12 @@ const PatientRecords = () => {
                     credit, 
                     payment_in_day, 
                     payment_in,
-                    patients (pt_firstname, pt_lastname)
+                    patients (pt_firstname, pt_lastname),
+                    is_refund
                 `)
                 .eq("date", today)  
-                .eq("branchs_id", branchId);
+                .eq("branchs_id", branchId)
+                .eq("is_refund", false);
     
             if (error) throw error;
     
@@ -148,9 +150,11 @@ const PatientRecords = () => {
                     patients (pt_firstname, pt_lastname),
                     total,
                     payment_balance,
-                    credit
+                    credit,
+                    is_refund
                 `)
-                .eq("branchs_id", branchId);
+                .eq("branchs_id", branchId)
+                .eq("is_refund", false);
     
             if (salesError) throw salesError;
     

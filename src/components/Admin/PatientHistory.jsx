@@ -9,6 +9,10 @@ import { Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Text, useColorMo
   AlertDialogFooter} from '@chakra-ui/react';
 import { FaEye } from 'react-icons/fa';
 import SmartHeader from '../header/SmartHeader';
+import RefundButton from './rembolso/Refund';
+
+
+  
 
 const PatientHistory = () => {
   const location = useLocation();
@@ -22,6 +26,7 @@ const PatientHistory = () => {
     const toast = useToast();
   const navigate = useNavigate();
 
+
   useEffect(() => {
     if (selectedPatient) {
       fetchSales(selectedPatient.id);
@@ -32,7 +37,7 @@ const PatientHistory = () => {
   const fetchSales = async (patientId) => {
     const { data, error } = await supabase
       .from('sales')
-      .select('id, date, inventario (brand), lens:lens_id(lens_type), total, credit, balance, payment_in')
+      .select('id, date, inventario (brand), lens:lens_id(lens_type), total, credit, balance, payment_in, is_refund')
       .eq('patient_id', patientId);
 
     if (error) {
@@ -90,6 +95,12 @@ const PatientHistory = () => {
         position: 'center',
       });
     }
+  };
+
+  const handleRefundUpdate = (saleId) => {
+    setSales((prevSales) => 
+      prevSales.map((sale) => sale.id === saleId ? { ...sale, is_refund: true } : sale)
+    );
   };
 
   const handleNavigate = (route = null) => {
@@ -201,6 +212,9 @@ const PatientHistory = () => {
                     <Td>{sale.credit}</Td>
                     <Td>{sale.balance}</Td>
                     <Td>{sale.payment_in}</Td>
+                    <Td>
+                      <RefundButton sale={sale} onRefund={handleRefundUpdate} />
+                    </Td>
                     {user && user.role_id === 1 && (
                         <Td>
                           <Button
@@ -218,6 +232,7 @@ const PatientHistory = () => {
                                           )}
                   </Tr>
                 ))}
+
               </Tbody>
             </Table>
           </Box>

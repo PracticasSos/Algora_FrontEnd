@@ -260,23 +260,24 @@ const GenerateInventoryReport = ({ branchFilter, inventoryList }) => {
                 let stockClass = 'stock-good';
                 let estadoText = 'Normal';
                 
-                if (item.stock_final <= 0) {
-                    stockClass = 'stock-alert';
-                    estadoText = 'Sin Stock';
-                } else if (item.stock_final <= 5) {
-                    stockClass = 'stock-warning';
-                    estadoText = 'Stock Bajo';
-                }
-                
-                return `
-                <tr>
-                    <td><strong>${item.brand}</strong></td>
-                    <td>${item.stock_inicial}</td>
-                    <td>${item.salidas}</td>
-                    <td class="${stockClass}">${item.stock_final}</td>
-                    <td class="${stockClass}">${estadoText}</td>
-                </tr>
-                `;
+                    // Calcular el stock final correctamente
+                    const stockFinal = item.stock_inicial - item.salidas;
+                    if (stockFinal <= 0) {
+                        stockClass = 'stock-alert';
+                        estadoText = 'Sin Stock';
+                    } else if (stockFinal <= 5) {
+                        stockClass = 'stock-warning';
+                        estadoText = 'Stock Bajo';
+                    }
+                    return `
+                    <tr>
+                        <td><strong>${item.brand}</strong></td>
+                        <td>${item.stock_inicial}</td>
+                        <td>${item.salidas}</td>
+                        <td class="${stockClass}">${stockFinal}</td>
+                        <td class="${stockClass}">${estadoText}</td>
+                    </tr>
+                    `;
             }).join('')}
         </tbody>
     </table>

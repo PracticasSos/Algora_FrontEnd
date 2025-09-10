@@ -7,8 +7,8 @@ import RegisterPatientForm from "../components/Optometra/RegisterPatient";
 import OptometraDashBoard from "../components/optionsauth/OptionsOptometra";
 import VendedorDashBoard from "../components/optionsauth/OptionsVendedor.jsx";
 import ListPatients from "../components/Optometra/ListPatients"
-import Inventario from "../components/Admin/Inventario.jsx";
-import InventarioList from "../components/Admin/InventarioList.jsx";
+import Inventario from "../components/Admin/Inventory/Inventario.jsx";
+import InventarioList from "../components/Admin/Inventory/InventarioList.jsx";
 import Branch from "../components/Admin/Branch.jsx";
 import ListBranch from "../components/Admin/ListBranch.jsx";
 import Lab from "../components/Admin/Labs.jsx";

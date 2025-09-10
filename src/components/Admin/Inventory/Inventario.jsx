@@ -1,9 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import {Box, Button, FormControl, FormLabel, Input, Heading, VStack, useToast, Select, useColorModeValue, Text, HStack} from "@chakra-ui/react";
 import { useState, useEffect } from "react";
-import { supabase } from "../../api/supabase.js";
+import { supabase } from "../../../api/supabase.js";
 import { FaEye } from 'react-icons/fa';
-import SmartHeader from "../header/SmartHeader.jsx";
+import SmartHeader from "../../header/SmartHeader.jsx";
 
 const Inventario = () => {
   const navigate = useNavigate();

@@ -34,7 +34,6 @@ import Sales from "../components/Admin/Sales/Sales.jsx";
 import Register from "../components/Admin/Register.jsx";
 import HistoryClinic from "../components/Admin/HistoryClinic.jsx";
 import SalesHistory from "../components/Admin/Sales/history/SalesHistory.jsx";
-import Tenants from "../components/tenants/Tenants.jsx";
 import PrintCertificate from "../components/Admin/certificate/PrintCertificate.jsx";
 import Tenant from "../components/Admin/Tenant.jsx";
 import UploadLogo from "../components/Admin/certificate/UploadLogo.jsx";
@@ -50,6 +49,7 @@ import LensCustomizer from "../components/ExperienceModule/pages/LensCustomizer.
 import Loader from "../components/ExperienceModule/ExperienceUI/Loader.jsx";
 import MessageClients from "../components/ExperienceModule/pages/MessageClients.jsx";
 import ChangePassword from "../components/optionsauth/ChangePassword.jsx";
+import Tenants from "../components/tenants/Tenants.jsx";
 
 
 const AppRouter = () => {
@@ -108,6 +108,8 @@ const AppRouter = () => {
             <Route path="/lens" element={<LensCustomizer />} />
             <Route path="/loader" element={<Loader />} />
             <Route path="/mensajeria" element={<MessageClients />} />
+            <Route path="/super-admin/tenants" element={<Tenants />} />
+
 
 
         </Routes>

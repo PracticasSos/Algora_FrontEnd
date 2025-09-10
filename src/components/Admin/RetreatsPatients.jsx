@@ -82,9 +82,11 @@ const RetreatsPatients = () => {
           total,
           balance,
           credit,
-          branchs:branchs_id(id, name)
+          branchs:branchs_id(id, name),
+          is_refund
         `)
-        .eq('is_completed', false);
+        .eq('is_completed', false)
+        .eq("is_refund", false);
 
         if (branchId) {
           query = query.eq('branchs_id', branchId);

@@ -76,10 +76,12 @@ const BalancesPatient = () => {
                     balance,
                     credit,
                     patients:patient_id(pt_firstname, pt_lastname, pt_phone),
-                    branchs:branchs_id(id, name)
+                    branchs:branchs_id(id, name),
+                    is_refund
                 `)
-                .gt('credit', 0) // Solo ventas con saldo pendiente
-                .order('date', { ascending: false }); // Ordenar por fecha más reciente
+                .gt('credit', 0) 
+                .order('date', { ascending: false })
+                .eq("is_refund", false);
 
             if  (branchId) {
                 query = query.eq('branchs_id', branchId);

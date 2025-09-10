@@ -31,9 +31,11 @@ const Balance = () => {
     const fetchAbonos = async (branchId) => {
         const { data, error } = await supabase
             .from("sales")
-            .select("id, date, branchs_id, total, credit, balance, payment_balance, patients (pt_firstname, pt_lastname)")
+            .select("id, date, branchs_id, total, credit, balance, payment_balance, patients (pt_firstname, pt_lastname), is_refund")
             .eq("branchs_id", branchId)
-            .gt("credit", 0);
+            .gt("credit", 0)
+            .eq("is_refund", false);
+            
 
         if (!error) {
             setRecords(data);

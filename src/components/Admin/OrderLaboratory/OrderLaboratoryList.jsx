@@ -56,11 +56,13 @@ const OrderLaboratoryList = () => {
             pt_firstname,
             pt_lastname,
             pt_ci
-          )
+          ),
+          is_refund
         `)
         .gte('date', `${todayString}T00:00:00`)
         .lte('date', `${todayString}T23:59:59`)
-        .eq('branchs_id', selectedBranch);
+        .eq('branchs_id', selectedBranch)
+        .eq("is_refund", false);
 
       if (error) throw error;
 

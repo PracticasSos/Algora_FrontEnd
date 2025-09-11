@@ -52,6 +52,8 @@ const PrintCertificate = () => {
 
   const navigate = useNavigate();
   const [tenantId, setTenantId] = useState(null);
+  const [doctorSeal, setDoctorSeal] = useState(null);
+  const [footerInfo, setFooterInfo] = useState('');
 
     // Ref para el textarea de diagnóstico
   const diagnosisRef = useRef(null);
@@ -79,7 +81,7 @@ const PrintCertificate = () => {
 
 
   useEffect(() => {
-  fetchPatients();
+    fetchPatients();
   }, []);
 
   const fetchPatients = async () => {
@@ -439,38 +441,38 @@ const PrintCertificate = () => {
             </Box>
           </Box>
           <Box 
-  display="flex" 
-  flexDirection={{ base: "column", md: "row" }} 
-  gap={{ base: 2, md: 4 }} // ← Reducir gap entre elementos
-  justifyContent="center" 
-  alignItems={{ base: "center", md: "flex-start" }} 
-  my={2} // ← Reducir margen vertical
->
-  <Box 
-    flex="1" 
-    maxW={{ base: "100%", md: "300px" }} 
-    w={{ base: "100%", md: "auto" }} 
-    mb={{ base: 2, md: 0 }} // ← Reducir margen inferior
-  >
-    <SignaturePadComponent
-      onSave={(signatureDataUrl) =>
-        setFormData((prev) => ({
-          ...prev,
-          signature: signatureDataUrl,
-        }))
-      }
-    />
-  </Box>
-  <Box 
-    flex="1" 
-    maxW={{ base: "100%", md: "400px" }} 
-    w={{ base: "100%", md: "auto" }} 
-    mt={{ base: -2, md: 0 }} // ← Margen negativo para acercar más en móvil
-  >
-    <SelloSelector />
-  </Box>
-</Box>
-          <CertificateFooter currentUser={user} />
+            display="flex" 
+            flexDirection={{ base: "column", md: "row" }} 
+            gap={{ base: 2, md: 4 }} // ← Reducir gap entre elementos
+            justifyContent="center" 
+            alignItems={{ base: "center", md: "flex-start" }} 
+            my={2} // ← Reducir margen vertical
+          >
+            <Box 
+              flex="1" 
+              maxW={{ base: "100%", md: "300px" }} 
+              w={{ base: "100%", md: "auto" }} 
+              mb={{ base: 2, md: 0 }} // ← Reducir margen inferior
+            >
+              <SignaturePadComponent
+                onSave={(signatureDataUrl) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    signature: signatureDataUrl,
+                  }))
+                }
+              />
+            </Box>
+            <Box 
+              flex="1" 
+              maxW={{ base: "100%", md: "400px" }} 
+              w={{ base: "100%", md: "auto" }} 
+              mt={{ base: -2, md: 0 }} // ← Margen negativo para acercar más en móvil
+            >
+              <SelloSelector onSelect={setDoctorSeal} />
+            </Box>
+          </Box>
+          <CertificateFooter currentUser={user} onFooterInfo={setFooterInfo} />
         </Box>
       </Box>
       <PdfMeasures
@@ -480,6 +482,9 @@ const PrintCertificate = () => {
             message: "Aquí tienes tu certificado de medidas"
           }}
           selectedPatient={selectedPatient}
+          tenantId={tenantId}
+          doctorSeal={doctorSeal}
+          footerInfo={footerInfo}
         />
     </Box>
     );

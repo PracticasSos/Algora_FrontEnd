@@ -15,41 +15,59 @@ import {
   Text,
   Flex,
   Spinner,
-  
 } from "@chakra-ui/react";
-import html2canvas from "html2canvas";
-import { jsPDF } from "jspdf";
+import { generateCertificatePDF } from "./certificate/pdf/pdfGenerator";
 import { supabase } from "../../api/supabase";
 
-const PdfMeasures = ({ formData, targetRef, selectedPatient }) => {
+
+const PdfMeasures = ({ formData, selectedPatient, doctorData, tenantId, doctorSeal, footerInfo }) => {
+  const [logoBase64, setLogoBase64] = useState(null);
   const toast = useToast();
   const [loading, setLoading] = useState(false);
-  const { isOpen, onOpen, onClose } = useDisclosure(); // Modal control
+  const { isOpen, onOpen, onClose } = useDisclosure();
   const [modalMessage, setModalMessage] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState(null);
 
-  const waitForImagesToLoad = async (container) => {
-    const images = container.querySelectorAll("img");
-    const promises = [];
-
-    images.forEach((img) => {
-      if (!img.complete || img.naturalHeight === 0) {
-        promises.push(
-          new Promise((resolve) => {
-            img.onload = img.onerror = resolve;
-          })
-        );
+  useEffect(() => {
+    if (!tenantId) return;
+    const fetchLogo = async () => {
+      const { data, error } = await supabase
+        .from('logos')
+        .select('logo_url')
+        .eq('tenant_id', tenantId)
+        .single();
+      if (error) {
+        console.error('Error al obtener el logo:', error);
+        return;
       }
-    });
-
-    return Promise.all(promises);
-  };
+      const convertImageToBase64 = async (imageUrl) => {
+        try {
+          const response = await fetch(imageUrl, { mode: 'cors' });
+          const blob = await response.blob();
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(blob);
+          });
+        } catch (error) {
+          console.error('Error al convertir la imagen a base64:', error);
+          return null;
+        }
+      };
+      const base64Image = await convertImageToBase64(data.logo_url);
+      if (base64Image) {
+        setLogoBase64(base64Image);
+      }
+    };
+    fetchLogo();
+  }, [tenantId]);
 
   const handleDownloadPdf = async () => {
-    if (!targetRef?.current) {
+    if (!formData || !selectedPatient) {
       toast({
         title: "Error",
-        description: "No se encontró el contenido para generar el PDF.",
+        description: "Faltan datos del formulario o paciente seleccionado.",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -59,67 +77,53 @@ const PdfMeasures = ({ formData, targetRef, selectedPatient }) => {
 
     setLoading(true);
     setIsGenerating(true);
-    onOpen(); 
+    setModalMessage("Generando certificado de agudeza visual...");
+    onOpen();
 
     try {
-      const content = targetRef.current;
-      const buttons = content.querySelectorAll("button");
-      buttons.forEach((btn) => (btn.style.display = "none"));
+      const result = await generateCertificatePDF(
+        formData,
+        selectedPatient,
+        doctorData,
+        logoBase64,
+        doctorSeal,
+        footerInfo
+      );
 
-      await waitForImagesToLoad(content);
-
-      const canvas = await html2canvas(content, { scale: 2 });
-      const imgData = canvas.toDataURL("image/png");
-
-      const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = 210;
-      const pdfHeight = 297;
-
-      let imgWidth = pdfWidth - 20;
-      let imgHeight = (canvas.height / canvas.width) * imgWidth;
-
-      if (imgHeight > pdfHeight - 20) {
-        const scaleFactor = (pdfHeight - 20) / imgHeight;
-        imgWidth *= scaleFactor;
-        imgHeight = pdfHeight - 20;
-      }
-
-      pdf.addImage(imgData, "PNG", 10, 10, imgWidth, imgHeight);
-      const pdfBlob = pdf.output("blob");
-      const fileName = `medidas-${formData.patient_id}-${Date.now()}.pdf`;
-
-      const { error } = await supabase.storage
-        .from("measures")
-        .upload(fileName, pdfBlob, {
-          contentType: "application/pdf",
+      if (result.success) {
+        setPdfUrl(result.pdfUrl);
+        setModalMessage("✅ Se generó correctamente el certificado de agudeza visual.");
+        
+        toast({
+          title: "Certificado generado",
+          description: result.message,
+          status: "success",
+          duration: 3000,
+          isClosable: true,
         });
 
-      if (error) throw error;
+        return result.pdfUrl;
+      } else {
+        throw new Error(result.message);
+      }
 
-      const { data: urlData, error: urlError } = supabase.storage
-        .from("measures")
-        .getPublicUrl(fileName);
-
-      if (urlError) throw urlError;
-      setIsGenerating(false);   
-      setModalMessage("✅ Se generó correctamente el certificado visual.");
-      
-
-      return urlData.publicUrl;
     } catch (error) {
       console.error("Error al generar PDF:", error);
+      
+      setModalMessage("❌ Error al generar el certificado.");
+      
       toast({
         title: "Error",
-        description: "No se pudo generar o subir el PDF.",
+        description: error.message || "No se pudo generar el certificado PDF.",
         status: "error",
-        duration: 3000,
+        duration: 5000,
         isClosable: true,
       });
+      
       return null;
     } finally {
-      const buttons = targetRef?.current?.querySelectorAll("button");
-      buttons?.forEach((btn) => (btn.style.display = "inline-block"));
       setLoading(false);
+      setIsGenerating(false);
     }
   };
 
@@ -137,10 +141,16 @@ const PdfMeasures = ({ formData, targetRef, selectedPatient }) => {
       return;
     }
 
-    const pdfUrl = await handleDownloadPdf();
-    if (!pdfUrl) return;
+    let currentPdfUrl = pdfUrl;
+    
+    if (!currentPdfUrl) {
+      setModalMessage("Generando certificado para envío por WhatsApp...");
+      onOpen();
+      currentPdfUrl = await handleDownloadPdf();
+      if (!currentPdfUrl) return;
+    }
 
-    const message = formData.message || "Aquí tienes el documento de tus medidas.";
+    const message = formData.message || "Aquí tienes tu certificado de agudeza visual.";
     const phoneNumber = patient.pt_phone.replace(/\D/g, "");
 
     if (phoneNumber.length < 8) {
@@ -155,45 +165,130 @@ const PdfMeasures = ({ formData, targetRef, selectedPatient }) => {
     }
 
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(
-      `${message}\n\nPuedes descargar tu documento aquí: ${pdfUrl}`
+      `${message}\n\nPuedes descargar tu certificado de agudeza visual aquí: ${currentPdfUrl}`
     )}`;
+    
     window.open(whatsappUrl, "_blank");
 
     setModalMessage("✅ El certificado ha sido enviado por WhatsApp.");
-    onOpen(); // Mostrar modal
+    
+    toast({
+      title: "WhatsApp abierto",
+      description: "Se abrió WhatsApp con el mensaje y el enlace del certificado.",
+      status: "success",
+      duration: 3000,
+      isClosable: true,
+    });
+  };
+
+  const handlePreviewCertificate = async () => {
+    if (!formData || !selectedPatient) {
+      toast({
+        title: "Error",
+        description: "Faltan datos del formulario o paciente seleccionado.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    try {
+      const result = await generateCertificatePDF(
+        formData,
+        selectedPatient,
+        doctorData,
+        logoBase64
+      );
+
+      if (result.success) {
+        toast({
+          title: "Vista previa",
+          description: "Se abrió la vista previa del certificado.",
+          status: "info",
+          duration: 2000,
+          isClosable: true,
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error en vista previa",
+        description: error.message,
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
   };
 
   return (
     <>
       <SimpleGrid>
         <Box p={5}>
-          <Button onClick={handleDownloadPdf} isLoading={loading}>
-            Generar PDF
-          </Button>
-          <Button onClick={sendWhatsAppMessage} isLoading={loading} ml={3}>
-            Enviar por WhatsApp
-          </Button>
+          <Flex gap={3} wrap="wrap">
+            <Button 
+              onClick={handleDownloadPdf} 
+              colorScheme="blue"
+              isLoading={loading}
+              loadingText="Generando..."
+              size="md"
+            >
+              📄 Generar Certificado
+            </Button>
+            
+            <Button 
+              onClick={sendWhatsAppMessage} 
+              colorScheme="green"
+              isLoading={loading}
+              loadingText="Enviando..."
+              size="md"
+            >
+              📱 Enviar por WhatsApp
+            </Button>
+          </Flex>
         </Box>
       </SimpleGrid>
 
-      {/* Modal de confirmación */}
+      {/* Modal de estado */}
       <Modal isOpen={isOpen} onClose={onClose} isCentered>
         <ModalOverlay />
         <ModalContent>
-          <ModalHeader>{isGenerating ? "Generando certificado..." : "Certificado visual"}</ModalHeader>
+          <ModalHeader>
+            {isGenerating ? "Generando certificado..." : "Certificado de Agudeza Visual"}
+          </ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             {isGenerating ? (
-              <Flex align="center" justify="center" py={5}>
+              <Flex align="center" justify="center" py={8} direction="column">
                 <Spinner size="xl" thickness="4px" color="teal.500" />
+                <Text mt={4} textAlign="center" color="gray.600">
+                  Por favor espera mientras se genera tu certificado...
+                </Text>
               </Flex>
             ) : (
-              <Text>{modalMessage}</Text>
+              <Box py={4}>
+                <Text fontSize="md">{modalMessage}</Text>
+                {pdfUrl && (
+                  <Box mt={4} p={3} bg="gray.50" borderRadius="md">
+                    <Text fontSize="sm" color="gray.600">
+                      URL del certificado:
+                    </Text>
+                    <Text 
+                      fontSize="xs" 
+                      color="blue.500" 
+                      wordBreak="break-all"
+                      mt={1}
+                    >
+                      {pdfUrl}
+                    </Text>
+                  </Box>
+                )}
+              </Box>
             )}
           </ModalBody>
           {!isGenerating && (
             <ModalFooter>
-              <Button colorScheme="green" onClick={onClose}>
+              <Button colorScheme="teal" onClick={onClose}>
                 Cerrar
               </Button>
             </ModalFooter>

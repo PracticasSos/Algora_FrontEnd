@@ -3,7 +3,7 @@ import { Box, Flex, Icon, Text, Spinner } from '@chakra-ui/react';
 import { FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaFacebook, FaInstagram } from 'react-icons/fa';
 import { supabase } from '../../../api/supabase';
 
-const CertificateFooter = ({ currentUser }) => { // ← Cambiar de tenantId a currentUser
+const CertificateFooter = ({ currentUser, onFooterInfo }) => {
   const [branch, setBranch] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -17,19 +17,24 @@ const CertificateFooter = ({ currentUser }) => { // ← Cambiar de tenantId a cu
       const { data, error } = await supabase
         .from('branchs')
         .select('address, cell, name, email')
-        .eq('id', currentUser.branch_id) // ← Usar branch_id del usuario
+        .eq('id', currentUser.branch_id)
         .single();
 
       if (error) {
         console.error('Error al cargar datos de la sucursal:', error);
       } else {
         setBranch(data);
+        // Construir el string del footer y enviarlo al padre
+        if (onFooterInfo && data) {
+          const footerString = `${data.name || ''} | ${data.address || ''} | Tel: ${data.cell || ''} | Email: ${data.email || ''}`;
+          onFooterInfo(footerString);
+        }
       }
       setLoading(false);
     };
 
     fetchBranch();
-  }, [currentUser?.branch_id]); // ← Cambiar dependencia
+  }, [currentUser?.branch_id]);
 
   if (loading) {
     return (

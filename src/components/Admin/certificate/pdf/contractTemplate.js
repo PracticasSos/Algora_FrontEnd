@@ -383,7 +383,7 @@ export const certificateTemplate = `
     <div class="signatures-section">
         <div class="signature-box">
             <div class="signature-line">{{patientSignature}}</div>
-            <div class="signature-text">Firma del Paciente</div>
+            <div class="signature-text">Firma</div>
         </div>
         
         <div style="width: 100%; display: flex; justify-content: center; align-items: center;">

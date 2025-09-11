@@ -46,7 +46,7 @@ export const useUserPermissions = (userData) => {
           '/list-patients', '/list-users', '/list-lens', '/list-inventory',
           '/list-branch', '/list-labs','/cuestionario','/lens','/material',
           '/admin/modelos','/resultados','/register-experience','/mensajeria',
-          '/retreats-patients/retreats', '/retreats', '/history-clinic/patient-history',  'patient-history',
+          '/retreats-patients/retreats', '/retreats', '/history-clinic/patient-history',  'patient-history','/super-admin/tenants'
         ];
       case 2: 
         return ['/optometra', '/register-patient', '/retreats-patients', '/register-experience', '/register-patient', '/sales', 
@@ -78,7 +78,7 @@ export const useUserPermissions = (userData) => {
           '/admin/modelos','/resultados','/register-experience','/mensajeria',
           '/retreats-patients/retreats', '/retreats', '/history-clinic/patient-history',  'patient-history','/cuestionario',
           '/lens','/material',
-          '/admin/modelos','/resultados','/register-experience',
+          '/admin/modelos','/resultados','/register-experience','/super-admin/tenants'
         ];
       default: 
         return ['/login-form'];

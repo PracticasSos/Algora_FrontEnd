@@ -17,7 +17,17 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/Login" replace />;
   }
 
-  // Verificar permisos para la ruta actual
+  // EXCEPCIÓN: Rutas del super admin global (fuera del sistema multitenant)
+  if (location.pathname.startsWith('/super-admin')) {
+    // Opcional:  Agregar validación adicional aquí si quieres
+    // Por ejemplo, verificar si el usuario tiene un rol específico
+    // if (user.role_id !== 4) {
+    //   return <Navigate to="/Login" replace />;
+    // }
+    return children;
+  }
+
+  // Verificar permisos para la ruta actual (solo para rutas del sistema multitenant)
   const hasPermission = isRouteAllowed(location.pathname, allowedRoutes);
 
   if (!hasPermission) {

@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../api/supabase";
-import { useNavigate} from "react-router-dom";
-import {Box, Heading, Table, Thead, Tbody, Tr, Th, Td, Select, Button, Badge, SimpleGrid, Input, useColorModeValue } from "@chakra-ui/react";
+import { useNavigate } from "react-router-dom";
+import { 
+  Box, Heading, Table, Thead, Tbody, Tr, Th, Td, 
+  Select, Button, Badge, SimpleGrid, Input, 
+  useColorModeValue, useToast 
+} from "@chakra-ui/react";
 import SmartHeader from "../header/SmartHeader";
 
 const Egresos = () => {
@@ -11,6 +15,8 @@ const Egresos = () => {
   const [users, setUsers] = useState([]);
   const [labs, setLabs] = useState([]);
   const navigate = useNavigate();
+  const toast = useToast();
+
   const [newEgreso, setNewEgreso] = useState({
     user_id: "",
     records: "",
@@ -58,12 +64,11 @@ const Egresos = () => {
     setLabs(data || []);
   };
 
-
   const fetchEgresos = async () => {
     const today = new Date().toLocaleDateString("en-CA");
     const { data, error } = await supabase
       .from("egresos")
-      .select(`id, records,  date, value, specification, payment_in, users (firstname), labs (name), branchs (name)`)
+      .select(`id, records, date, value, specification, payment_in, users (firstname), labs (name), branchs (name)`)
       .eq("date", today)
       .eq("branchs_id", selectedBranch);
 
@@ -78,12 +83,15 @@ const Egresos = () => {
     setNewEgreso((prev) => ({ ...prev, [field]: value }));
   };
 
-
   const handleSaveEgreso = async () => {
-    console.log("Selected Branch for newEgreso:", newEgreso.branchs_id);
-  
     if (!newEgreso.branchs_id) {
-      alert("Por favor, seleccione una sucursal para guardar el egreso.");
+      toast({
+        title: "Sucursal requerida",
+        description: "Por favor, seleccione una sucursal para guardar el egreso.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
       return;
     }
   
@@ -95,10 +103,23 @@ const Egresos = () => {
   
     if (error) {
       console.error("Error saving egreso:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo registrar el egreso: " + error.message,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
       return;
     } else {
-      console.log('Egresos registrados:', data);
-      alert("¡Egresos registrado con éxito!");
+      console.log("Egresos registrados:", data);
+      toast({
+        title: "Éxito",
+        description: "¡Egreso registrado con éxito!",
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
     }
   
     setNewEgreso({
@@ -114,37 +135,37 @@ const Egresos = () => {
   };
   
   const handleNavigate = (route = null) => {
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = JSON.parse(localStorage.getItem("user"));
     if (route) {
-        navigate(route);
-        return;
+      navigate(route);
+      return;
     }
     if (!user || !user.role_id) {
-        navigate('/login-form');
-        return;
+      navigate("/login-form");
+      return;
     }
     switch (user.role_id) {
-        case 1:
-            navigate('/Admin');
-            break;
-        case 2:
-            navigate('/Optometra');
-            break;
-        case 3:
-            navigate('/Vendedor');
-            break;
-        case 4:
-            navigate('/SuperAdmin');
-            break;
-        default:
-            navigate('/');
+      case 1:
+        navigate("/Admin");
+        break;
+      case 2:
+        navigate("/Optometra");
+        break;
+      case 3:
+        navigate("/Vendedor");
+        break;
+      case 4:
+        navigate("/SuperAdmin");
+        break;
+      default:
+        navigate("/");
     }
   };
-  const moduleSpecificButton = null;
 
-  const textColor = useColorModeValue('gray.800', 'white');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const selectBg = useColorModeValue('white', 'gray.700');
+  const moduleSpecificButton = null;
+  const textColor = useColorModeValue("gray.800", "white");
+  const borderColor = useColorModeValue("gray.200", "gray.600");
+  const selectBg = useColorModeValue("white", "gray.700");
 
   return (
     <Box p={6} maxW="1300px" mx="auto" boxShadow="md" borderRadius="lg">

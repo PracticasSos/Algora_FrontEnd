@@ -1,163 +1,192 @@
 import { useState, useEffect } from "react";
-import { Box, Heading, Select, Table, Thead, Tbody, Tr, Th, Td, Button, Input, useColorModeValue, HStack, Text} from "@chakra-ui/react";
+import { 
+  Box, Heading, Select, Table, Thead, Tbody, Tr, Th, Td, 
+  Button, Input, useColorModeValue, HStack, Text, useToast 
+} from "@chakra-ui/react";
 import { supabase } from "../../api/supabase";
 import { useNavigate } from "react-router-dom";
 import { FaEye } from 'react-icons/fa';
 import SmartHeader from "../header/SmartHeader";
 
 const Balance = () => {
-    const [records, setRecords] = useState([]);
-    const [branches, setBranches] = useState([]);
-    const [selectedBranch, setSelectedBranch] = useState("");
-    const [newAbonos, setNewAbonos] = useState({});
-    const [paymentMethods, setPaymentMethods] = useState({});
-    const navigate = useNavigate();
+  const [records, setRecords] = useState([]);
+  const [branches, setBranches] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState("");
+  const [newAbonos, setNewAbonos] = useState({});
+  const [paymentMethods, setPaymentMethods] = useState({});
+  const navigate = useNavigate();
+  const toast = useToast();
 
-    useEffect(() => {
-        fetchBranches();
-    }, []);
+  useEffect(() => {
+    fetchBranches();
+  }, []);
 
-    useEffect(() => {
-        if (selectedBranch) {
-            fetchAbonos(selectedBranch);
-        }
-    }, [selectedBranch]);
+  useEffect(() => {
+    if (selectedBranch) {
+      fetchAbonos(selectedBranch);
+    }
+  }, [selectedBranch]);
 
-    const fetchBranches = async () => {
-        const { data, error } = await supabase.from("branchs").select("id, name");
-        if (!error) setBranches(data || []);
-    };
+  const fetchBranches = async () => {
+    const { data, error } = await supabase.from("branchs").select("id, name");
+    if (!error) setBranches(data || []);
+  };
 
-    const fetchAbonos = async (branchId) => {
-        const { data, error } = await supabase
-            .from("sales")
-            .select("id, date, branchs_id, total, credit, balance, payment_balance, patients (pt_firstname, pt_lastname), is_refund")
-            .eq("branchs_id", branchId)
-            .gt("credit", 0)
-            .eq("is_refund", false);
+  const fetchAbonos = async (branchId) => {
+    const { data, error } = await supabase
+      .from("sales")
+      .select("id, date, branchs_id, total, credit, balance, payment_balance, patients (pt_firstname, pt_lastname), is_refund")
+      .eq("branchs_id", branchId)
+      .gt("credit", 0)
+      .eq("is_refund", false);
             
+    if (!error) {
+      setRecords(data);
+      setNewAbonos({});
+      setPaymentMethods({});
+    }
+  };
 
-        if (!error) {
-            setRecords(data);
-            setNewAbonos({});
-            setPaymentMethods({});
-        }
-    };
+  const handleAbonoChange = (id, value) => {
+    setNewAbonos((prevState) => ({ ...prevState, [id]: value }));
+  };
 
-    const handleAbonoChange = (id, value) => {
-        setNewAbonos((prevState) => ({ ...prevState, [id]: value }));
-    };
+  const handlePaymentChange = (id, method) => {
+    setPaymentMethods((prevState) => ({ ...prevState, [id]: method }));
+  };
 
-    const handlePaymentChange = (id, method) => {
-        setPaymentMethods((prevState) => ({ ...prevState, [id]: method }));
-    };
+  const handleAbonoSubmit = async (record) => {
+    const abono = parseFloat(newAbonos[record.id]) || 0;
+    const paymentMethod = paymentMethods[record.id] || "";
 
-    const handleAbonoSubmit = async (record) => {
-        const abono = parseFloat(newAbonos[record.id]) || 0;
-        const paymentMethod = paymentMethods[record.id] || "";
+    if (abono <= 0 || abono > record.credit) {
+      toast({
+        title: "Abono inválido",
+        description: "El monto ingresado no es válido.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
 
-        if (abono <= 0 || abono > record.credit) {
-            alert("Abono inválido");
-            return;
-        }
+    if (!paymentMethod) {
+      toast({
+        title: "Método de pago requerido",
+        description: "Seleccione un método de pago antes de continuar.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
 
-        if (!paymentMethod) {
-            alert("Seleccione un método de pago");
-            return;
-        }
+    const nuevoBalance = record.balance + abono;
+    const nuevoCredito = record.credit - abono;
 
-        const nuevoBalance = record.balance + abono;
-        const nuevoCredito = record.credit - abono;
+    try {
+      const { error } = await supabase
+        .from("sales")
+        .update({ 
+          balance: nuevoBalance, 
+          credit: nuevoCredito,
+          payment_balance: paymentMethod
+        })
+        .eq("id", record.id);
 
-        try {
-            const { error } = await supabase
-                .from("sales")
-                .update({ 
-                    balance: nuevoBalance, 
-                    credit: nuevoCredito,
-                    payment_balance: paymentMethod
-                })
-                .eq("id", record.id);
+      if (error) throw error;
 
-            if (error) throw error;
+      fetchAbonos(selectedBranch);
+      setNewAbonos((prevState) => ({ ...prevState, [record.id]: "" }));
+      setPaymentMethods((prevState) => ({ ...prevState, [record.id]: "" }));
 
-            fetchAbonos(selectedBranch);
-            setNewAbonos((prevState) => ({ ...prevState, [record.id]: "" }));
-            setPaymentMethods((prevState) => ({ ...prevState, [record.id]: "" }));
-        } catch (error) {
-            console.error("Error al actualizar el abono:", error);
-        }
-    };
+      toast({
+        title: "Éxito",
+        description: "El abono se registró correctamente.",
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error("Error al actualizar el abono:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo registrar el abono. Inténtelo nuevamente.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
 
-    const sortedPatients = [...records].sort((a, b) => {
-        // Si alguna fecha es inválida, ponla al final
-        if (!a.date) return 1;
-        if (!b.date) return -1;
-        return new Date(b.date) - new Date(a.date);
-    }); 
+  const sortedPatients = [...records].sort((a, b) => {
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return new Date(b.date) - new Date(a.date);
+  }); 
 
-    const handleNavigate = (route = null) => {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (route) {
-            navigate(route);
-            return;
-        }
-        if (!user || !user.role_id) {
-            navigate('/login-form');
-            return;
-        }
-        switch (user.role_id) {
-            case 1:
-                navigate('/Admin');
-                break;
-            case 2:
-                navigate('/Optometra');
-                break;
-            case 3:
-                navigate('/Vendedor');
-                break;
-            case 4:
-                navigate('/SuperAdmin');
-                break;
-            default:
-                navigate('/');
-        }
-    };
+  const handleNavigate = (route = null) => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (route) {
+      navigate(route);
+      return;
+    }
+    if (!user || !user.role_id) {
+      navigate('/login-form');
+      return;
+    }
+    switch (user.role_id) {
+      case 1:
+        navigate('/Admin');
+        break;
+      case 2:
+        navigate('/Optometra');
+        break;
+      case 3:
+        navigate('/Vendedor');
+        break;
+      case 4:
+        navigate('/SuperAdmin');
+        break;
+      default:
+        navigate('/');
+    }
+  };
 
-    const moduleSpecificButton = (
-  <Button 
-    onClick={() => handleNavigate('/list-balance')} 
-    bg={useColorModeValue(
-      'rgba(255, 255, 255, 0.8)', 
-      'rgba(255, 255, 255, 0.1)'
-    )}
-    backdropFilter="blur(10px)"
-    border="1px solid"
-    borderColor={useColorModeValue(
-      'rgba(56, 178, 172, 0.3)', 
-      'rgba(56, 178, 172, 0.5)'
-    )}
-    color={useColorModeValue('teal.600', 'teal.300')}
-    size="sm"
-    borderRadius="15px"
-    px={4}
-    _hover={{
-      bg: useColorModeValue(
-        'rgba(56, 178, 172, 0.1)', 
-        'rgba(56, 178, 172, 0.2)'
-      ),
-      borderColor: 'teal.400',
-      transform: 'translateY(-1px)',
-    }}
-    transition="all 0.2s"
-  >
-    <HStack spacing={2} align="center" justify="center">
-      <FaEye size="14px" />
-      <Text fontWeight="600" lineHeight="1" m={0}>
-        Listar Abonos
-      </Text>
-    </HStack>
-  </Button>
+  const moduleSpecificButton = (
+    <Button 
+      onClick={() => handleNavigate('/list-balance')} 
+      bg={useColorModeValue(
+        'rgba(255, 255, 255, 0.8)', 
+        'rgba(255, 255, 255, 0.1)'
+      )}
+      backdropFilter="blur(10px)"
+      border="1px solid"
+      borderColor={useColorModeValue(
+        'rgba(56, 178, 172, 0.3)', 
+        'rgba(56, 178, 172, 0.5)'
+      )}
+      color={useColorModeValue('teal.600', 'teal.300')}
+      size="sm"
+      borderRadius="15px"
+      px={4}
+      _hover={{
+        bg: useColorModeValue(
+          'rgba(56, 178, 172, 0.1)', 
+          'rgba(56, 178, 172, 0.2)'
+        ),
+        borderColor: 'teal.400',
+        transform: 'translateY(-1px)',
+      }}
+      transition="all 0.2s"
+    >
+      <HStack spacing={2} align="center" justify="center">
+        <FaEye size="14px" />
+        <Text fontWeight="600" lineHeight="1" m={0}>
+          Listar Abonos
+        </Text>
+      </HStack>
+    </Button>
   );
 
   const textColor = useColorModeValue('gray.800', 'white');

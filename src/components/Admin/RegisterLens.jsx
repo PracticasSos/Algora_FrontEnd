@@ -1,12 +1,25 @@
 import { useState } from "react";
 import { supabase } from "../../api/supabase";
-import { Box, Button, FormControl, FormLabel, Input, Heading, SimpleGrid, useColorModeValue, Text, HStack } from '@chakra-ui/react';
+import { 
+    Box, 
+    Button, 
+    FormControl, 
+    FormLabel, 
+    Input, 
+    Heading, 
+    SimpleGrid, 
+    useColorModeValue, 
+    Text, 
+    HStack, 
+    useToast 
+} from '@chakra-ui/react';
 import { useNavigate } from "react-router-dom";
 import { FaEye } from 'react-icons/fa';
 import SmartHeader from "../header/SmartHeader";
 
 const RegisterLens = () => {
     const navigate = useNavigate();
+    const toast = useToast();
 
     const [formData, setFormData] = useState({
         lens_type: '',
@@ -26,10 +39,23 @@ const RegisterLens = () => {
 
         if (error) {
             console.error('Error:', error.message);
-            alert("Ocurrio un error:" + error.message);
+            toast({
+                title: 'Error',
+                description: "Ocurrió un error: " + error.message,
+                status: 'error',
+                duration: 5000,
+                isClosable: true,
+            });
         } else {
             console.log('Lens registered:', data);
-            alert("Registado con exito")
+            toast({
+                title: 'Éxito',
+                description: 'Lente registrado correctamente.',
+                status: 'success',
+                duration: 5000,
+                isClosable: true,
+            });
+            handleReset();
         }
     };
 

@@ -80,11 +80,15 @@ const Tenants = () => {
   
   const { isOpen, onOpen, onClose } = useDisclosure();
   const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  
+  // Separate state for edit modal
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  
   const [selectedTenant, setSelectedTenant] = useState(null);
   const toast = useToast();
   const { colorMode } = useColorMode();
 
-  // Stepper for modal
+  // Stepper for create modal
   const steps = [
     { title: 'Información del Tenant', description: 'Datos de la empresa' },
     { title: 'Usuario Administrador', description: 'Cuenta del admin' }
@@ -94,7 +98,7 @@ const Tenants = () => {
     count: steps.length,
   });
 
-  // Form data
+  // Form data for create (original structure)
   const [tenantData, setTenantData] = useState({
     name: '',
     email: '',
@@ -115,6 +119,17 @@ const Tenants = () => {
     birthdate: '',
     ci: '',
     phone_number: ''
+  });
+
+  // Form data for edit (from second code)
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    email: '',
+    plan: 'basico',
+    billing_cycle: 'mensual',
+    next_billing_date: '',
+    phone: '',
+    address: ''
   });
 
   const bgColor = useColorModeValue('white', 'gray.800');
@@ -170,6 +185,7 @@ const Tenants = () => {
     }
   };
 
+  // Original create function (unchanged)
   const handleCreateTenant = async () => {
     if (activeStep === 0) {
       // Validate step 1
@@ -245,27 +261,131 @@ const Tenants = () => {
     }
   };
 
-  const handleToggleStatus = async (tenant) => {
+  // New edit functions (from second code)
+  const handleOpenEditModal = async (tenant) => {
     try {
+      console.log('Fetching tenant from Supabase:', tenant.id);
+
+      const { data, error } = await supabase
+        .from('tenants')
+        .select('id, name, email, plan, billing_cycle, next_billing_date, phone, address, status')
+        .eq('id', tenant.id)
+        .single();
+
+      if (error) throw error;
+
+      setSelectedTenant(data);
+
+      let formattedDate = '';
+      if (data.next_billing_date) {
+        const date = new Date(data.next_billing_date);
+        formattedDate = date.toISOString().split('T')[0];
+      }
+
+      setEditFormData({
+        name: data.name || '',
+        email: data.email || '',
+        plan: data.plan || 'basico',
+        billing_cycle: data.billing_cycle || 'mensual',
+        next_billing_date: formattedDate,
+        phone: data.phone || '',
+        address: data.address || ''
+      });
+
+      setIsEditModalOpen(true);
+    } catch (err) {
+      console.error('Error fetching tenant:', err);
+      toast({
+        title: 'Error',
+        description: 'No se pudo cargar el tenant para editar',
+        status: 'error'
+      });
+    }
+  };
+
+  const handleEditTenant = async () => {
+    if (!selectedTenant) return;
+    
+    setLoading(true);
+    try {
+      if (!editFormData.name || !editFormData.email) {
+        toast({
+          title: 'Error',
+          description: 'Nombre y email del tenant son requeridos',
+          status: 'error'
+        });
+        setLoading(false);
+        return;
+      }
+
+      const updateData = {
+        name: editFormData.name,
+        email: editFormData.email,
+        plan: editFormData.plan,
+        billing_cycle: editFormData.billing_cycle,
+        phone: editFormData.phone || null,
+        address: editFormData.address || null,
+      };
+
+      if (editFormData.next_billing_date) {
+        updateData.next_billing_date = editFormData.next_billing_date;
+      }
+
       const { error } = await supabase
         .from('tenants')
-        .update({ status: !tenant.status })
+        .update(updateData)
+        .eq('id', selectedTenant.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Tenant actualizado',
+        description: 'Los datos del tenant se han actualizado exitosamente',
+        status: 'success'
+      });
+
+      setIsEditModalOpen(false);
+      setSelectedTenant(null);
+      loadTenants();
+
+    } catch (error) {
+      console.error('Error updating tenant:', error);
+      toast({
+        title: 'Error',
+        description: `Error al actualizar el tenant: ${error.message}`,
+        status: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleStatus = async (tenant) => {
+    try {
+      const newStatus = !tenant.status;
+
+      const { error } = await supabase
+        .from('tenants')
+        .update({ 
+          status: newStatus,
+        })
         .eq('id', tenant.id);
 
       if (error) throw error;
 
       toast({
         title: 'Estado actualizado',
-        description: `Tenant ${tenant.status ? 'desactivado' : 'activado'} exitosamente`,
+        description: `Tenant ${newStatus ? 'activado' : 'desactivado'} exitosamente`,
         status: 'success'
       });
 
-      loadTenants();
+      await loadTenants();
+
     } catch (error) {
       console.error('Error updating tenant status:', error);
       toast({
         title: 'Error',
-        description: 'Error al actualizar el estado del tenant',
+        description: `Error al actualizar el estado del tenant: ${error.message}`,
         status: 'error'
       });
     }
@@ -433,7 +553,10 @@ const Tenants = () => {
                         size="sm"
                       />
                       <MenuList>
-                        <MenuItem icon={<FaEdit />}>
+                        <MenuItem 
+                          icon={<FaEdit />}
+                          onClick={() => handleOpenEditModal(tenant)}
+                        >
                           Editar
                         </MenuItem>
                         <MenuItem 
@@ -483,7 +606,7 @@ const Tenants = () => {
         </Flex>
       )}
 
-      {/* Create Tenant Modal */}
+      {/* Create Tenant Modal (Original with stepper) */}
       <Modal isOpen={isOpen} onClose={onClose} size="2xl" closeOnOverlayClick={false}>
         <ModalOverlay />
         <ModalContent maxH="90vh" overflowY="auto">
@@ -709,6 +832,131 @@ const Tenants = () => {
                 rightIcon={activeStep === 0 ? <FaArrowRight /> : <FaCheck />}
               >
                 {activeStep === 0 ? 'Siguiente' : 'Crear Tenant'}
+              </Button>
+            </HStack>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Edit Tenant Modal (From second code) */}
+      <Modal 
+        isOpen={isEditModalOpen} 
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedTenant(null);
+        }} 
+        size="xl"
+      >
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>
+            <HStack>
+              <FaEdit color="teal" />
+              <Text>Editar Tenant</Text>
+              {selectedTenant && (
+                <Text fontSize="sm" color="gray.500">
+                  (ID: {selectedTenant.id.slice(0, 8)}...)
+                </Text>
+              )}
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton />
+          
+          <ModalBody>
+            <VStack spacing={4} align="stretch">
+              <FormControl isRequired>
+                <FormLabel>Nombre de la Empresa</FormLabel>
+                <Input
+                  value={editFormData.name}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Óptica ABC"
+                />
+              </FormControl>
+              
+              <FormControl isRequired>
+                <FormLabel>Email de Contacto</FormLabel>
+                <Input
+                  type="email"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="contacto@opticaabc.com"
+                />
+              </FormControl>
+              
+              <HStack>
+                <FormControl>
+                  <FormLabel>Plan</FormLabel>
+                  <Select
+                    value={editFormData.plan}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, plan: e.target.value }))}
+                  >
+                    <option value="basico">Básico</option>
+                    <option value="intermedio">Intermedio</option>
+                    <option value="premium">Premium</option>
+                  </Select>
+                </FormControl>
+                
+                <FormControl>
+                  <FormLabel>Ciclo de Facturación</FormLabel>
+                  <Select
+                    value={editFormData.billing_cycle}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, billing_cycle: e.target.value }))}
+                  >
+                    <option value="mensual">Mensual</option>
+                    <option value="anual">Anual</option>
+                  </Select>
+                </FormControl>
+              </HStack>
+              
+              <FormControl>
+                <FormLabel>Próxima Fecha de Cobro</FormLabel>
+                <Input
+                  type="date"
+                  value={editFormData.next_billing_date}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, next_billing_date: e.target.value }))}
+                />
+              </FormControl>
+              
+              <FormControl>
+                <FormLabel>Teléfono</FormLabel>
+                <Input
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  placeholder="+1234567890"
+                />
+              </FormControl>
+              
+              <FormControl>
+                <FormLabel>Dirección</FormLabel>
+                <Input
+                  value={editFormData.address}
+                  onChange={(e) => setEditFormData(prev => ({ ...prev, address: e.target.value }))}
+                  placeholder="Calle Principal 123"
+                />
+              </FormControl>
+            </VStack>
+          </ModalBody>
+
+          <ModalFooter>
+            <HStack spacing={3}>
+              <Button 
+                variant="ghost" 
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setSelectedTenant(null);
+                }}
+              >
+                Cancelar
+              </Button>
+              
+              <Button
+                colorScheme="teal"
+                onClick={handleEditTenant}
+                isLoading={loading}
+                loadingText="Actualizando..."
+                leftIcon={<FaCheck />}
+              >
+                Actualizar Tenant
               </Button>
             </HStack>
           </ModalFooter>

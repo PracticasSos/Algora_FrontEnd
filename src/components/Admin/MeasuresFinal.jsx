@@ -1,12 +1,18 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../api/supabase";
-import { Box, Button, FormControl, Input, SimpleGrid, Heading, Alert, AlertIcon, Table, Thead, Tbody, Tr, Th, Td, Textarea, RadioGroup, Radio, Stack, Checkbox, Text, FormLabel, useColorModeValue, HStack} from "@chakra-ui/react";
+import { 
+  Box, Button, FormControl, Input, SimpleGrid, Heading, 
+  Table, Thead, Tbody, Tr, Th, Td, Textarea, RadioGroup, 
+  Radio, Stack, Checkbox, Text, FormLabel, useColorModeValue, 
+  HStack, useToast
+} from "@chakra-ui/react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaEye } from 'react-icons/fa';
 import SmartHeader from "../header/SmartHeader";
 
 const MeasuresFinal = () => {
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [formData, setFormData] = useState({
     patient_id: "",
@@ -46,14 +52,14 @@ const MeasuresFinal = () => {
   const { id } = useParams();
 
   useEffect(() => {
-  if (id && patients.length > 0) {
-    const found = patients.find(p => String(p.id) === String(id));
-    if (found) {
-      setFormData(f => ({ ...f, patient_id: found.id }));
-      setSearchTermPatients(`${found.pt_firstname} ${found.pt_lastname}`);
-      setFilteredPatients([]);
+    if (id && patients.length > 0) {
+      const found = patients.find(p => String(p.id) === String(id));
+      if (found) {
+        setFormData(f => ({ ...f, patient_id: found.id }));
+        setSearchTermPatients(`${found.pt_firstname} ${found.pt_lastname}`);
+        setFilteredPatients([]);
+      }
     }
-  }
   }, [id, patients]); 
 
   useEffect(() => {
@@ -61,11 +67,9 @@ const MeasuresFinal = () => {
       setPatients(data);
       setFilteredPatients(data);
 
-      // Intentar seleccionar paciente desde localStorage
       const stored = localStorage.getItem('selectedPatient');
       if (stored) {
         const selected = JSON.parse(stored);
-        // Buscar el paciente en la lista por CI o nombre
         const found = data.find(
           p =>
             (selected.pt_ci && p.pt_ci === selected.pt_ci) ||
@@ -76,27 +80,33 @@ const MeasuresFinal = () => {
           setSearchTermPatients(`${found.pt_firstname} ${found.pt_lastname}`);
           setFilteredPatients([]);
         }
-        // Limpia el localStorage para evitar selección accidental en el futuro
         localStorage.removeItem('selectedPatient');
       }
     });
   }, []);
 
-    const fetchData = async (table, setter) => {
-      try {
-          const { data, error } = await supabase.from(table).select("*");
-          if (error) throw error;
-          setter(data);
-      } catch (err) {
-          console.error(`Error fetching ${table}:`, err);
-          setError(`Error al obtener los datos de ${table}`);
-      }
-    };
+  const fetchData = async (table, setter) => {
+    try {
+      const { data, error } = await supabase.from(table).select("*");
+      if (error) throw error;
+      setter(data);
+    } catch (err) {
+      console.error(`Error fetching ${table}:`, err);
+      setError(`Error al obtener los datos de ${table}`);
+      toast({
+        title: "Error",
+        description: `No se pudieron obtener los datos de ${table}.`,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
 
-    const handleChange = (e) => {
-      const { name, value } = e.target;
-      setFormData({ ...formData, [name]: value });
-    };
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
 
   const handleSearchPatients = (e) => {
     const searchTerm = e.target.value.toLowerCase();
@@ -121,19 +131,32 @@ const MeasuresFinal = () => {
 
   const handleSubmit = async () => {
     if (!formData.patient_id) {
-      alert ("Por favor completa los campos obligatorios.");
+      toast({
+        title: "Campos obligatorios",
+        description: "Por favor completa los campos obligatorios.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
       return;
-  }
+    }
 
-  const newFormData = {
-    ...formData,
-    created_at: new Date().toISOString(), 
-  };
-  try {
+    const newFormData = {
+      ...formData,
+      created_at: new Date().toISOString(), 
+    };
+
+    try {
       const { data, error } = await supabase.from("rx_final").insert([newFormData]);
       if (error) throw error;
       console.log("Medidas registradas:", data);
-      alert("Medidas registradas exitosamente.");
+      toast({
+        title: "Éxito",
+        description: "Medidas registradas exitosamente.",
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
       setFormData({
         patient_id: "",
         sphere_right: "",
@@ -163,40 +186,47 @@ const MeasuresFinal = () => {
         color_issues: "",
         created_at: ""
       });
-  } catch (error) {
+    } catch (error) {
       console.error("Error al registrar medidas:", error.message);
-      alert("Hubo un error al registar la venta.");
-  }
+      toast({
+        title: "Error",
+        description: "Hubo un error al registrar las medidas.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
   };
 
   const handleNavigate = (route = null) => {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (route) {
-            navigate(route);
-            return;
-        }
-        if (!user || !user.role_id) {
-            navigate('/LoginForm');
-            return;
-        }
-        switch (user.role_id) {
-            case 1:
-                navigate('/Admin');
-                break;
-            case 2:
-                navigate('/Optometra');
-                break;
-            case 3:
-                navigate('/Vendedor');
-                break;
-            case 4:
-                navigate('/SuperAdmin');
-                break;
-            default:
-                navigate('/');
-        }
-    };
-    const moduleSpecificButton = null;
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (route) {
+      navigate(route);
+      return;
+    }
+    if (!user || !user.role_id) {
+      navigate('/LoginForm');
+      return;
+    }
+    switch (user.role_id) {
+      case 1:
+        navigate('/Admin');
+        break;
+      case 2:
+        navigate('/Optometra');
+        break;
+      case 3:
+        navigate('/Vendedor');
+        break;
+      case 4:
+        navigate('/SuperAdmin');
+        break;
+      default:
+        navigate('/');
+    }
+  };
+
+  const moduleSpecificButton = null;
 
     return (
       <Box display="flex" flexDirection="column" alignItems="center" minHeight="100dvh" p={[2, 4, 6]}>

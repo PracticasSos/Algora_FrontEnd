@@ -1,266 +1,243 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../api/supabase";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Box, Heading, Button, FormControl, FormLabel, Input, Table, Thead, Tbody, Tr, Th, Td, HStack, Select, SimpleGrid, Text, useColorModeValue } from "@chakra-ui/react";
+import { 
+  Box, Heading, Button, FormControl, FormLabel, Input, 
+  Table, Thead, Tbody, Tr, Th, Td, HStack, Select, 
+  SimpleGrid, Text, useColorModeValue, useToast 
+} from "@chakra-ui/react";
 import SmartHeader from "../header/SmartHeader";
 import { FaEye } from 'react-icons/fa';
 
 const Retreats = () => {
-    const { saleId } = useParams();
-    const location = useLocation();
-    const [salesData, setSalesData] = useState(null);
-    const [patientData, setPatientData] = useState(location.state?.patientData || null);
-    const [patientsList, setPatientsList] = useState([]);
-    const [isTyping, setIsTyping] = useState(false);
-    const [pendingSales, setPendingSales] = useState([]);
-    const [message, setMessage] = useState("");
-    const [paymentBalance, setPaymentBalance] = useState("");
-    const navigate = useNavigate();
+  const { saleId } = useParams();
+  const location = useLocation();
+  const [salesData, setSalesData] = useState(null);
+  const [patientData, setPatientData] = useState(location.state?.patientData || null);
+  const [patientsList, setPatientsList] = useState([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [pendingSales, setPendingSales] = useState([]);
+  const [message, setMessage] = useState("");
+  const [paymentBalance, setPaymentBalance] = useState("");
+  const navigate = useNavigate();
+  const toast = useToast();
 
-    const handleNavigate = (route = null) => {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (route) {
-            navigate(route);
-            return;
-        }
-        if (!user || !user.role_id) {
-            navigate('/LoginForm');
-            return;
-        }
-        switch (user.role_id) {
-            case 1:
-                navigate('/Admin');
-                break;
-            case 2:
-                navigate('/Optometra');
-                break;
-            case 3:
-                navigate('/Vendedor');
-                break;
-            case 4:
-                navigate('/SuperAdmin');
-                break;
-            default:
-                navigate('/');
-        }
-    };
+  const handleNavigate = (route = null) => {
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (route) {
+      navigate(route);
+      return;
+    }
+    if (!user || !user.role_id) {
+      navigate('/LoginForm');
+      return;
+    }
+    switch (user.role_id) {
+      case 1:
+        navigate('/Admin');
+        break;
+      case 2:
+        navigate('/Optometra');
+        break;
+      case 3:
+        navigate('/Vendedor');
+        break;
+      case 4:
+        navigate('/SuperAdmin');
+        break;
+      default:
+        navigate('/');
+    }
+  };
 
-    useEffect(() => {
-        if (saleId) {
-            fetchPatientData();
-        } else {
-            console.error("Sale is undefined or invalid.");
-            alert("Error: El ID de la venta no está disponible.");
-        }
-    }, [saleId]);
+  useEffect(() => {
+    if (saleId) {
+      fetchPatientData();
+    } else {
+      console.error("Sale is undefined or invalid.");
+      toast({
+        title: "Error",
+        description: "El ID de la venta no está disponible.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  }, [saleId]);
 
-    const fetchPatientData = async () => {
-        try {
-            const { data, error } = await supabase
-                .from("sales")
-                .select(`
-                    *,
-                    patients (
-                        id,
-                        pt_firstname,
-                        pt_lastname,
-                        pt_ci,
-                        pt_phone
-                    ),
-                    rx_final:measure_id (*),
-                    inventario:inventario_id(brand),
-                    lens:lens_id(lens_type)
-                `)
-                .eq("id", saleId)
-                .single();
-    
-            if (error) throw error;
-    
-            setPatientData(data.patients); 
-            setSalesData(data); 
-        } catch (error) {
-            console.error("Error fetching patient data:", error);
-            alert("Error al cargar los datos de la venta.");
-        }
-    };
-    
-    const fetchSalesData = async () => {
-        try {
-            const { data, error } = await supabase
-                .from("sales")
-                .select(`
-                    id,
-                    date,
-                    inventario:inventario_id(brand),
-                    delivery_time, 
-                    p_frame, 
-                    p_lens,
-                    price,
-                    discount_frame, 
-                    discount_lens,
-                    total,
-                    balance,
-                    credit,
-                    payment_in,
-                    payment_balance, 
-                    meausre_id
-                `)
-                .eq("patient_id", patientData.id); 
-    
-            if (error) throw error;
-    
-            console.log("Sales Data:", data); 
-    
-            if (!Array.isArray(data)) {
-                throw new Error("Supabase did not return an array");
-            }
-            const correctSale = data.find(sale => sale.date === location.state?.selectedDate);
-    
-            setSalesData(correctSale || null); 
-            setPendingSales(data);
-        } catch (error) {
-            console.error("Error fetching sales data:", error);
-        }
-    };
-    
-    const handleInputFocus = () => {
-        setIsTyping(true);
-    };
-    
-    const handleInputBlur = () => {
-        setTimeout(() => {
-            setIsTyping(false); 
-        }, 200); 
-    };
-
-    const handleSendWhatsApp = async () => {
-        if (!salesData || !patientData) {
-            alert("Faltan datos para completar la operación.");
-            return;
-        }
-    
-        try {
-            const phoneNumber = patientData.pt_phone;
-            const formattedMessage = message || "Pedido listo para retiro.";
-            const currentCredit = salesData.credit || 0;
-            const updatedBalance = (salesData.balance || 0) + currentCredit;
-            const updatedCredit = 0; 
-    
-            const { error: updateSalesError } = await supabase
-                .from('sales')
-                .update({ 
-                    is_completed: true,
-                    credit: updatedCredit,  
-                    balance: updatedBalance, 
-                    payment_balance: paymentBalance 
-                })
-                .eq('id', salesData.id);
-    
-            if (updateSalesError) {
-                console.error('Error actualizando la venta:', updateSalesError);
-                throw updateSalesError;
-            }
-    
-            sendWhatsAppMessage(phoneNumber, formattedMessage);
-            
-            setPendingSales(prevSales => 
-                prevSales.filter(sale => sale.id !== salesData.id)
-            );
-    
-            navigate("/RetreatsPatients", { 
-                state: { 
-                    updatedPendingSales: pendingSales.filter(sale => sale.id !== salesData.id) 
-                } 
-            });
-    
-            alert("Mensaje enviado, retiro marcado como completado y saldo actualizado.");
-        } catch (err) {
-            console.error("Error al procesar la venta:", err);
-            alert("Hubo un problema al completar la operación.");
-        }
-    };
-    
-    const fetchPendingSales = async () => {
-        const { data, error } = await supabase
-            .from('sales')
-            .select('*')
-            .neq('is_completed', false);  
-        
-        if (error) {
-            console.error('Error fetching sales:', error);
-        } else {
-            setPendingSales(data);
-        }
-    };
-    
-    const sendWhatsAppMessage = (phoneNumber, message) => {
-        if (!phoneNumber) {
-            alert("El número de teléfono no está disponible.");
-            return;
-        }
-    
-        const encodedMessage = encodeURIComponent(message);
-        const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
-    
-        window.open(whatsappUrl, "_blank");
-    };
-    
-    const handleWhatsAppClick = async () => {
-        try {
-            const pdfUrl = await generateAndUploadPDF(formData);
-            const message = formData.message || "Aquí tienes el documento solicitado.";
-            const phoneNumber = formData.pt_phone;
-    
-            sendWhatsAppMessage(phoneNumber, pdfUrl, message);
-        } catch (err) {
-            console.error("Error enviando mensaje por WhatsApp:", err);
-            alert("Hubo un problema al enviar el mensaje.");
-        }
-    };
-
-    const filteredPatients = patientsList.filter(patient => {
-        if (searchTerm === '') {
-            return true; 
-        }
-        const fullName = `${patient.pt_firstname} ${patient.pt_lastname}`;
-        return fullName.toLowerCase().includes(searchTerm.toLowerCase()); 
-    });
-
-    const moduleSpecificButton = (
-      <Button 
-        onClick={() => handleNavigate('/retreats-patients')} 
-        bg={useColorModeValue(
-          'rgba(255, 255, 255, 0.8)', 
-          'rgba(255, 255, 255, 0.1)'
-        )}
-        backdropFilter="blur(10px)"
-        border="1px solid"
-        borderColor={useColorModeValue(
-          'rgba(56, 178, 172, 0.3)', 
-          'rgba(56, 178, 172, 0.5)'
-        )}
-        color={useColorModeValue('teal.600', 'teal.300')}
-        size="sm"
-        borderRadius="15px"
-        px={4}
-        _hover={{
-          bg: useColorModeValue(
-            'rgba(56, 178, 172, 0.1)', 
-            'rgba(56, 178, 172, 0.2)'
+  const fetchPatientData = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("sales")
+        .select(`
+          *,
+          patients (
+            id,
+            pt_firstname,
+            pt_lastname,
+            pt_ci,
+            pt_phone
           ),
-          borderColor: 'teal.400',
-          transform: 'translateY(-1px)',
-        }}
-        transition="all 0.2s"
-      >
-        <HStack spacing={2} align="center" justify="center">
-          <FaEye size="14px" />
-          <Text fontWeight="600" lineHeight="1" m={0}>
-            Lista de Retiros
-          </Text>
-        </HStack>
-      </Button>
+          rx_final:measure_id (*),
+          inventario:inventario_id(brand),
+          lens:lens_id(lens_type)
+        `)
+        .eq("id", saleId)
+        .single();
+
+      if (error) throw error;
+
+      setPatientData(data.patients); 
+      setSalesData(data); 
+    } catch (error) {
+      console.error("Error fetching patient data:", error);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los datos de la venta.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const handleSendWhatsApp = async () => {
+    if (!salesData || !patientData) {
+      toast({
+        title: "Datos incompletos",
+        description: "Faltan datos para completar la operación.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    try {
+      const phoneNumber = patientData.pt_phone;
+      const formattedMessage = message || "Pedido listo para retiro.";
+      const currentCredit = salesData.credit || 0;
+      const updatedBalance = (salesData.balance || 0) + currentCredit;
+      const updatedCredit = 0; 
+
+      const { error: updateSalesError } = await supabase
+        .from('sales')
+        .update({ 
+          is_completed: true,
+          credit: updatedCredit,  
+          balance: updatedBalance, 
+          payment_balance: paymentBalance 
+        })
+        .eq('id', salesData.id);
+
+      if (updateSalesError) {
+        console.error('Error actualizando la venta:', updateSalesError);
+        throw updateSalesError;
+      }
+
+      sendWhatsAppMessage(phoneNumber, formattedMessage);
+      
+      setPendingSales(prevSales => 
+        prevSales.filter(sale => sale.id !== salesData.id)
       );
+
+      navigate("/RetreatsPatients", { 
+        state: { 
+          updatedPendingSales: pendingSales.filter(sale => sale.id !== salesData.id) 
+        } 
+      });
+
+      toast({
+        title: "Operación completada",
+        description: "Mensaje enviado, retiro marcado como completado y saldo actualizado.",
+        status: "success",
+        duration: 5000,
+        isClosable: true,
+      });
+    } catch (err) {
+      console.error("Error al procesar la venta:", err);
+      toast({
+        title: "Error",
+        description: "Hubo un problema al completar la operación.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const sendWhatsAppMessage = (phoneNumber, message) => {
+    if (!phoneNumber) {
+      toast({
+        title: "Teléfono no disponible",
+        description: "El número de teléfono no está disponible.",
+        status: "warning",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
+
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+
+    window.open(whatsappUrl, "_blank");
+  };
+
+  const handleWhatsAppClick = async () => {
+    try {
+      const pdfUrl = await generateAndUploadPDF(formData);
+      const message = formData.message || "Aquí tienes el documento solicitado.";
+      const phoneNumber = formData.pt_phone;
+
+      sendWhatsAppMessage(phoneNumber, `${message} ${pdfUrl}`);
+    } catch (err) {
+      console.error("Error enviando mensaje por WhatsApp:", err);
+      toast({
+        title: "Error",
+        description: "Hubo un problema al enviar el mensaje.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    }
+  };
+
+  const moduleSpecificButton = (
+    <Button 
+      onClick={() => handleNavigate('/retreats-patients')} 
+      bg={useColorModeValue(
+        'rgba(255, 255, 255, 0.8)', 
+        'rgba(255, 255, 255, 0.1)'
+      )}
+      backdropFilter="blur(10px)"
+      border="1px solid"
+      borderColor={useColorModeValue(
+        'rgba(56, 178, 172, 0.3)', 
+        'rgba(56, 178, 172, 0.5)'
+      )}
+      color={useColorModeValue('teal.600', 'teal.300')}
+      size="sm"
+      borderRadius="15px"
+      px={4}
+      _hover={{
+        bg: useColorModeValue(
+          'rgba(56, 178, 172, 0.1)', 
+          'rgba(56, 178, 172, 0.2)'
+        ),
+        borderColor: 'teal.400',
+        transform: 'translateY(-1px)',
+      }}
+      transition="all 0.2s"
+    >
+      <HStack spacing={2} align="center" justify="center">
+        <FaEye size="14px" />
+        <Text fontWeight="600" lineHeight="1" m={0}>
+          Lista de Retiros
+        </Text>
+      </HStack>
+    </Button>
+  );
 
     return (
         <Box className="sales-form" display="flex" flexDirection="column" alignItems="center" minHeight="100vh">

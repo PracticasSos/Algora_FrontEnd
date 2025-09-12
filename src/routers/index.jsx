@@ -35,7 +35,6 @@ import Register from "../components/Admin/Register.jsx";
 import HistoryClinic from "../components/Admin/HistoryClinic.jsx";
 import SalesHistory from "../components/Admin/Sales/history/SalesHistory.jsx";
 import PrintCertificate from "../components/Admin/certificate/PrintCertificate.jsx";
-import Tenant from "../components/Admin/Tenant.jsx";
 import UploadLogo from "../components/Admin/certificate/UploadLogo.jsx";
 import SuperAdminDashBoard from "../components/optionsauth/OptionsSuperAdmin.jsx";
 import FormInitial from '../components/ExperienceModule/pages/FormInitial.jsx';
@@ -58,7 +57,6 @@ const AppRouter = () => {
             <Route path="/" element={<Welcome />} /> {/*Cada route sera una ruta de acceso a la pagina */}
             <Route path="/register" element={<Register/>} />{/*Ruta para registrar usuarios (solo admin accede)*/}
             <Route path="/change-password" element={<ChangePassword/>} />{/*Ruta para cambiar contraseña*/}
-            <Route path="/tenants" element={<Tenants/>} />{/*Ruta para registrar usuarios (solo admin accede)*/}
             <Route path="/inventory" element={<Inventario/>}></Route>
             <Route path="/login-form" element={<LoginForm/>} />
             <Route path="/admin" element={<AdminDashBoard/>} />
@@ -96,7 +94,6 @@ const AppRouter = () => {
             <Route path="/history-clinic/patient-history/:patientId" element={<PatientHistory />} />
             <Route path="/history-clinic/patient-history/:patientId/sales-history/:saleId" element={<SalesHistory />} />
             <Route path="/print-certificate" element={<PrintCertificate/>}></Route>
-            <Route path="/tenant" element={<Tenant/>}></Route>
             <Route path="/upload-logo" element={<UploadLogo/>}></Route>
             <Route path="/message-manager" element={<MessageManager/>}></Route>
             <Route path="/register-experience" element={<FormInitial />}> </Route>

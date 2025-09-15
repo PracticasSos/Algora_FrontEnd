@@ -8,7 +8,7 @@ const Welcome = ({ onFinish }) => {
       if (typeof onFinish === "function") {
         onFinish();
       }
-    }, 2500);
+    }, 1200);
 
     return () => clearTimeout(timer);
   }, [onFinish]);

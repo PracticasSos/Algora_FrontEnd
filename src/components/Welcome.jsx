@@ -2,16 +2,13 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import './WelcomeScreen.css';
 
-
-
 const Welcome = ({ onFinish }) => {
-  // ✅ Llama a onFinish después de 2.5s
   useEffect(() => {
     const timer = setTimeout(() => {
       if (typeof onFinish === "function") {
         onFinish();
       }
-    }, 2500); // puedes ajustar el tiempo si quieres que dure más o menos
+    }, 2500);
 
     return () => clearTimeout(timer);
   }, [onFinish]);

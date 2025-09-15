@@ -10,23 +10,19 @@ function App() {
   const [isChecking, setIsChecking] = useState(true);
   const navigate = useNavigate();
 
-  // 🎨 Colores adaptativos para light/dark mode
   const bgColor = useColorModeValue("white", "gray.800");
 
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-
         if (session?.user) {
-          // Guarda la sesión básica en localStorage (opcional, depende de tu AuthContext)
           localStorage.setItem("user", JSON.stringify(session.user));
         }
       } catch (error) {
         console.error("Error checking auth status:", error);
       } finally {
         setIsChecking(false);
-        setShowSplash(false); // oculta el splash una vez cargado
       }
     };
 
@@ -34,20 +30,19 @@ function App() {
   }, []);
 
   const handleWelcomeFinish = () => {
-    setShowSplash(false);
+    // Primero navega, luego ocultamos el splash
     navigate("/login-form");
+    setShowSplash(false);
   };
 
-  if (isChecking) {
-    return null; // Puedes poner un loader si prefieres
-  }
+  if (isChecking) return null; // loader opcional
 
   return showSplash ? (
     <Welcome onFinish={handleWelcomeFinish} />
   ) : (
     <Container
       maxW="100%"
-      padding="0px"
+      padding="0"
       bg={bgColor}
       minH="100vh"
       fontFamily="'Satoshi', sans-serif"

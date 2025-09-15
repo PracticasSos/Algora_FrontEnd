@@ -1,21 +1,21 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import SearchPatient from "./SearchPatient";
 import Measures from "./Measures";
 import { supabase } from "../../../api/supabase";
-import { Box, Heading, Button, Text, Grid, useColorModeValue  } from "@chakra-ui/react";
-import Total from "./Total";
+import { Box, Heading, useColorModeValue  } from "@chakra-ui/react";
 import Pdf from "./Pdf";
 import {useNavigate, useParams } from "react-router-dom";
-import SignaturePadComponent from "./SignaturePadComponent";
 import { useToast } from "@chakra-ui/react";
-import Delivery from "./Delivery";
-import SalesDetails from "./SalesDetails";
-import TotalUI from "./TotalUI";
-import MessageSection from "./MenssageSection";
-import ObservationSection from "./ObservationSection";
-import TermsCondition from "./TermsCondition";
 import SmartHeader from "../../header/SmartHeader";
-
+import SalesDetailsStep from "./SalesDetailsStep";
+import TotalStep from "./TotalStep";
+import DeliveryStep from "./DeliveryStep";
+import MessageStep from "./MessageStep";
+import ObservationStep from "./ObservationStep";
+import TermsStep from "./TermsStep";
+import StepsIndicator from "./StepsIndicator";
+import NavigationButtons from "./NavigationButtons";
+import PaymentStep from "./PaymentStep";
 
 const Sales = () => {
   const [saleData, setSaleData] = useState({
@@ -64,7 +64,6 @@ const Sales = () => {
   const [branchName, setBranchName] = useState("");
   const { id } = useParams();
   const toast = useToast();
-  // Nuevo estado para controlar las páginas
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 8; 
 
@@ -375,11 +374,6 @@ const Sales = () => {
 
   const moduleSpecificButton = null;
 
-  const cardBg = useColorModeValue(
-    'rgba(207, 202, 202, 0.5)', // Light: tarjetas blancas
-    'rgba(48, 44, 44, 0.2)' // Dark: tu fondo actual
-  );
-
   // Función para renderizar el contenido según el paso actual
   const renderStepContent = () => {
     
@@ -393,119 +387,59 @@ const Sales = () => {
         );
       case 2:
         return (
-          <Box p={5}>
-            <Text fontSize="xl" fontWeight="bold" mb={6} textAlign="center" color="gray.600">
-              Detalles de Venta
-            </Text>
-            <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
-              <Grid gap={4} alignItems="start">
-                <SalesDetails
-                  formData={formData}
-                  setFormData={setFormData}
-                  onTotalsChange={handleTotalsChange}
-                />
-              </Grid>
-            </Box>
-          </Box>
+          <SalesDetailsStep
+            formData={formData}
+            setFormData={setFormData}
+            onTotalsChange={handleTotalsChange}
+          />
         );
       case 3:
         return (
-          <Box mb={[4, 6]}>
-            <Text fontSize="xl" fontWeight="bold" mb={6} textAlign="center" color="gray.600">
-              Total
-            </Text>
-            <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
-              <TotalUI
-                frameName={formData.brand || ""}
-                lensName={formData.lens_type_name || ""}
-                total_p_frame={formData.total_p_frame}
-                total_p_lens={formData.total_p_lens}
-                initialFormData={formData}
-                onFormDataChange={handleFormDataChange}
-              />
-            </Box>
-          </Box>
+          <TotalStep
+            formData={formData}
+            onFormDataChange={handleFormDataChange}
+          />
         );
       case 4:
         return (
-          <Box mt={6}>
-            <Text fontSize="xl" fontWeight="bold" mb={6} textAlign="center" color="gray.600">
-              Método de Pago
-            </Text>
-            <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
-              <Total
-                formData={formData}
-                setFormData={handleFormDataChange}
-              />
-            </Box>
-          </Box>
+          <PaymentStep
+            formData={formData}
+            onFormDataChange={handleFormDataChange}
+          />
         );
       case 5:
         return (
-          <Box mt={8}>
-            <Text fontSize="xl" fontWeight="bold" mb={6} textAlign="center" color="gray.600">
-              Tiempo de Entrega
-            </Text>
-            <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
-              <Delivery saleData={saleData} setSaleData={setSaleData} />
-            </Box>
-          </Box>
+          <DeliveryStep
+            saleData={saleData}
+            setSaleData={setSaleData}
+          />
         );
       case 6:
         return (
-          <Box mt={8}>
-            <Text fontSize="xl" fontWeight="bold" mb={6} textAlign="center" color="gray.600">
-              Mensaje
-            </Text>
-            <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
-              <MessageSection
-                selectedBranch={branchName}
-                formData={formData}
-                setFormData={setFormData}
-              />
-            </Box>
-          </Box>
+          <MessageStep
+            selectedBranch={branchName}
+            formData={formData}
+            setFormData={setFormData}
+          />
         );
       case 7:
         return (
-          <Box mt={8}>
-            <Text fontSize="xl" fontWeight="bold" mb={6} textAlign="center" color="gray.600">
-              Observación
-            </Text>
-            <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
-              <ObservationSection setFormData={setFormData} />
-            </Box>
-          </Box>
+          <ObservationStep
+            setFormData={setFormData}
+          />
         );
       case 8:
         return (
-          <Box mt={8}>
-            <Text fontSize="xl" fontWeight="bold" mb={6} textAlign="center" color="gray.600">
-              Términos y Condiciones
-            </Text>
-            <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
-              <TermsCondition
-                selectedBranch={branchName}
-                formData={formData}
-                setFormData={setFormData}
-              />
-              <SignaturePadComponent
-                onSave={(signatureDataUrl) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    signature: signatureDataUrl,
-                  }))
-                }
-              />
-            </Box>
-          </Box>
+          <TermsStep
+            selectedBranch={branchName}
+            formData={formData}
+            setFormData={setFormData}
+          />
         );
       default:
         return null;
     }
   };
-  
-  
 
   return (
     <Box ref={salesRef} w="full" px={4}>
@@ -522,44 +456,20 @@ const Sales = () => {
           Contrato de Servicio
         </Heading>
       </Box>
-        {/* Indicador de pasos */}
-        <Box mb={6} display="flex" justifyContent="center" flexWrap="wrap" gap={2}>
-          {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
-            <Button
-              key={step}
-              size="sm"
-              colorScheme={currentStep === step ? "teal" : "gray"}
-              variant={currentStep === step ? "solid" : "outline"}
-              onClick={() => goToStep(step)}
-            >
-              {step}
-            </Button>
-          ))}
-        </Box>
-          
-        {/* Contenido del paso actual */}
+        <StepsIndicator
+          totalSteps={totalSteps}
+          currentStep={currentStep}
+          goToStep={goToStep}
+        />
         {renderStepContent()}
-
-        {/* Botones de navegación */}
-        <Box mt={6} display="flex" justifyContent="space-between" width="100%" maxWidth="400px" gap={4}>
-          <Button
-            onClick={prevStep}
-            isDisabled={currentStep === 1}
-            colorScheme="gray"
-          >
-            Anterior
-          </Button>
-          
-          {currentStep === totalSteps ? (
-            <Button colorScheme="teal" onClick={handleSubmit} isDisabled={isSubmitting}>
-              {isSubmitting ? "Registrando..." : "Registrar Venta"}
-            </Button>
-          ) : (
-            <Button onClick={nextStep} colorScheme="teal">
-              Siguiente
-            </Button>
-          )}
-        </Box>
+        <NavigationButtons
+          currentStep={currentStep}
+          totalSteps={totalSteps}
+          prevStep={prevStep}
+          nextStep={nextStep}
+          handleSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+        />
         {saleId && <Pdf 
           formData={pdfData} 
           targetRef={salesRef} 

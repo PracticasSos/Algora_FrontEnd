@@ -2,85 +2,56 @@ import { useEffect, useState } from "react";
 import Welcome from "./components/Welcome";
 import { Container, useColorModeValue } from "@chakra-ui/react";
 import AppRouter from "./routers";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "./api/supabase";
-import { useUserPermissions,  isRouteAllowed } from './components/optionsauth/UserPermissions';
 
 function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [isChecking, setIsChecking] = useState(true);
-  const [userData, setUserData] = useState(null);
   const navigate = useNavigate();
-  const location = useLocation();
-  
-  // Colores adaptativos para light/dark mode
-  const bgColor = useColorModeValue('white', 'gray.800');
-  
-  const { allowedRoutes, loading: permissionsLoading } = useUserPermissions(userData);
+
+  // 🎨 Colores adaptativos para light/dark mode
+  const bgColor = useColorModeValue("white", "gray.800");
 
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (session?.user) {
-          const { data: user, error: userError } = await supabase
-            .from('users')
-            .select('id, role_id, tenant_id, auth_id')
-            .eq('auth_id', session.user.id)
-            .single();
+        const { data: { session } } = await supabase.auth.getSession();
 
-          if (!userError && user) {
-            const fullUserData = { ...session.user, ...user };
-            localStorage.setItem('user', JSON.stringify(fullUserData));
-            setUserData(fullUserData);
-            setShowSplash(false);
-            setIsChecking(false);
-            return;
-          }
+        if (session?.user) {
+          // Guarda la sesión básica en localStorage (opcional, depende de tu AuthContext)
+          localStorage.setItem("user", JSON.stringify(session.user));
         }
-        
-        setIsChecking(false);
       } catch (error) {
-        console.error('Error checking auth status:', error);
+        console.error("Error checking auth status:", error);
+      } finally {
         setIsChecking(false);
+        setShowSplash(false); // oculta el splash una vez cargado
       }
     };
 
     checkAuthStatus();
   }, []);
 
-  useEffect(() => {
-  if (userData && !permissionsLoading && allowedRoutes.length > 0) {
-    const dashboardRoutes = {
-      1: '/admin',
-      2: '/optometra', 
-      3: '/vendedor',
-      4: '/SuperAdmin'
-    };
-
-    const defaultRoute = dashboardRoutes[userData.role_id] || '/login-form';
-
-    // Usar la función isRouteAllowed en lugar de includes
-    if (!isRouteAllowed(location.pathname, allowedRoutes) || location.pathname === '/') {
-      navigate(defaultRoute);
-    }
-  }
-}, [userData, allowedRoutes, permissionsLoading, location.pathname, navigate]);
-
   const handleWelcomeFinish = () => {
     setShowSplash(false);
-    navigate("/login-form"); 
+    navigate("/login-form");
   };
 
-  if (isChecking || permissionsLoading) {
-    return null;
+  if (isChecking) {
+    return null; // Puedes poner un loader si prefieres
   }
 
   return showSplash ? (
     <Welcome onFinish={handleWelcomeFinish} />
   ) : (
-    <Container maxW="100%" padding="0px" bg={bgColor} minH="100vh" fontFamily="'Satoshi', sans-serif"  >
+    <Container
+      maxW="100%"
+      padding="0px"
+      bg={bgColor}
+      minH="100vh"
+      fontFamily="'Satoshi', sans-serif"
+    >
       <AppRouter />
     </Container>
   );

@@ -102,7 +102,7 @@ const HeaderVendedor = ({ moduleSpecificButton = null }) => {
             <Text
               color={textColor}
               cursor="pointer"
-              onClick={() => navigate("/")}
+              onClick={() => navigate("/vendedor")}
               _hover={{ color: textHoverColor }}
               fontWeight="medium"
             >
@@ -167,9 +167,15 @@ const HeaderVendedor = ({ moduleSpecificButton = null }) => {
                   <MenuItem onClick={() => navigate("/history-measure-list")}>
                     Historial de Medidas
                   </MenuItem>
-                  <MenuItem onClick={handleLogout} color="red.500">
+                  <MenuItem
+                    onClick={() => {
+                      handleLogout();
+                      navigate("/login-form");
+                    }}
+                    color="red.500"
+                  >
                     Cerrar Sesión
-                  </MenuItem>
+                  </MenuItem>  
                 </MenuList>
               </Portal>
             </Menu>

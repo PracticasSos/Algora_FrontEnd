@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Box,
+import React, { useState } from "react";
+import {
+  Box,
   Flex,
   Text,
   Image,
@@ -13,17 +14,11 @@ import { Box,
   IconButton,
   Stack,
   Collapse,
-  Portal,} from '@chakra-ui/react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../AuthContext';
-import { useUserPermissions } from './UserPermissions';
-import { HamburgerIcon, CloseIcon } from "@chakra-ui/icons";
-import ColorModeToggle from '../../Toggle';
-
-import 'swiper/css';
-import 'swiper/css/effect-coverflow';
-import 'swiper/css/pagination';
-import 'swiper/css/navigation';
+  Portal,
+} from "@chakra-ui/react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../AuthContext";
+import ColorModeToggle from "../../Toggle";
 
 import iconocertificadovisual from "../../assets/iconocertificadovisual.png";
 import iconocierrediario from "../../assets/iconocierrediario.png";
@@ -46,9 +41,6 @@ import iconossaldos from "../../assets/iconossaldos.png";
 import iconosucursal from "../../assets/iconosucursal.png";
 import iconousuarios from "../../assets/iconousuarios.png";
 import iconoventa from "../../assets/iconoventa.png";
-import usuariofemenino from "../../assets/usuariofemenino.png";
-import usuariomasculino from "../../assets/usuariomasculino.png";
-import avataralgora from "../../assets/avataralgora.jpg";
 
 const defaultOptions = [
   { label: "Registrar Paciente", icon: iconoregistrar, route: "/register-patient" },
@@ -79,116 +71,39 @@ const VendedorDashBoard = () => {
   const [showAll, setShowAll] = useState(false);
   const navigate = useNavigate();
   const { isOpen, onToggle } = useDisclosure();
-
   const { user, loading: authLoading, logout } = useAuth();
-  const { allowedRoutes, loading: permissionsLoading } = useUserPermissions(user);
 
-  if (authLoading || permissionsLoading) return null;
+  if (authLoading) return null;
   if (!user) return null;
 
-  // ✅ Todas las opciones disponibles
+  // ✅ Tomamos las rutas permitidas del JWT
+  const allowedRoutes = user.allowed_routes || [];
+
+  // ✅ Todas las opciones posibles
   const allOptions = [...defaultOptions, ...extraRouters];
 
-  // ✅ Filtrar opciones basado en permisos
-  const filteredOptions = allOptions.filter(option => 
-    allowedRoutes.includes(option.route)
-  );
+  // ✅ Filtrar según permisos
+  const availableOptions =
+    allowedRoutes.length > 0
+      ? allOptions.filter((option) => allowedRoutes.includes(option.route))
+      : allOptions;
 
-  // ✅ Si no hay opciones filtradas, mostrar todas (fallback)
-  const availableOptions = filteredOptions.length > 0 ? filteredOptions : allOptions;
-
-  const carouselItems = availableOptions.slice(0, 5);
-  
-  const handleOptionClick = (label) => {
-    // Buscar la opción por label y navegar a su ruta
-    const option = allOptions.find(opt => opt.label === label);
-    if (option && option.route) {
-      navigate(option.route);
-    }
+  const handleOptionClick = (route) => {
+    if (route) navigate(route);
   };
 
   const handleLogout = async () => {
     try {
       await logout();
+      navigate("/login-form");
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      console.error("Error al cerrar sesión:", error);
     }
   };
 
-  // Colores adaptativos - mantener tu estética oscura para dark mode
-  const mainBg = useColorModeValue(
-    'linear(to-b, #f7fafc, #edf2f7)', // Light: gradiente gris claro
-    '#000000' // Dark: tu negro actual
-  );
-
-  const navBg = useColorModeValue(
-    'rgba(255, 255, 255, 0.9)', // Light: fondo blanco semi-transparente
-    'rgba(46, 46, 46, 0.5)' // Dark: tu fondo actual
-  );
-
-  const navBorder = useColorModeValue(
-    '1px solid rgba(0,0,0,0.1)', // Light: borde negro sutil
-    '1px solid rgba(255,255,255,0.1)' // Dark: tu borde actual
-  );
-
-  const textColor = useColorModeValue(
-    'gray.800', // Light: texto oscuro
-    'white' // Dark: texto blanco
-  );
-
-  const textHoverColor = useColorModeValue(
-    '#2196f3', // Light: azul
-    '#00E599' // Dark: tu verde actual
-  );
-
-  const cardBg = useColorModeValue(
-    'rgba(207, 202, 202, 0.5)', // Light: tarjetas blancas
-    'rgba(46, 46, 46, 0.5)' // Dark: tu fondo actual
-  );
-
-  const cardBorder = useColorModeValue(
-    '2px solid #219BAA', // Light: tu borde actual
-    '2px solid #219BAA' // Dark: tu borde actual
-  );
-
-  const collapseBg = useColorModeValue(
-    'white', // Light: fondo blanco
-    'black' // Dark: tu negro actual
-  );
-
-  const borderTopColor = useColorModeValue(
-    'rgba(0,0,0,0.1)', // Light: borde negro sutil
-    'rgba(255,255,255,0.1)' // Dark: tu borde actual
-  );
-
-  // Agregar estilos adaptativos para el botón
-  const buttonBg = useColorModeValue(
-    'gray.300', // Light: fondo gris claro
-    'whiteAlpha.200' // Dark: fondo transparente blanco
-  );
-
-  const buttonBorderColor = useColorModeValue(
-    'gray.600', // Light: borde gris
-    'whiteAlpha.300' // Dark: borde transparente blanco
-  );
-
-  const buttonTextColor = useColorModeValue(
-    'gray.800', // Light: texto oscuro
-    'white' // Dark: texto blanco
-  );
-
-  const buttonHoverBg = useColorModeValue(
-    'gray.200', // Light: hover gris más oscuro
-    'whiteAlpha.300' // Dark: hover transparente
-  );
-
-  const moreItems = [
-      { label: "Créditos", icon: iconocreditos },
-      { label: "Saldos", icon: iconossaldos },
-      { label: "Envios", icon: iconoenvios },
-      { label: "Mensajes", icon: iconomensajes }
-    ];
-
+  // 🎨 Colores adaptativos
+  const mainBg = useColorModeValue("linear(to-b, #f7fafc, #edf2f7)", "#000000");
+  
 return (
     <Box
       bg={mainBg}
@@ -232,7 +147,7 @@ return (
               <Text
                 color={textColor}
                 cursor="pointer"
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/vendedor")}
                 _hover={{ color: textHoverColor }}
                 fontWeight="medium"
               >

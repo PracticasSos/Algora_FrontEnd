@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import {Box,
+import {
+  Box,
   Flex,
   Text,
   Image,
@@ -12,10 +13,10 @@ import {Box,
   useDisclosure,
   IconButton,
   Stack,
-  Collapse,} from '@chakra-ui/react';
+  Collapse,
+} from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
-import { useUserPermissions } from './UserPermissions';
 import { HamburgerIcon, CloseIcon } from "@chakra-ui/icons";
 import ColorModeToggle from '../../Toggle';
 
@@ -56,22 +57,21 @@ const defaultOptions = [
 ];
 
 const extraRouters = [
-    { label: "Orden de Laboratorio", icon: iconoordenlaboratorio, route: "/order-laboratory-list" },
-    { label: "Venta/ Contrato de Servicio", icon: iconoventa, route: "/sales" },
-    { label: "Registrar Medidas", icon: iconomedidas, route: "/measures-final" },
+  { label: "Orden de Laboratorio", icon: iconoordenlaboratorio, route: "/order-laboratory-list" },
+  { label: "Venta/ Contrato de Servicio", icon: iconoventa, route: "/sales" },
+  { label: "Registrar Medidas", icon: iconomedidas, route: "/measures-final" },
   { label: "Historial de Medidas", icon: iconohistorialmedidas, route: "/history-measure-list" },
-    { label: "Retiros", icon: iconoretiros, route: "/retreats-patients" },
-    { label: "Cierre", icon: iconocierrediario, route: "/patient-records" },
-    { label: "Saldos", icon: iconossaldos, route: "/balances-patient" },
-    { label: "Egresos", icon: iconoegresos, route: "/egresos" },
-    { label: "Créditos", icon: iconocreditos, route: "/creditos" },
-    { label: "Inventario", icon: iconoinventario, route: "/inventario" },
-    { label: "Registrar Lunas", icon: iconolunas, route: "/registrar-lunas" },
-    { label: "Usuarios", icon: iconousuarios, route: "/usuarios" },
-    { label: "Laboratorios", icon: iconolaboratorios, route: "/laboratorios" },
-    { label: "Sucursal", icon: iconosucursal, route: "/sucursal" },
-    { label: "Consultar Cierre", icon: iconoconsultarcierre, route: "/consultar-cierre" },
-    { label: "Imprimir Certificado", icon: iconocertificadovisual, route: "/imprimir-certificado" },
+  { label: "Cierre", icon: iconocierrediario, route: "/patient-records" },
+  { label: "Saldos", icon: iconossaldos, route: "/balances-patient" },
+  { label: "Egresos", icon: iconoegresos, route: "/egresos" },
+  { label: "Créditos", icon: iconocreditos, route: "/creditos" },
+  { label: "Inventario", icon: iconoinventario, route: "/inventario" },
+  { label: "Registrar Lunas", icon: iconolunas, route: "/registrar-lunas" },
+  { label: "Usuarios", icon: iconousuarios, route: "/usuarios" },
+  { label: "Laboratorios", icon: iconolaboratorios, route: "/laboratorios" },
+  { label: "Sucursal", icon: iconosucursal, route: "/sucursal" },
+  { label: "Consultar Cierre", icon: iconoconsultarcierre, route: "/consultar-cierre" },
+  { label: "Imprimir Certificado", icon: iconocertificadovisual, route: "/imprimir-certificado" },
 ];
 
 const OptometraDashBoard = () => {
@@ -80,27 +80,26 @@ const OptometraDashBoard = () => {
   const { isOpen, onToggle } = useDisclosure();
 
   const { user, loading: authLoading, logout } = useAuth();
-  const { allowedRoutes, loading: permissionsLoading } = useUserPermissions(user);
 
-  if (authLoading || permissionsLoading) return null;
+  if (authLoading) return null;
   if (!user) return null;
+
+  // ✅ Tomamos allowed_routes directo del usuario
+  const allowedRoutes = user.allowed_routes || [];
 
   // ✅ Todas las opciones disponibles
   const allOptions = [...defaultOptions, ...extraRouters];
 
   // ✅ Filtrar opciones basado en permisos
-  const filteredOptions = allOptions.filter(option => 
-    allowedRoutes.includes(option.route)
-  );
-
-  // ✅ Si no hay opciones filtradas, mostrar todas (fallback)
-  const availableOptions = filteredOptions.length > 0 ? filteredOptions : allOptions;
+  const availableOptions =
+    allowedRoutes.length > 0
+      ? allOptions.filter((option) => allowedRoutes.includes(option.route))
+      : allOptions;
 
   const carouselItems = availableOptions.slice(0, 3);
-  
+
   const handleOptionClick = (label) => {
-    // Buscar la opción por label y navegar a su ruta
-    const option = allOptions.find(opt => opt.label === label);
+    const option = allOptions.find((opt) => opt.label === label);
     if (option && option.route) {
       navigate(option.route);
     }
@@ -109,78 +108,38 @@ const OptometraDashBoard = () => {
   const handleLogout = async () => {
     try {
       await logout();
+      navigate("/login-form");
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      console.error("Error al cerrar sesión:", error);
     }
   };
 
-  // Colores adaptativos - mantener tu estética oscura para dark mode
+  // Colores adaptativos
   const mainBg = useColorModeValue(
-    'linear(to-b, #f7fafc, #edf2f7)', // Light: gradiente gris claro
-    '#000000' // Dark: tu negro actual
+    'linear(to-b, #f7fafc, #edf2f7)',
+    '#000000'
   );
 
   const navBg = useColorModeValue(
-    'rgba(255, 255, 255, 0.9)', // Light: fondo blanco semi-transparente
-    'rgba(46, 46, 46, 0.5)' // Dark: tu fondo actual
+    'rgba(255, 255, 255, 0.9)',
+    'rgba(46, 46, 46, 0.5)'
   );
 
   const navBorder = useColorModeValue(
-    '1px solid rgba(0,0,0,0.1)', // Light: borde negro sutil
-    '1px solid rgba(255,255,255,0.1)' // Dark: tu borde actual
+    '1px solid rgba(0,0,0,0.1)',
+    '1px solid rgba(255,255,255,0.1)'
   );
 
-  const textColor = useColorModeValue(
-    'gray.800', // Light: texto oscuro
-    'white' // Dark: texto blanco
-  );
-
-  const textHoverColor = useColorModeValue(
-    '#2196f3', // Light: azul
-    '#00E599' // Dark: tu verde actual
-  );
-
-  const cardBg = useColorModeValue(
-    'rgba(207, 202, 202, 0.5)', // Light: tarjetas blancas
-    'rgba(46, 46, 46, 0.5)' // Dark: tu fondo actual
-  );
-
-  const cardBorder = useColorModeValue(
-    '2px solid #219BAA', // Light: tu borde actual
-    '2px solid #219BAA' // Dark: tu borde actual
-  );
-
-  const collapseBg = useColorModeValue(
-    'white', // Light: fondo blanco
-    'black' // Dark: tu negro actual
-  );
-
-  const borderTopColor = useColorModeValue(
-    'rgba(0,0,0,0.1)', // Light: borde negro sutil
-    'rgba(255,255,255,0.1)' // Dark: tu borde actual
-  );
-
-  // Agregar estilos adaptativos para el botón
-  const buttonBg = useColorModeValue(
-    'gray.300', // Light: fondo gris claro
-    'whiteAlpha.200' // Dark: fondo transparente blanco
-  );
-
-  const buttonBorderColor = useColorModeValue(
-    'gray.600', // Light: borde gris
-    'whiteAlpha.300' // Dark: borde transparente blanco
-  );
-
-  const buttonTextColor = useColorModeValue(
-    'gray.800', // Light: texto oscuro
-    'white' // Dark: texto blanco
-  );
-
-  const buttonHoverBg = useColorModeValue(
-    'gray.200', // Light: hover gris más oscuro
-    'whiteAlpha.300' // Dark: hover transparente
-  );
-
+  const textColor = useColorModeValue('gray.800', 'white');
+  const textHoverColor = useColorModeValue('#2196f3', '#00E599');
+  const cardBg = useColorModeValue('rgba(207, 202, 202, 0.5)', 'rgba(46, 46, 46, 0.5)');
+  const cardBorder = useColorModeValue('2px solid #219BAA', '2px solid #219BAA');
+  const collapseBg = useColorModeValue('white', 'black');
+  const borderTopColor = useColorModeValue('rgba(0,0,0,0.1)', 'rgba(255,255,255,0.1)');
+  const buttonBg = useColorModeValue('gray.300', 'whiteAlpha.200');
+  const buttonBorderColor = useColorModeValue('gray.600', 'whiteAlpha.300');
+  const buttonTextColor = useColorModeValue('gray.800', 'white');
+  const buttonHoverBg = useColorModeValue('gray.200', 'whiteAlpha.300');
 
 return (
     <Box
@@ -381,7 +340,7 @@ return (
                   cursor="pointer"
                   onClick={() => {
                     onToggle();
-                    navigate("/");
+                    navigate("/optometra");
                   }}
                   _hover={{ color: textHoverColor }}
                 >

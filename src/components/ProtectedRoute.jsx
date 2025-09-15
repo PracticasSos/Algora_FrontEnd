@@ -1,53 +1,52 @@
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { useUserPermissions, isRouteAllowed } from './optionsauth/UserPermissions';
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
-const ProtectedRoute = ({ children }) => {
-  const { user, loading: authLoading } = useAuth();
-  const location = useLocation();
-  const { allowedRoutes, loading: permissionsLoading } = useUserPermissions(user);
-
-  // Mostrar loading mientras se cargan datos
-  if (authLoading || permissionsLoading) {
-    return null; // o un spinner si prefieres
-  }
-
-  // Si no hay usuario, redirigir al login
-  if (!user) {
-    return <Navigate to="/Login" replace />;
-  }
-
-  // EXCEPCIÓN: Rutas del super admin global (fuera del sistema multitenant)
-  if (location.pathname.startsWith('/super-admin')) {
-    // Opcional:  Agregar validación adicional aquí si quieres
-    // Por ejemplo, verificar si el usuario tiene un rol específico
-    // if (user.role_id !== 4) {
-    //   return <Navigate to="/Login" replace />;
-    // }
-    return children;
-  }
-
-  // Verificar permisos para la ruta actual (solo para rutas del sistema multitenant)
-  const hasPermission = isRouteAllowed(location.pathname, allowedRoutes);
-
-  if (!hasPermission) {
-    // Redirigir según el rol del usuario
-    const defaultRoute = getDefaultRouteForRole(user.role_id);
-    return <Navigate to={defaultRoute} replace />;
-  }
-
-  return children;
-};
-
-// Función helper para obtener la ruta por defecto según el rol
+// Mapear rol → ruta por defecto (fallback en caso de que no haya permisos)
 const getDefaultRouteForRole = (roleId) => {
   switch (roleId) {
-    case 1: return '/admin';
-    case 2: return '/optometra';
-    case 3: return '/vendedor';
-    case 4: return '/SuperAdmin';
-    default: return '/Login';
+    case 1: return "/admin";
+    case 2: return "/optometra";
+    case 3: return "/vendedor";
+    case 4: return "/super-admin";
+    default: return "/login";
   }
+};
+
+const ProtectedRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  // ⏳ Mientras carga la sesión
+  if (loading) return null;
+
+  // 🚪 Si no hay usuario → login
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // 🛡️ Claims principales
+  const roleId = user.role_id || user.user_metadata?.role_id;
+  const allowedRoutes = user.allowed_routes || user.user_metadata?.allowed_routes || [];
+
+  // ✅ Excepción: rutas de super admin
+  if (location.pathname.startsWith("/super-admin")) {
+    if (roleId === 1 || roleId === 4) {
+      return children;
+    }
+    return <Navigate to={getDefaultRouteForRole(roleId)} replace />;
+  }
+
+  // 🔒 Validar si la ruta actual está en las permitidas
+  const hasPermission = allowedRoutes.some((route) =>
+    location.pathname.startsWith(route)
+  );
+
+  if (!hasPermission) {
+    return <Navigate to={getDefaultRouteForRole(roleId)} replace />;
+  }
+
+  // 🚀 Si pasó todos los checks → renderizamos la página
+  return children;
 };
 
 export default ProtectedRoute;

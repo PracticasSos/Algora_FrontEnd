@@ -37,8 +37,6 @@ import iconossaldos from "../../assets/iconossaldos.png";
 import iconosucursal from "../../assets/iconosucursal.png";
 import iconousuarios from "../../assets/iconousuarios.png";
 import iconoventa from "../../assets/iconoventa.png";
-import usuariofemenino from "../../assets/usuariofemenino.png";
-import usuariomasculino from "../../assets/usuariomasculino.png";
 import avataralgora from "../../assets/avataralgora.jpg";
 import { HamburgerIcon, CloseIcon } from "@chakra-ui/icons";
 import 'swiper/css';
@@ -286,7 +284,7 @@ const AdminDashBoard = () => {
               <Text
                 color={textColor}
                 cursor="pointer"
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/admin")}
                 _hover={{ color: textHoverColor }}
                 fontWeight="medium"
               >

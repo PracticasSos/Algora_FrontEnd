@@ -30,6 +30,21 @@ const Sales = () => {
     p_frame: 0,
     p_lens: 0,
   });
+
+  useEffect(() => {
+    const setContext = async () => {
+      try {
+        if (saleData.branchs_id) {
+          await supabase.rpc("set_branch", { branch_id: saleData.branchs_id });
+        }
+        await supabase.rpc("set_route", { route: "/sales" });
+      } catch (err) {
+        console.error("Error configurando contexto de mensajes:", err.message);
+      }
+    };
+    setContext();
+  }, [saleData.branchs_id]);
+
   const [totals, setTotals] = useState({
     frameName: "",
     lensName: "",
@@ -67,19 +82,21 @@ const Sales = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 8; 
 
+
   const handleFormDataChange = (newFormData) => {
     setFormData((prevFormData) => {
-      // Solo actualiza si los valores realmente cambian
-      const updated = { ...prevFormData, ...newFormData };
-      if (JSON.stringify(updated) !== JSON.stringify(prevFormData)) {
-        // Si el cambio incluye termsAccepted, actualiza ese campo
-        if ('termsAccepted' in newFormData) {
-          updated.termsAccepted = newFormData.termsAccepted;
-        }
-        return updated;
+    const updated = { ...prevFormData, ...newFormData };
+    if (JSON.stringify(updated) !== JSON.stringify(prevFormData)) {
+      if ('branchs_id' in newFormData) {
+        setSaleData((prevSaleData) => ({
+          ...prevSaleData,
+          branchs_id: newFormData.branchs_id
+        }));
       }
-      return prevFormData;
-    });
+      return updated; 
+    }
+    return prevFormData;
+  });
 
     const saleDataKeys = ["brand_id", "lens_id"];
     const saleDataUpdates = {};
@@ -417,7 +434,7 @@ const Sales = () => {
       case 6:
         return (
           <MessageStep
-            selectedBranch={branchName}
+            selectedBranch={saleData.branchs_id}
             formData={formData}
             setFormData={setFormData}
           />

@@ -32,21 +32,12 @@ const TermsCondition = ({ selectedBranch, formData, setFormData }) => {
   useEffect(() => {
     const updatedMessage = baseMessage.replace("{{BRANCH}}", selectedBranch || "VEOPTICS");
     setMessage(updatedMessage);
-    setFormData((prev) => ({
-      ...prev,
-      message: updatedMessage,
-      observation: "",
-      observation_img: ""
-    }));
   }, [selectedBranch]);
 
-  // Colores adaptativos
   const boxBg = useColorModeValue('gray.100', 'gray.700');
   const textColor = useColorModeValue('gray.800', 'white');
   const borderColor = useColorModeValue('gray.200', 'gray.600');
   const selectBg = useColorModeValue('white', 'gray.600');
-  
-  // Colores específicos para el contenido de términos
   const termsBg = useColorModeValue('white', 'gray.600');
   const termsTextColor = useColorModeValue('gray.700', 'gray.200');
   const buttonColor = useColorModeValue('teal.600', 'teal.300');

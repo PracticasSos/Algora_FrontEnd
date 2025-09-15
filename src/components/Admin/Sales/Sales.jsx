@@ -82,7 +82,6 @@ const Sales = () => {
       return prevFormData;
     });
 
-    // Extraer solo las claves relevantes para saleData
     const saleDataKeys = ["brand_id", "lens_id"];
     const saleDataUpdates = {};
 
@@ -127,7 +126,6 @@ const Sales = () => {
         patient_id: id,
       }));
       
-      // Cargar las medidas del paciente cuando se recibe el ID por parámetro
       if (patientMeasures.length > 0) {
         const patientLatestMeasures = patientMeasures.filter(
           (measure) => measure.patient_id === id
@@ -144,8 +142,6 @@ const Sales = () => {
       }
     }
   }, [id, patientMeasures]);
-// ...existing code...
-
 
   useEffect(() => {
     const fetchBranchName = async () => {
@@ -229,8 +225,6 @@ const Sales = () => {
     }
   };
   
-
-    // mergedFormData disponible en todo el componente
   const mergedFormData = {
     ...formData,
     branchs_id: formData.branchs_id && formData.branchs_id !== "" ? formData.branchs_id : saleData.branchs_id,
@@ -329,8 +323,6 @@ const Sales = () => {
         duration: 5000,
         isClosable: true,
       });
-  // Limpiar formulario SOLO después de que el PDF se haya generado y subido
-  // Esto lo puedes hacer en el callback onPdfUploaded del componente Pdf
     }
   } catch (err) {
     console.error("Error al registrar la venta:", err);

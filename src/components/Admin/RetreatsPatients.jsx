@@ -12,7 +12,6 @@ import { Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, VStack, Textarea
 import { useNavigate } from 'react-router-dom';
 import SearchBar from './SearchBar';
 import SmartHeader from '../header/SmartHeader';
-import { mod } from '@tensorflow/tfjs';
 
 const RetreatsPatients = () => {
   const [allPatients, setAllPatients] = useState([]); 

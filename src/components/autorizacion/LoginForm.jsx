@@ -140,56 +140,287 @@ const LoginForm = () => {
 
   return (
     <Flex minH="100vh" w="100vw" overflow="hidden" position="fixed" top={0} left={0} flexDir={{ base: "column", md: "row" }}>
-      {/* Panel izquierdo */}
-      <Box display={{ base: "none", md: "flex" }} className="login-left"
-        backgroundImage="url('/assets/lentes.jpg')" backgroundSize="cover" backgroundPosition="center"
-        position="relative" flex="1" minH="100vh">
-        <Box position="absolute" top={0} left={0} right={0} bottom={0} bg="blackAlpha.600" zIndex={1} />
-        <Box textAlign="center" maxW="280px" position="relative" zIndex={2} color="white" m="auto">
-          <Text fontSize="3xl" fontWeight="bold" mb={2}>¡Bienvenido a Algora!</Text>
-          <Text fontSize="md">Sistema de gestión para ópticas. Administra tus sucursales, productos y servicios desde un solo lugar.</Text>
-        </Box>
+
+        <Box 
+          display={{ base: "none", md: "flex" }} 
+          className="login-left"
+          backgroundImage="url('/assets/loginimg.png')" 
+          backgroundSize="cover" 
+          backgroundPosition="center"
+          position="relative" 
+          flex="1" 
+          minH="100vh"
+          //borderRadius="20px" // Added border radius
+        >
+          {/* Overlay con gradiente más elegante */}
+        <Box 
+          position="absolute" 
+          top={0} 
+          left={0} 
+          right={0} 
+          bottom={0} 
+          bgGradient="linear(to-br, blackAlpha.700, blackAlpha.500, blackAlpha.800)" 
+          zIndex={1} 
+        />
+        
+        {/* Contenido con mejor posicionamiento */}
+        <Flex 
+          position="relative" 
+          zIndex={2} 
+          color="white" 
+          h="100%" 
+          w="100%" 
+          align="end" 
+          justify="center"
+          px={12}
+          pb={20}
+        >
+          <Box textAlign="center" maxW="600px">
+            <Text fontSize="3xl" fontWeight="800" mb={6} lineHeight="1.2">
+              Bienvenido a{" "}
+              <Text as="span" color="#ffffffff">
+                Algora
+              </Text>
+            </Text>
+            <Text fontSize="md" color="gray.400" lineHeight="1.6" fontWeight="200">
+              Sistema de gestión integral para ópticas. Administra tus sucursales, 
+              productos y servicios desde una plataforma moderna y eficiente.
+            </Text>
+
+
+          </Box>
+        </Flex>
       </Box>
 
-      {/* Panel derecho */}
-      <Box className="login-right" flex="1" bg="#333333" display="flex" flexDir="column" alignItems="center" justifyContent="center" minH="100vh" w="100%" px={4}>
-        <Box display="flex" flexDir="column" alignItems="center" gap={4}>
-          <Box display={{ base: "flex", md: "none" }}>
-            <Image src="/assets/loginalgora.jpg" w="80px" h="80px" borderRadius="full" objectFit="cover" />
+      {/* Panel derecho - Completamente rediseñado */}
+      <Box 
+        className="login-right" 
+        flex="1" 
+        bg="#000000"  // Fondo completamente negro
+        display="flex" 
+        flexDir="column" 
+        alignItems="center" 
+        justifyContent="center" 
+        minH="100vh" 
+        w="100%" 
+        px={4}
+        position="relative"
+      >
+        {/* Patrón de fondo sutil */}
+        <Box
+          position="absolute"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          opacity={0.03}
+          bgImage="radial-gradient(circle at 25% 25%, #219BAA 1px, transparent 1px)"
+          bgSize="30px 30px"
+        />
+        
+        <Box display="flex" flexDir="column" alignItems="center" gap={4} position="relative" zIndex={1}>
+          {/* Logo móvil mejorado */}
+          <Box display={{ base: "flex", md: "none" }} mb={6}>
+            <Box position="relative">
+              <Image 
+                src="/assets/loginalgora.jpg" 
+                w="100px" 
+                h="100px" 
+                borderRadius="full" 
+                objectFit="cover"
+                border="3px solid #219BAA"
+                shadow="0 0 20px rgba(33, 155, 170, 0.3)"
+              />
+              <Box
+                position="absolute"
+                top={0}
+                left={0}
+                right={0}
+                bottom={0}
+                borderRadius="full"
+                bgGradient="radial(transparent 60%, rgba(33, 155, 170, 0.1))"
+              />
+            </Box>
           </Box>
 
-          <Box flex="1" display="flex" alignItems="center" justifyContent="center">
-            <Box p={8} borderRadius="lg" color="black" maxW={{ base: "100%", md: "350px" }}>
-              <Text fontSize="2xl" fontWeight="bold" mb={20} textAlign="center" color="gray.300">Iniciar Sesión</Text>
-              {errorMessage && <Text color="red.500" mb={4} textAlign="center" fontSize="sm">{errorMessage}</Text>}
+          {/* Formulario rediseñado */}
+          <Box 
+            flex="1" 
+            display="flex" 
+            alignItems="center" 
+            justifyContent="center"
+            w="100%"
+          >
+            <Box 
+              p={{ base: 6, md: 10 }} 
+              borderRadius="2xl" 
+              maxW={{ base: "100%", md: "420px" }}
+              w="100%"
+              bg="rgba(255, 255, 255, 0.02)"
+              backdropFilter="blur(10px)"
+              border="1px solid rgba(255, 255, 255, 0.05)"
+              shadow="0 20px 40px rgba(0, 0, 0, 0.3)"
+            >
+              {/* Título elegante */}
+              <Box textAlign="center" mb={8}>
+                <Text 
+                  fontSize="3xl" 
+                  fontWeight="700" 
+                  color="white"
+                  mb={2}
+                >
+                  Iniciar Sesión
+                </Text>
+                <Text color="gray.400" fontSize="sm">
+                  Accede a tu panel de control
+                </Text>
+              </Box>
+
+              {/* Error message mejorado */}
+              {errorMessage && (
+                <Box 
+                  bg="rgba(255, 0, 0, 0.1)" 
+                  border="1px solid rgba(255, 0, 0, 0.2)"
+                  borderRadius="lg" 
+                  p={3} 
+                  mb={6}
+                >
+                  <Text color="#ff6b6b" fontSize="sm" textAlign="center">
+                    {errorMessage}
+                  </Text>
+                </Box>
+              )}
 
               <form onSubmit={handleSubmit}>
-                <FormControl id="email" isRequired mb={4}>
-                  <FormLabel color="gray.200">Usuario</FormLabel>
+                {/* Campo Email mejorado */}
+                <FormControl id="email" isRequired mb={6}>
+                  <FormLabel color="gray.200" fontSize="sm" fontWeight="500" mb={3}>
+                    Correo electrónico
+                  </FormLabel>
                   <InputGroup>
-                    <InputLeftElement pointerEvents="none"><Icon as={FaEnvelope} color="gray.400" /></InputLeftElement>
-                    <Input variant="flushed" type="email" name="email" placeholder="tú@correo.com" value={formData.email} onChange={handleChange} color="white" _placeholder={{ color: "gray.400" }} />
+                    <InputLeftElement pointerEvents="none" h="56px">
+                      <Icon as={FaEnvelope} color="#219BAA" />
+                    </InputLeftElement>
+                    <Input 
+                      h="56px"
+                      type="email" 
+                      name="email" 
+                      placeholder="tu@correo.com" 
+                      value={formData.email} 
+                      onChange={handleChange} 
+                      color="white"
+                      bg="rgba(255, 255, 255, 0.05)"
+                      border="1px solid rgba(255, 255, 255, 0.1)"
+                      borderRadius="xl"
+                      _placeholder={{ color: "gray.500" }}
+                      _hover={{ 
+                        borderColor: "#219BAA",
+                        bg: "rgba(255, 255, 255, 0.08)" 
+                      }}
+                      _focus={{ 
+                        borderColor: "#219BAA",
+                        bg: "rgba(255, 255, 255, 0.08)",
+                        boxShadow: "0 0 0 1px #219BAA"
+                      }}
+                      fontSize="md"
+                      pl="50px"
+                    />
                   </InputGroup>
                 </FormControl>
 
-                <FormControl id="password" isRequired mb={6}>
-                  <FormLabel color="gray.200">Contraseña</FormLabel>
+                {/* Campo Password mejorado */}
+                <FormControl id="password" isRequired mb={8}>
+                  <FormLabel color="gray.200" fontSize="sm" fontWeight="500" mb={3}>
+                    Contraseña
+                  </FormLabel>
                   <InputGroup>
-                    <InputLeftElement pointerEvents="none"><Icon as={FaLock} color="gray.400" /></InputLeftElement>
-                    <Input variant="flushed" name="password" type={showPassword ? "text" : "password"} placeholder="********" value={formData.password} onChange={handleChange} color="white" _placeholder={{ color: "gray.400" }} />
-                    <InputRightElement>
-                      <IconButton variant="ghost" size="sm" aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} icon={<Icon as={showPassword ? FaEyeSlash : FaEye} color="gray.400" />} onClick={() => setShowPassword(!showPassword)} _hover={{ bg: "transparent" }} />
+                    <InputLeftElement pointerEvents="none" h="56px">
+                      <Icon as={FaLock} color="#219BAA" />
+                    </InputLeftElement>
+                    <Input 
+                      h="56px"
+                      name="password" 
+                      type={showPassword ? "text" : "password"} 
+                      placeholder="••••••••" 
+                      value={formData.password} 
+                      onChange={handleChange} 
+                      color="white"
+                      bg="rgba(255, 255, 255, 0.05)"
+                      border="1px solid rgba(255, 255, 255, 0.1)"
+                      borderRadius="xl"
+                      _placeholder={{ color: "gray.500" }}
+                      _hover={{ 
+                        borderColor: "#219BAA",
+                        bg: "rgba(255, 255, 255, 0.08)" 
+                      }}
+                      _focus={{ 
+                        borderColor: "#219BAA",
+                        bg: "rgba(255, 255, 255, 0.08)",
+                        boxShadow: "0 0 0 1px #219BAA"
+                      }}
+                      fontSize="md"
+                      pl="50px"
+                      pr="50px"
+                    />
+                    <InputRightElement h="56px">
+                      <IconButton 
+                        variant="ghost" 
+                        size="sm" 
+                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"} 
+                        icon={<Icon as={showPassword ? FaEyeSlash : FaEye} color="gray.400" />} 
+                        onClick={() => setShowPassword(!showPassword)} 
+                        _hover={{ bg: "rgba(255, 255, 255, 0.1)" }}
+                        borderRadius="lg"
+                      />
                     </InputRightElement>
                   </InputGroup>
                 </FormControl>
 
-                <Button type="submit" color="white" w="100%" mt={10} borderRadius="full" bg="#219BAA" isLoading={loading} loadingText="Ingresando...">Ingresar</Button>
+                {/* Botón de login mejorado */}
+                <Button 
+                  type="submit" 
+                  w="100%" 
+                  h="56px"
+                  fontSize="md"
+                  fontWeight="600"
+                  borderRadius="xl" 
+                  bgGradient="linear(to-r, #219BAA, #1A7A87)"
+                  color="white"
+                  isLoading={loading} 
+                  loadingText="Iniciando sesión..."
+                  _hover={{ 
+                    bgGradient: "linear(to-r, #1A7A87, #146B75)",
+                    transform: "translateY(-1px)",
+                    shadow: "0 10px 25px rgba(33, 155, 170, 0.3)"
+                  }}
+                  _active={{
+                    transform: "translateY(0px)"
+                  }}
+                  transition="all 0.2s ease"
+                >
+                  Iniciar Sesión
+                </Button>
               </form>
 
-              <Text fontSize="sm" textAlign="center" color="gray.500" mt={6} px={2}>
-                Algora protege tu privacidad. ¿Quieres conocer más de nuestros servicios?{" "}
-                <Text as="span" color="#219BAA" cursor="pointer" textDecoration="underline" _hover={{ color: "#1A7A87" }} onClick={() => navigate("/servicios")}>Ingresa aquí</Text>
-              </Text>
+              {/* Footer del formulario */}
+              <Box mt={8} textAlign="center">
+                <Text fontSize="sm" color="gray.400" lineHeight="1.6">
+                  Algora protege tu privacidad.{" "}
+                  <Text 
+                    as="span" 
+                    color="#219BAA" 
+                    cursor="pointer" 
+                    fontWeight="500"
+                    _hover={{ 
+                      color: "#1A7A87",
+                      textDecoration: "underline" 
+                    }}
+                    onClick={() => navigate("/servicios")}
+                  >
+                    Conoce nuestros servicios
+                  </Text>
+                </Text>
+              </Box>
             </Box>
           </Box>
         </Box>

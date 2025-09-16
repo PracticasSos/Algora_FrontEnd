@@ -32,111 +32,110 @@ const Register = () => {
   const toast = useToast();
   const navigate = useNavigate();
 
-  const availableRoutes = [
-    { path: "/register", label: "Registrar Usuarios" },
-    { path: "/inventory", label: "Inventario" },
-    { path: "/register-patient", label: "Registrar Paciente" },
-    { path: "/branch", label: "Registrar Sucursal" },
-    { path: "/labs", label: "Registrar Laboratorio" },
-    { path: "/cash-closure", label: "Cierre de Caja" },
-    { path: "/sales", label: "Registrar Venta" },
-    { path: "/register-lens", label: "Registrar Lunas" },
-    { path: "/patient-records", label: "Historial del Paciente" },
-    { path: "/measures-final", label: "Medidas Finales" },
-    { path: "/order-laboratory-list", label: "Órdenes a Laboratorio" },
-    { path: "/history-measure-list", label: "Historial de Medidas" },
-    { path: "/egresos", label: "Egresos" },
-    { path: "/balances-patient", label: "Saldos del Paciente" },
-    { path: "/retreats-patients", label: "Abonos del Paciente" },
-    { path: "/balance", label: "Balance General" },
-    { path: "/list-lens", label: "Listar Lunas" },
-    { path: "/list-balance", label: "Listar Balances" },
-    { path: "/list-sales", label: "Historial de Ventas" },
-    { path: "/history-clinic", label: "Historial Clínico" },
-  ];
+ const availableRoutes = [
+{ path: "/register", label: "Registrar Usuarios" },
+{ path: "/inventory", label: "Inventario" },
+{ path: "/register-patient", label: "Registrar Paciente" },
+{ path: "/branch", label: "Registrar Sucursal" },
+{ path: "/labs", label: "Registrar Laboratorio" },
+{ path: "/cash-closure", label: "Cierre de Caja" },
+{ path: "/sales", label: "Registrar Venta" },
+{ path: "/register-lens", label: "Registrar Lunas" },
+{ path: "/patient-records", label: "Historial del Paciente" },
+{ path: "/measures-final", label: "Medidas Finales" },
+{ path: "/order-laboratory-list", label: "Órdenes a Laboratorio" },
+{ path: "/history-measure-list", label: "Historial de Medidas" },
+{ path: "/egresos", label: "Egresos" },
+{ path: "/balances-patient", label: "Saldos del Paciente" },
+{ path: "/retreats-patients", label: "Abonos del Paciente" },
+{ path: "/balance", label: "Balance General" },
+{ path: "/list-lens", label: "Listar Lunas" },
+{ path: "/list-balance", label: "Listar Balances" },
+{ path: "/list-sales", label: "Historial de Ventas" },
+{ path: "/history-clinic", label: "Historial Clínico" },
+];
 
-  // Load roles and branches
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [rolesResponse, branchsResponse] = await Promise.all([
-          supabase.from('role').select('*'),
-          supabase.from('branchs').select('*')
-        ]);
-        
-        if (rolesResponse.data) setRoles(rolesResponse.data);
-        if (branchsResponse.data) setBranchs(branchsResponse.data);
-        
-        if (rolesResponse.error) {
-          console.error('Error loading roles:', rolesResponse.error);
-        }
-        if (branchsResponse.error) {
-          console.error('Error loading branches:', branchsResponse.error);
-        }
-      } catch (error) {
-        console.error('Error loading data:', error);
-      }
-    };
 
-    loadData();
-  }, []);
+// Load roles and branches with filtering
+useEffect(() => {
+const loadData = async () => {
+try {
+const [rolesResponse, branchsResponse] = await Promise.all([
+supabase.from('role').select('*'),
+supabase.from('branchs').select('*')
+]);
 
-  // Auto-select routes when role changes
-  useEffect(() => {
-    if (!formData.role_id) return;
-    let newRoutes = [];
-    switch (parseInt(formData.role_id)) {
-      case 1: // Admin
-      case 4: // Super Admin
-        newRoutes = availableRoutes;
-        break;
-      case 2: // Optometra
-        newRoutes = availableRoutes.filter(r =>
-          ['/measures-final', '/history-clinic', '/register-patient', '/history-measure-list'].includes(r.path)
-        );
-        break;
-      case 3: // Vendedor
-        newRoutes = availableRoutes.filter(r =>
-          ['/register-patient', '/sales', '/history-clinic', '/balance', '/measures-final', '/patient-records', '/order-laboratory-list', '/history-measure-list', '/balances-patient'].includes(r.path)
-        );
-        break;
-      default:
-        newRoutes = [];
-    }
-    setSelectRoutes(newRoutes.map(r => r.path));
-  }, [formData.role_id]);
 
-  const handleChange = e => {
-    const { name, value } = e.target;
-    setFormData(f => ({ ...f, [name]: value }));
-  };
+if (rolesResponse.data) {
+// Mostrar solo roles permitidos de forma dinámica
+const allowedRoles = ["Admin", "Optometra", "Vendedor"];
+setRoles(rolesResponse.data.filter(r => allowedRoles.includes(r.role_name)));
+}
+if (branchsResponse.data) setBranchs(branchsResponse.data);
 
-  const handleRouteToggle = path => {
-    setSelectRoutes(prev =>
-      prev.includes(path) ? prev.filter(p => p !== path) : [...prev, path]
-    );
-  };
 
-  const renderInputField = (label, name, type) => (
-    <FormControl id={name} isRequired>
-      <FormLabel>{label}</FormLabel>
-      <Input type={type} name={name} value={formData[name]} onChange={handleChange} />
-    </FormControl>
-  );
+if (rolesResponse.error) console.error('Error loading roles:', rolesResponse.error);
+if (branchsResponse.error) console.error('Error loading branches:', branchsResponse.error);
+} catch (error) {
+console.error('Error loading data:', error);
+}
+};
 
-  const renderSelectField = (label, name, options) => (
-    <FormControl id={name} isRequired>
-      <FormLabel>{label}</FormLabel>
-      <Select name={name} value={formData[name]} onChange={handleChange}>
-        <option value="">Seleccione {label.toLowerCase()}</option>
-        {options.map(o => (
-          <option key={o.id} value={o.id}>
-            {o.name || o.role_name}
-          </option>
-        ))}
-      </Select>
-    </FormControl>
-  );
+
+loadData();
+}, []);
+
+
+useEffect(() => {
+if (!formData.role_id) return;
+let newRoutes = [];
+switch (parseInt(formData.role_id)) {
+case 1: case 4:
+newRoutes = availableRoutes;
+break;
+case 2:
+newRoutes = availableRoutes.filter(r => ['/measures-final', '/history-clinic', '/register-patient', '/history-measure-list'].includes(r.path));
+break;
+case 3:
+newRoutes = availableRoutes.filter(r => ['/register-patient', '/sales', '/history-clinic', '/balance', '/measures-final', '/patient-records', '/order-laboratory-list', '/history-measure-list', '/balances-patient'].includes(r.path));
+break;
+default:
+newRoutes = [];
+}
+setSelectRoutes(newRoutes.map(r => r.path));
+}, [formData.role_id]);
+
+
+const handleChange = e => {
+const { name, value } = e.target;
+setFormData(f => ({ ...f, [name]: value }));
+};
+
+
+const handleRouteToggle = path => {
+setSelectRoutes(prev => prev.includes(path) ? prev.filter(p => p !== path) : [...prev, path]);
+};
+
+
+const renderInputField = (label, name, type) => (
+<FormControl id={name} isRequired>
+<FormLabel>{label}</FormLabel>
+<Input type={type} name={name} value={formData[name]} onChange={handleChange} />
+</FormControl>
+);
+
+
+const renderSelectField = (label, name, options) => (
+<FormControl id={name} isRequired>
+<FormLabel>{label}</FormLabel>
+<Select name={name} value={formData[name]} onChange={handleChange}>
+<option value="">Seleccione {label.toLowerCase()}</option>
+{options.map(o => (
+<option key={o.id} value={o.id}>{o.name || o.role_name}</option>
+))}
+</Select>
+</FormControl>
+);
 
   const handleCreate = async () => {
     setLoading(true);

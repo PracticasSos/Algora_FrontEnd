@@ -7,15 +7,38 @@ import {
   MenuButton,
   MenuList,
   MenuItem,
+  MenuDivider,
   useColorModeValue,
   useDisclosure,
   IconButton,
   Stack,
   Collapse,
   Portal,
+  Avatar,
+  VStack,
+  HStack,
+  Badge,
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
-import { HamburgerIcon, CloseIcon } from "@chakra-ui/icons";
+import { 
+  HamburgerIcon, 
+  CloseIcon,
+  ViewIcon,
+  ChevronRightIcon,
+} from "@chakra-ui/icons";
+import { 
+  FiHome,
+  FiUser,
+  FiUsers,
+  FiPackage,
+  FiClipboard,
+  FiDollarSign,
+  FiEye,
+  FiActivity,
+  FiLogOut,
+  FiMapPin,
+  FiTool,
+} from 'react-icons/fi';
 import ColorModeToggle from '../../Toggle';
 import { useAuth } from '../AuthContext';
 import iconocierrediario from "../../assets/iconocierrediario.png";
@@ -31,16 +54,24 @@ const HeaderAdmin = ({
   const handleLogout = async () => {
     try {
       await logout();
+      navigate("/login-form");
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }
   };
-  
-  const mainBg = useColorModeValue(
-    'linear(to-b, #f7fafc, #edf2f7)',
-    '#000000'
-  );
 
+  // Datos del usuario
+  const userData = {
+    name: user?.user_metadata?.firstname || user?.firstname || "Usuario",
+    lastName: user?.user_metadata?.lastname || user?.lastname || "Administrador", 
+    email: user?.email || "admin@algora.com",
+    role: user?.role_name || "Sin rol asignado",
+    title: user?.user_metadata?.title || user?.title || null,
+    tenant_id: user?.tenant_id,
+    role_id: user?.role_id,
+    allowed_routes: user?.allowed_routes || []
+  };
+  
   const navBg = useColorModeValue(
     'rgba(255, 255, 255, 0.9)',
     'rgba(46, 46, 46, 0.5)'
@@ -57,6 +88,34 @@ const HeaderAdmin = ({
   const borderTopColor = useColorModeValue(
     'rgba(0,0,0,0.1)',
     'rgba(255,255,255,0.1)'
+  );
+
+  const menuBg = useColorModeValue('white', 'gray.800');
+  const menuBorder = useColorModeValue('gray.200', 'gray.600');
+  const subtitleColor = useColorModeValue('gray.500', 'gray.400');
+
+  const MenuItemCustom = ({ icon, children, onClick, color = textColor }) => (
+    <MenuItem
+      onClick={onClick}
+      color={color}
+      _hover={{ 
+        bg: useColorModeValue('gray.50', 'gray.700'),
+        transform: 'translateX(2px)'
+      }}
+      transition="all 0.2s"
+      py={3}
+      px={4}
+    >
+      <HStack spacing={3} width="100%">
+        <Box color={color} fontSize="18px">
+          {icon}
+        </Box>
+        <Text fontWeight="medium">{children}</Text>
+        <Box ml="auto" color={subtitleColor}>
+          <ChevronRightIcon />
+        </Box>
+      </HStack>
+    </MenuItem>
   );
 
   return (
@@ -100,9 +159,8 @@ const HeaderAdmin = ({
                 </Text>
               )}
             </Box>
-            <Flex gap={6} align="center" display={{ base: "none", md: "flex" }}>
-                
-              <Box width="40px" />
+
+            <Flex gap={24} align="center" display={{ base: "none", md: "flex" }}>
               <Text
                 color={textColor}
                 cursor="pointer"
@@ -112,7 +170,6 @@ const HeaderAdmin = ({
               >
                 Inicio
               </Text>
-              <Box width="40px" />
               <Text
                 color={textColor}
                 cursor="pointer"
@@ -122,7 +179,6 @@ const HeaderAdmin = ({
               >
                 Certificado
               </Text>
-              <Box width="40px" />
               <Text
                 color={textColor}
                 cursor="pointer"
@@ -135,8 +191,7 @@ const HeaderAdmin = ({
             </Flex>
 
             {/* Desktop: íconos a la derecha */}
-            <Flex display={{ base: "none", md: "flex" }} gap={3} align="center" minW="100px" justify="flex-end">
-              {/* Toggle de modo oscuro */}
+            <Flex display={{ base: "none", md: "flex" }} gap={8} align="center" minW="100px" justify="flex-end" mt={4}>
               <ColorModeToggle />
               
               <Image
@@ -164,44 +219,124 @@ const HeaderAdmin = ({
                 </MenuButton>
                 <Portal>
                 <MenuList 
-                   zIndex="999999" 
+                   zIndex="999999"
+                   bg={menuBg}
+                   border={`1px solid ${menuBorder}`}
+                   borderRadius="12px"
+                   boxShadow="lg"
+                   minW="280px"
+                   p={0}
                 >
-                  <MenuItem onClick={() => navigate("/branch")}>
-                    Registrar Sucursal
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/labs")}>
-                    Registrar Laboratorio
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/register")}>
-                    Registrar Usuario
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/register-lens")}>
-                    Registrar Lentes
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/measures-final")}>
-                    Registrar Medidas
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/inventory")}>
-                    Inventario
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/cash-closure")}>
-                    Consultar Cierre
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/history-clinic")}>
-                    Historial de Venta
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/history-measure-list")}>
-                    Historial de Medidas
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      handleLogout();
-                      navigate("/login-form");
-                    }}
-                    color="red.500"
-                  >
-                    Cerrar Sesión
-                  </MenuItem>   
+                  {/* Header del usuario */}
+                  <Box p={4} borderBottom={`1px solid ${menuBorder}`}>
+                    <HStack spacing={3}>
+                      <Avatar 
+                        src={avataralgora}
+                        size="md"
+                        border="2px solid #50bcd8"
+                      />
+                      <VStack align="start" spacing={1} flex={1}>
+                        <Text fontWeight="bold" fontSize="md" color={textColor}>
+                          {userData.name} {userData.lastName}
+                        </Text>
+                        <Text fontSize="sm" color={subtitleColor}>
+                          {userData.email}
+                        </Text>
+                        <Badge 
+                          colorScheme="green" 
+                          size="sm"
+                          borderRadius="full"
+                          px={2}
+                        >
+                          {userData.role}
+                        </Badge>
+                      </VStack>
+                    </HStack>
+                  </Box>
+
+                  {/* Opciones principales */}
+                  <Box py={2}>
+                    <MenuItemCustom 
+                      icon={<FiMapPin />}
+                      onClick={() => navigate("/branch")}
+                    >
+                      Registrar Sucursal
+                    </MenuItemCustom>
+                    
+                    <MenuItemCustom 
+                      icon={<FiTool />}
+                      onClick={() => navigate("/labs")}
+                    >
+                      Registrar Laboratorio
+                    </MenuItemCustom>
+                    
+                    <MenuItemCustom 
+                      icon={<FiUser />}
+                      onClick={() => navigate("/register")}
+                    >
+                      Registrar Usuario
+                    </MenuItemCustom>
+                    
+                    <MenuItemCustom 
+                      icon={<FiEye />}
+                      onClick={() => navigate("/register-lens")}
+                    >
+                      Registrar Lentes
+                    </MenuItemCustom>
+                    
+                    <MenuItemCustom 
+                      icon={<FiClipboard />}
+                      onClick={() => navigate("/measures-final")}
+                    >
+                      Registrar Medidas
+                    </MenuItemCustom>
+                  </Box>
+
+                  <MenuDivider />
+                  
+                  {/* Consultas y reportes */}
+                  <Box py={2}>
+                    <MenuItemCustom 
+                      icon={<FiPackage />}
+                      onClick={() => navigate("/inventory")}
+                    >
+                      Inventario
+                    </MenuItemCustom>
+                    
+                    <MenuItemCustom 
+                      icon={<FiDollarSign />}
+                      onClick={() => navigate("/cash-closure")}
+                    >
+                      Consultar Cierre
+                    </MenuItemCustom>
+                    
+                    <MenuItemCustom 
+                      icon={<FiActivity />}
+                      onClick={() => navigate("/history-clinic")}
+                    >
+                      Historial de Venta
+                    </MenuItemCustom>
+                    
+                    <MenuItemCustom 
+                      icon={<ViewIcon />}
+                      onClick={() => navigate("/history-measure-list")}
+                    >
+                      Historial de Medidas
+                    </MenuItemCustom>
+                  </Box>
+
+                  <MenuDivider />
+                  
+                  {/* Cerrar sesión */}
+                  <Box py={2}>
+                    <MenuItemCustom 
+                      icon={<FiLogOut />}
+                      onClick={handleLogout}
+                      color="red.500"
+                    >
+                      Cerrar Sesión
+                    </MenuItemCustom>
+                  </Box>
                 </MenuList>
                 </Portal>
               </Menu>
@@ -259,37 +394,150 @@ const HeaderAdmin = ({
                       />
                     </MenuButton>
                     <Portal>
-                    <MenuList zIndex="99999">
-                  <MenuItem onClick={() => navigate("/branch")}>
-                    Registrar Sucursal
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/labs")}>
-                    Registrar Laboratorio
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/register")}>
-                    Registrar Usuario
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/register-lens")}>
-                    Registrar Lentes
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/measures-final")}>
-                    Registrar Medidas
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/inventory")}>
-                    Inventario
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/cash-closure")}>
-                    Consultar Cierre
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/history-clinic")}>
-                    Historial de Venta
-                  </MenuItem>
-                  <MenuItem onClick={() => navigate("/history-measure-list")}>
-                    Historial de Medidas
-                  </MenuItem>
-                  <MenuItem onClick={handleLogout} color="red.500">
-                    Cerrar Sesión
-                  </MenuItem>
+                    <MenuList 
+                      zIndex="99999"
+                      bg={menuBg}
+                      border={`1px solid ${menuBorder}`}
+                      borderRadius="12px"
+                      boxShadow="lg"
+                      minW="280px"
+                      p={0}
+                    >
+                      {/* Header del usuario - versión móvil */}
+                      <Box p={4} borderBottom={`1px solid ${menuBorder}`}>
+                        <HStack spacing={3}>
+                          <Avatar 
+                            src={avataralgora}
+                            size="sm"
+                            border="2px solid #50bcd8"
+                          />
+                          <VStack align="start" spacing={1} flex={1}>
+                            <Text fontWeight="bold" fontSize="sm" color={textColor}>
+                              {userData.name} {userData.lastName}
+                            </Text>
+                            <Text fontSize="xs" color={subtitleColor}>
+                              {userData.email}
+                            </Text>
+                            <Badge 
+                              colorScheme="green" 
+                              size="sm"
+                              borderRadius="full"
+                              px={2}
+                            >
+                              {userData.role}
+                            </Badge>
+                          </VStack>
+                        </HStack>
+                      </Box>
+
+                      {/* Opciones para móvil */}
+                      <Box py={2}>
+                        <MenuItemCustom 
+                          icon={<FiMapPin />}
+                          onClick={() => {
+                            onToggle();
+                            navigate("/branch");
+                          }}
+                        >
+                          Registrar Sucursal
+                        </MenuItemCustom>
+                        
+                        <MenuItemCustom 
+                          icon={<FiTool />}
+                          onClick={() => {
+                            onToggle();
+                            navigate("/labs");
+                          }}
+                        >
+                          Registrar Laboratorio
+                        </MenuItemCustom>
+                        
+                        <MenuItemCustom 
+                          icon={<FiUser />}
+                          onClick={() => {
+                            onToggle();
+                            navigate("/register");
+                          }}
+                        >
+                          Registrar Usuario
+                        </MenuItemCustom>
+                        
+                        <MenuItemCustom 
+                          icon={<FiEye />}
+                          onClick={() => {
+                            onToggle();
+                            navigate("/register-lens");
+                          }}
+                        >
+                          Registrar Lentes
+                        </MenuItemCustom>
+                        
+                        <MenuItemCustom 
+                          icon={<FiClipboard />}
+                          onClick={() => {
+                            onToggle();
+                            navigate("/measures-final");
+                          }}
+                        >
+                          Registrar Medidas
+                        </MenuItemCustom>
+                      </Box>
+
+                      <MenuDivider />
+                      
+                      <Box py={2}>
+                        <MenuItemCustom 
+                          icon={<FiPackage />}
+                          onClick={() => {
+                            onToggle();
+                            navigate("/inventory");
+                          }}
+                        >
+                          Inventario
+                        </MenuItemCustom>
+                        
+                        <MenuItemCustom 
+                          icon={<FiDollarSign />}
+                          onClick={() => {
+                            onToggle();
+                            navigate("/cash-closure");
+                          }}
+                        >
+                          Consultar Cierre
+                        </MenuItemCustom>
+                        
+                        <MenuItemCustom 
+                          icon={<FiActivity />}
+                          onClick={() => {
+                            onToggle();
+                            navigate("/history-clinic");
+                          }}
+                        >
+                          Historial de Venta
+                        </MenuItemCustom>
+                        
+                        <MenuItemCustom 
+                          icon={<ViewIcon />}
+                          onClick={() => {
+                            onToggle();
+                            navigate("/history-measure-list");
+                          }}
+                        >
+                          Historial de Medidas
+                        </MenuItemCustom>
+                      </Box>
+
+                      <MenuDivider />
+                      
+                      <Box py={2}>
+                        <MenuItemCustom 
+                          icon={<FiLogOut />}
+                          onClick={handleLogout}
+                          color="red.500"
+                        >
+                          Cerrar Sesión
+                        </MenuItemCustom>
+                      </Box>
                     </MenuList>
                     </Portal>
                   </Menu>
@@ -300,7 +548,7 @@ const HeaderAdmin = ({
                   cursor="pointer"
                   onClick={() => {
                     onToggle();
-                    navigate("/");
+                    navigate("/admin");
                   }}
                   _hover={{ color: textHoverColor}}
                 >

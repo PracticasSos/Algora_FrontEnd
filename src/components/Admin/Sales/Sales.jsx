@@ -2,7 +2,34 @@ import { useState, useEffect, useRef } from "react";
 import SearchPatient from "./SearchPatient";
 import Measures from "./Measures";
 import { supabase } from "../../../api/supabase";
-import { Box, Heading, useColorModeValue  } from "@chakra-ui/react";
+import { 
+  Box, 
+  Heading, 
+  useColorModeValue, 
+  Container,
+  VStack,
+  HStack,
+  Text,
+  Progress,
+  Fade,
+  ScaleFade,
+  useBreakpointValue,
+  Card,
+  CardBody,
+  Badge,
+  Divider,
+  Icon
+} from "@chakra-ui/react";
+import { 
+  FiUser, 
+  FiShoppingCart, 
+  FiPercent, 
+  FiCreditCard, 
+  FiTruck, 
+  FiMessageSquare, 
+  FiFileText, 
+  FiCheckCircle 
+} from "react-icons/fi";
 import Pdf from "./Pdf";
 import {useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@chakra-ui/react";
@@ -13,7 +40,6 @@ import DeliveryStep from "./DeliveryStep";
 import MessageStep from "./MessageStep";
 import ObservationStep from "./ObservationStep";
 import TermsStep from "./TermsStep";
-import StepsIndicator from "./StepsIndicator";
 import NavigationButtons from "./NavigationButtons";
 import PaymentStep from "./PaymentStep";
 
@@ -30,6 +56,10 @@ const Sales = () => {
     p_frame: 0,
     p_lens: 0,
   });
+
+  // Estados para animaciones y transiciones
+  const [isStepChanging, setIsStepChanging] = useState(false);
+  const [stepDirection, setStepDirection] = useState('forward');
 
   useEffect(() => {
     const setContext = async () => {
@@ -82,6 +112,61 @@ const Sales = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 8; 
 
+  // Colores y estilos responsivos
+  const bgColor = useColorModeValue('gray.50', 'gray.900');
+  const cardBg = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const shadowColor = useColorModeValue('rgba(0,0,0,0.1)', 'rgba(0,0,0,0.3)');
+  const accentColor = useColorModeValue('teal.500', 'teal.300');
+  const textColor = useColorModeValue('gray.700', 'gray.200');
+  const mutedTextColor = useColorModeValue('gray.500', 'gray.400');
+
+  const containerMaxW = useBreakpointValue({ base: 'full', md: '6xl' });
+  const cardPadding = useBreakpointValue({ base: 4, md: 8 });
+
+  // Configuración de pasos con iconos y títulos
+  const stepConfig = [
+    { 
+      title: "Información del Paciente", 
+      icon: FiUser, 
+      description: "Datos del cliente y medidas" 
+    },
+    { 
+      title: "Detalles de Venta", 
+      icon: FiShoppingCart, 
+      description: "Selección de productos" 
+    },
+    { 
+      title: "Cálculo Total", 
+      icon: FiPercent, 
+      description: "Precios y descuentos" 
+    },
+    { 
+      title: "Método de Pago", 
+      icon: FiCreditCard, 
+      description: "Forma de pago" 
+    },
+    { 
+      title: "Entrega", 
+      icon: FiTruck, 
+      description: "Fecha y hora de entrega" 
+    },
+    { 
+      title: "Mensaje", 
+      icon: FiMessageSquare, 
+      description: "Mensaje personalizado" 
+    },
+    { 
+      title: "Observaciones", 
+      icon: FiFileText, 
+      description: "Notas adicionales" 
+    },
+    { 
+      title: "Términos y Firma", 
+      icon: FiCheckCircle, 
+      description: "Aceptación y firma digital" 
+    }
+  ];
 
   const handleFormDataChange = (newFormData) => {
     setFormData((prevFormData) => {
@@ -118,21 +203,38 @@ const Sales = () => {
     }
   };
 
- // Función para navegar entre pasos
+  // Funciones de navegación mejoradas con animaciones
   const nextStep = () => {
     if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
+      setIsStepChanging(true);
+      setStepDirection('forward');
+      setTimeout(() => {
+        setCurrentStep(currentStep + 1);
+        setIsStepChanging(false);
+      }, 200);
     }
   };
 
   const prevStep = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      setIsStepChanging(true);
+      setStepDirection('backward');
+      setTimeout(() => {
+        setCurrentStep(currentStep - 1);
+        setIsStepChanging(false);
+      }, 200);
     }
   };
 
   const goToStep = (step) => {
-    setCurrentStep(step);
+    if (step !== currentStep) {
+      setIsStepChanging(true);
+      setStepDirection(step > currentStep ? 'forward' : 'backward');
+      setTimeout(() => {
+        setCurrentStep(step);
+        setIsStepChanging(false);
+      }, 200);
+    }
   };
 
  useEffect(() => {
@@ -257,10 +359,10 @@ const Sales = () => {
     message: formData.message,
     termsMessage: formData.termsMessage,
   };
+
   const handleSubmit = async () => {
   if (isSubmitting) return;
   setIsSubmitting(true);
-
 
   if (!mergedFormData.payment_in) {
     toast({
@@ -333,15 +435,24 @@ const Sales = () => {
       setSaleId(data[0].id);
       setPdfGenerated(true);
       toast({
-        title: "Venta registrada con éxito.",
-        description: "La venta ha sido guardada correctamente.",
+        title: "¡Venta registrada con éxito!",
+        description: "El contrato ha sido creado correctamente.",
         status: "success",
         duration: 5000,
         isClosable: true,
+        position: "top"
       });
     }
   } catch (err) {
     console.error("Error al registrar la venta:", err);
+    toast({
+      title: "Error al procesar la venta",
+      description: "Ha ocurrido un error. Por favor, intente nuevamente.",
+      status: "error",
+      duration: 5000,
+      isClosable: true,
+      position: "top"
+    });
   } finally {
     setIsSubmitting(false);
   }
@@ -391,118 +502,297 @@ const Sales = () => {
 
   const moduleSpecificButton = null;
 
-  // Función para renderizar el contenido según el paso actual
+  // Función mejorada para renderizar el contenido con animaciones
   const renderStepContent = () => {
-    
-    switch (currentStep) {
-      case 1:
-        return (
-          <Box>
-            <SearchPatient onFormDataChange={handlePatientDataChange} initialFormData={saleData} />
-            <Measures initialFormData={saleData} filteredMeasures={filteredMeasures} />
-          </Box>
-        );
-      case 2:
-        return (
-          <SalesDetailsStep
-            formData={formData}
-            setFormData={setFormData}
-            onTotalsChange={handleTotalsChange}
-          />
-        );
-      case 3:
-        return (
-          <TotalStep
-            formData={formData}
-            onFormDataChange={handleFormDataChange}
-          />
-        );
-      case 4:
-        return (
-          <PaymentStep
-            formData={formData}
-            onFormDataChange={handleFormDataChange}
-          />
-        );
-      case 5:
-        return (
-          <DeliveryStep
-            saleData={saleData}
-            setSaleData={setSaleData}
-          />
-        );
-      case 6:
-        return (
-          <MessageStep
-            selectedBranch={saleData.branchs_id}
-            formData={formData}
-            setFormData={setFormData}
-          />
-        );
-      case 7:
-        return (
-          <ObservationStep
-            setFormData={setFormData}
-          />
-        );
-      case 8:
-        return (
-          <TermsStep
-            selectedBranch={branchName}
-            formData={formData}
-            setFormData={setFormData}
-          />
-        );
-      default:
-        return null;
-    }
+    const content = (() => {
+      switch (currentStep) {
+        case 1:
+          return (
+            <VStack spacing={6} w="full">
+              <SearchPatient onFormDataChange={handlePatientDataChange} initialFormData={saleData} />
+              <Measures initialFormData={saleData} filteredMeasures={filteredMeasures} />
+            </VStack>
+          );
+        case 2:
+          return (
+            <SalesDetailsStep
+              formData={formData}
+              setFormData={setFormData}
+              onTotalsChange={handleTotalsChange}
+            />
+          );
+        case 3:
+          return (
+            <TotalStep
+              formData={formData}
+              onFormDataChange={handleFormDataChange}
+            />
+          );
+        case 4:
+          return (
+            <PaymentStep
+              formData={formData}
+              onFormDataChange={handleFormDataChange}
+            />
+          );
+        case 5:
+          return (
+            <DeliveryStep
+              saleData={saleData}
+              setSaleData={setSaleData}
+            />
+          );
+        case 6:
+          return (
+            <MessageStep
+              selectedBranch={saleData.branchs_id}
+              formData={formData}
+              setFormData={setFormData}
+            />
+          );
+        case 7:
+          return (
+            <ObservationStep
+              setFormData={setFormData}
+            />
+          );
+        case 8:
+          return (
+            <TermsStep
+              selectedBranch={branchName}
+              formData={formData}
+              setFormData={setFormData}
+            />
+          );
+        default:
+          return null;
+      }
+    })();
+
+    return (
+      <ScaleFade 
+        in={!isStepChanging} 
+        initialScale={0.95}
+        unmountOnExit
+      >
+        <Card
+          shadow="lg"
+          bg={cardBg}
+          borderWidth="1px"
+          borderColor={borderColor}
+          borderRadius="2xl"
+          overflow="hidden"
+          minH="400px"
+        >
+          <CardBody p={cardPadding}>
+            {content}
+          </CardBody>
+        </Card>
+      </ScaleFade>
+    );
+  };
+
+  // Componente mejorado del indicador de progreso
+  const EnhancedStepsIndicator = () => {
+    const progressPercentage = ((currentStep - 1) / (totalSteps - 1)) * 100;
+
+    return (
+      <Card
+        bg={cardBg}
+        shadow="md"
+        borderRadius="xl"
+        borderWidth="1px"
+        borderColor={borderColor}
+        mb={8}
+        overflow="hidden"
+      >
+        <CardBody p={6}>
+          <VStack spacing={4} w="full">
+            <HStack justify="space-between" w="full">
+              <VStack align="start" spacing={1}>
+                <HStack>
+                  <Icon 
+                    as={stepConfig[currentStep - 1]?.icon} 
+                    color={accentColor} 
+                    boxSize={5}
+                  />
+                  <Heading size="md" color={textColor}>
+                    {stepConfig[currentStep - 1]?.title}
+                  </Heading>
+                </HStack>
+                <Text fontSize="sm" color={mutedTextColor}>
+                  {stepConfig[currentStep - 1]?.description}
+                </Text>
+              </VStack>
+              <Badge 
+                colorScheme="teal" 
+                variant="subtle" 
+                px={3} 
+                py={1} 
+                borderRadius="full"
+                fontSize="sm"
+              >
+                {currentStep} de {totalSteps}
+              </Badge>
+            </HStack>
+            
+            <Box w="full">
+              <Progress 
+                value={progressPercentage} 
+                colorScheme="teal"
+                bg={useColorModeValue('gray.100', 'gray.700')}
+                borderRadius="full"
+                size="sm"
+                hasStripe
+                isAnimated
+              />
+            </Box>
+
+            <HStack 
+              justify="space-between" 
+              w="full" 
+              spacing={2}
+              flexWrap="wrap"
+            >
+              {stepConfig.map((step, index) => {
+                const stepNumber = index + 1;
+                const isActive = stepNumber === currentStep;
+                const isCompleted = stepNumber < currentStep;
+                
+                return (
+                  <VStack 
+                    key={stepNumber}
+                    spacing={1}
+                    cursor="pointer"
+                    onClick={() => goToStep(stepNumber)}
+                    transition="all 0.2s"
+                    _hover={{ transform: 'translateY(-2px)' }}
+                    minW="80px"
+                  >
+                    <Box
+                      w={8}
+                      h={8}
+                      borderRadius="full"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      bg={
+                        isCompleted 
+                          ? accentColor
+                          : isActive 
+                          ? accentColor
+                          : useColorModeValue('gray.200', 'gray.600')
+                      }
+                      color={
+                        isCompleted || isActive 
+                          ? 'white' 
+                          : useColorModeValue('gray.500', 'gray.400')
+                      }
+                      fontSize="sm"
+                      fontWeight="bold"
+                      transition="all 0.3s"
+                    >
+                      {isCompleted ? (
+                        <Icon as={FiCheckCircle} boxSize={4} />
+                      ) : (
+                        stepNumber
+                      )}
+                    </Box>
+                    <Text
+                      fontSize="xs"
+                      color={
+                        isActive 
+                          ? accentColor
+                          : isCompleted
+                          ? textColor
+                          : mutedTextColor
+                      }
+                      fontWeight={isActive ? 'semibold' : 'normal'}
+                      textAlign="center"
+                      lineHeight={1.2}
+                    >
+                      {step.title.length > 10 ? 
+                        `${step.title.substring(0, 10)}...` : 
+                        step.title
+                      }
+                    </Text>
+                  </VStack>
+                );
+              })}
+            </HStack>
+          </VStack>
+        </CardBody>
+      </Card>
+    );
   };
 
   return (
-    <Box ref={salesRef} w="full" px={4}>
-      <Box className="sales-form" display="flex" flexDirection="column" alignItems="center" minHeight="100vh" p={4}>
-        <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-          <Box w="100%" maxW="800px" mb={4}>
-        <Heading 
-          textAlign="left" 
-          size="md"
-          fontWeight="700"
-          color={useColorModeValue('teal.600', 'teal.300')}
-          pb={2}
-        >
-          Contrato de Servicio
-        </Heading>
-      </Box>
-        <StepsIndicator
-          totalSteps={totalSteps}
-          currentStep={currentStep}
-          goToStep={goToStep}
-        />
-        {renderStepContent()}
-        <NavigationButtons
-          currentStep={currentStep}
-          totalSteps={totalSteps}
-          prevStep={prevStep}
-          nextStep={nextStep}
-          handleSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-        />
-        {saleId && <Pdf 
-          formData={pdfData} 
-          targetRef={salesRef} 
-          onPdfUploaded={async (pdfUrl) => {
-            const { error } = await supabase
-              .from('sales')
-              .update({ pdf_url: pdfUrl })
-              .eq('id', saleId);
-            if (error) {
-              console.error('Error actualizando pdf_url:', error);
-            } else {
-              console.log('PDF URL actualizado correctamente');
-            }
-          }}
-        />}
-      </Box>
+    <Box 
+      ref={salesRef} 
+      minH="100vh" 
+      bg={bgColor}
+      transition="all 0.3s ease"
+    >
+      <Container maxW={containerMaxW} py={6}>
+        <VStack spacing={6} w="full">
+          <SmartHeader moduleSpecificButton={moduleSpecificButton} />
+          
+          <Fade in={true}>
+            <VStack spacing={2} w="full" textAlign="center">
+              <Heading 
+                size="md"
+                fontWeight="800"
+                bgGradient={`linear(to-r, ${accentColor}, teal.600)`}
+                bgClip="text"
+                letterSpacing="-0.02em"
+              >
+                Contrato de Servicio
+              </Heading>
+              <Text 
+                fontSize="md" 
+                color={mutedTextColor}
+                fontWeight="400"
+              >
+                Complete la información paso a paso para generar el contrato
+              </Text>
+              <Divider my={2} />
+            </VStack>
+          </Fade>
+
+          <EnhancedStepsIndicator />
+          
+          <Box w="full">
+            {renderStepContent()}
+          </Box>
+
+          <NavigationButtons
+            currentStep={currentStep}
+            totalSteps={totalSteps}
+            prevStep={prevStep}
+            nextStep={nextStep}
+            handleSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+          />
+
+          {saleId && (
+            <Pdf 
+              formData={pdfData} 
+              targetRef={salesRef} 
+              onPdfUploaded={async (pdfUrl) => {
+                const { error } = await supabase
+                  .from('sales')
+                  .update({ pdf_url: pdfUrl })
+                  .eq('id', saleId);
+                if (error) {
+                  console.error('Error actualizando pdf_url:', error);
+                } else {
+                  console.log('PDF URL actualizado correctamente');
+                }
+              }}
+            />
+          )}
+        </VStack>
+      </Container>
     </Box>
   );
 };

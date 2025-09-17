@@ -1,15 +1,32 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../../api/supabase";
- import { Box, VStack, SimpleGrid, Flex, Img, FormControl, FormLabel, Input, useBreakpointValue, useColorModeValue } from "@chakra-ui/react";
+import {
+  Box,
+  VStack,
+  SimpleGrid,
+  Flex,
+  Img,
+  FormControl,
+  FormLabel,
+  Input,
+  useColorModeValue,
+  Text,
+  Divider,
+  Icon,
+} from "@chakra-ui/react";
+import { SearchIcon } from "@chakra-ui/icons";
 
-const SalesDetails = ({ formData = {}, setFormData = () => {}, onTotalsChange = () => {} }) => {
+const SalesDetails = ({
+  formData = {},
+  setFormData = () => {},
+  onTotalsChange = () => {},
+}) => {
   const [searchFrame, setSearchFrame] = useState("");
   const [searchLens, setSearchLens] = useState("");
   const [frames, setFrames] = useState([]);
   const [lenses, setLenses] = useState([]);
   const [frameSuggestions, setFrameSuggestions] = useState([]);
   const [lensSuggestions, setLensSuggestions] = useState([]);
-
 
   const [calculatedData, setCalculatedData] = useState({
     p_frame: 0,
@@ -31,7 +48,6 @@ const SalesDetails = ({ formData = {}, setFormData = () => {}, onTotalsChange = 
     return Math.round(parseFloat(amount));
   };
 
-    // Sincroniza los inputs de búsqueda con los valores seleccionados en formData
   useEffect(() => {
     if (formData.brand && formData.brand !== searchFrame) {
       setSearchFrame(formData.brand);
@@ -88,12 +104,11 @@ const SalesDetails = ({ formData = {}, setFormData = () => {}, onTotalsChange = 
 
   const handleSuggestionClick = (item, type) => {
     if (type === "frame") {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         brand_id: item.id,
         brand: item.brand,
         p_frame: item.price || 0,
-        // Sincroniza el nombre en totals también si existe el callback
       }));
       setSearchFrame(item.brand);
       setFrameSuggestions([]);
@@ -103,7 +118,7 @@ const SalesDetails = ({ formData = {}, setFormData = () => {}, onTotalsChange = 
         });
       }
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         lens_id: item.id,
         lens_type_name: item.lens_type,
@@ -120,13 +135,12 @@ const SalesDetails = ({ formData = {}, setFormData = () => {}, onTotalsChange = 
   };
 
   useEffect(() => {
-  setCalculatedData((prev) => ({
-    ...prev,
-    p_frame: formData.p_frame || 0,
-    p_lens: formData.p_lens || 0,
-    // NO toques total_p_frame ni total_p_lens aquí
-  }));
-}, [formData]);
+    setCalculatedData((prev) => ({
+      ...prev,
+      p_frame: formData.p_frame || 0,
+      p_lens: formData.p_lens || 0,
+    }));
+  }, [formData]);
 
   useEffect(() => {
     const price = (calculatedData.p_frame || 0) + (calculatedData.p_lens || 0);
@@ -134,111 +148,121 @@ const SalesDetails = ({ formData = {}, setFormData = () => {}, onTotalsChange = 
   }, [calculatedData.p_frame, calculatedData.p_lens]);
 
   const handleDiscountChange = (e) => {
-  const { name, value } = e.target;
-  setDiscountInput((prev) => ({ ...prev, [name]: value }));
+    const { name, value } = e.target;
+    setDiscountInput((prev) => ({ ...prev, [name]: value }));
 
-  const discount = parseFloat(value);
-  
-  if (!isNaN(discount) && discount >= 0 && discount <= 100) {
-    if (name === "discount_frame") {
-      // Cálculo: 150 * (1 - 55.33/100) = 150 * 0.4467 = 67.005 → 67 (redondeado)
-      const total_p_frame = formatMoney(calculatedData.p_frame * (1 - discount / 100));
-      
-      console.log(`Frame calculation: ${calculatedData.p_frame} × (1 - ${discount}/100) = ${total_p_frame}`);
-      
-      setCalculatedData((prev) => ({
-        ...prev,
-        discount_frame: discount,
-        total_p_frame,
-      }));
-    } else if (name === "discount_lens") {
-      const total_p_lens = formatMoney(calculatedData.p_lens * (1 - discount / 100));
-      
-      setCalculatedData((prev) => ({
-        ...prev,
-        discount_lens: discount,
-        total_p_lens,
-      }));
-    }
-  } else {
-    setCalculatedData((prev) => ({
-      ...prev,
-      [name]: 0,
-      [name === "discount_frame" ? "total_p_frame" : "total_p_lens"]: 
-        name === "discount_frame" ? prev.p_frame : prev.p_lens,
-    }));
-  }
-};
+    const discount = parseFloat(value);
 
-  useEffect(() => {
-  setDiscountInput({
-    discount_frame:
-      calculatedData.discount_frame !== null && calculatedData.discount_frame !== undefined
-        ? calculatedData.discount_frame.toString()
-        : "",
-    discount_lens:
-      calculatedData.discount_lens !== null && calculatedData.discount_lens !== undefined
-        ? calculatedData.discount_lens.toString()
-        : "",
-  });
-}, [calculatedData.discount_frame, calculatedData.discount_lens]);
-
-  const handleTotalChange = (e) => {
-  const { name, value } = e.target;
-
-  if (name === "total_p_frame" || name === "total_p_lens") {
-    if (value === "") {
-      setCalculatedData((prev) => ({
-        ...prev,
-        [name]: null,
-        [`discount_${name === "total_p_frame" ? "frame" : "lens"}`]: 0,
-      }));
-      return;
-    }
-
-    const totalValue = formatMoney(value); // Redondea a entero
-    if (!isNaN(totalValue)) {
-      if (name === "total_p_frame") {
-        const discount_frame = calculatedData.p_frame > 0
-          ? parseFloat((100 - (totalValue / calculatedData.p_frame) * 100).toFixed(2))
-          : 0;
-          
+    if (!isNaN(discount) && discount >= 0 && discount <= 100) {
+      if (name === "discount_frame") {
+        const total_p_frame = formatMoney(
+          calculatedData.p_frame * (1 - discount / 100)
+        );
         setCalculatedData((prev) => ({
           ...prev,
-          total_p_frame: totalValue,
-          discount_frame: discount_frame,
+          discount_frame: discount,
+          total_p_frame,
         }));
-      } else {
-        const discount_lens = calculatedData.p_lens > 0
-          ? parseFloat((100 - (totalValue / calculatedData.p_lens) * 100).toFixed(2))
-          : 0;
-          
+      } else if (name === "discount_lens") {
+        const total_p_lens = formatMoney(
+          calculatedData.p_lens * (1 - discount / 100)
+        );
         setCalculatedData((prev) => ({
           ...prev,
-          total_p_lens: totalValue,
-          discount_lens: discount_lens,
+          discount_lens: discount,
+          total_p_lens,
         }));
       }
+    } else {
+      setCalculatedData((prev) => ({
+        ...prev,
+        [name]: 0,
+        [name === "discount_frame" ? "total_p_frame" : "total_p_lens"]:
+          name === "discount_frame" ? prev.p_frame : prev.p_lens,
+      }));
     }
-  }
-};
+  };
 
   useEffect(() => {
-    const totalFrame = calculatedData.total_p_frame !== null && calculatedData.total_p_frame !== undefined
-      ? formatMoney(calculatedData.total_p_frame)
-      : formatMoney(calculatedData.p_frame);
+    setDiscountInput({
+      discount_frame:
+        calculatedData.discount_frame !== null &&
+        calculatedData.discount_frame !== undefined
+          ? calculatedData.discount_frame.toString()
+          : "",
+      discount_lens:
+        calculatedData.discount_lens !== null &&
+        calculatedData.discount_lens !== undefined
+          ? calculatedData.discount_lens.toString()
+          : "",
+    });
+  }, [calculatedData.discount_frame, calculatedData.discount_lens]);
 
-    const totalLens = calculatedData.total_p_lens !== null && calculatedData.total_p_lens !== undefined
-      ? formatMoney(calculatedData.total_p_lens)
-      : formatMoney(calculatedData.p_lens);
+  const handleTotalChange = (e) => {
+    const { name, value } = e.target;
+
+    if (name === "total_p_frame" || name === "total_p_lens") {
+      if (value === "") {
+        setCalculatedData((prev) => ({
+          ...prev,
+          [name]: null,
+          [`discount_${name === "total_p_frame" ? "frame" : "lens"}`]: 0,
+        }));
+        return;
+      }
+
+      const totalValue = formatMoney(value);
+      if (!isNaN(totalValue)) {
+        if (name === "total_p_frame") {
+          const discount_frame =
+            calculatedData.p_frame > 0
+              ? parseFloat(
+                  (100 - (totalValue / calculatedData.p_frame) * 100).toFixed(2)
+                )
+              : 0;
+
+          setCalculatedData((prev) => ({
+            ...prev,
+            total_p_frame: totalValue,
+            discount_frame: discount_frame,
+          }));
+        } else {
+          const discount_lens =
+            calculatedData.p_lens > 0
+              ? parseFloat(
+                  (100 - (totalValue / calculatedData.p_lens) * 100).toFixed(2)
+                )
+              : 0;
+
+          setCalculatedData((prev) => ({
+            ...prev,
+            total_p_lens: totalValue,
+            discount_lens: discount_lens,
+          }));
+        }
+      }
+    }
+  };
+
+  useEffect(() => {
+    const totalFrame =
+      calculatedData.total_p_frame !== null &&
+      calculatedData.total_p_frame !== undefined
+        ? formatMoney(calculatedData.total_p_frame)
+        : formatMoney(calculatedData.p_frame);
+
+    const totalLens =
+      calculatedData.total_p_lens !== null &&
+      calculatedData.total_p_lens !== undefined
+        ? formatMoney(calculatedData.total_p_lens)
+        : formatMoney(calculatedData.p_lens);
 
     const totalP = totalFrame + totalLens;
 
     setCalculatedData((prev) => ({
       ...prev,
-      totalP: totalP.toString(), // Sin decimales
+      totalP: totalP.toString(),
     }));
-    // No actualizar formData aquí para evitar bucle
   }, [
     calculatedData.total_p_frame,
     calculatedData.total_p_lens,
@@ -246,310 +270,437 @@ const SalesDetails = ({ formData = {}, setFormData = () => {}, onTotalsChange = 
     calculatedData.p_lens,
     calculatedData.discount_frame,
     calculatedData.discount_lens,
-    calculatedData.price
+    calculatedData.price,
   ]);
 
+  useEffect(() => {
+    if (onTotalsChange) {
+      onTotalsChange({
+        frameName: formData.brand || "",
+        lensName: formData.lens_type_name || "",
+        total_p_frame: formatMoney(
+          calculatedData.discount_frame && calculatedData.discount_frame > 0
+            ? calculatedData.total_p_frame
+            : calculatedData.p_frame
+        ),
+        total_p_lens: formatMoney(
+          calculatedData.discount_lens && calculatedData.discount_lens > 0
+            ? calculatedData.total_p_lens
+            : calculatedData.p_lens
+        ),
+      });
+    }
+  }, [
+    calculatedData.total_p_frame,
+    calculatedData.total_p_lens,
+    calculatedData.p_frame,
+    calculatedData.p_lens,
+    calculatedData.discount_frame,
+    calculatedData.discount_lens,
+    formData.brand,
+    formData.lens_type_name,
+  ]);
 
-useEffect(() => {
-  if (onTotalsChange) {
-    onTotalsChange({
-      frameName: formData.brand || "",
-      lensName: formData.lens_type_name || "",
-      total_p_frame: formatMoney(
-        calculatedData.discount_frame && calculatedData.discount_frame > 0
-          ? calculatedData.total_p_frame
-          : calculatedData.p_frame
-      ),
-      total_p_lens: formatMoney(
-        calculatedData.discount_lens && calculatedData.discount_lens > 0
-          ? calculatedData.total_p_lens
-          : calculatedData.p_lens
-      ),
-    });
-  }
-}, [
-  calculatedData.total_p_frame,
-  calculatedData.total_p_lens,
-  calculatedData.p_frame,
-  calculatedData.p_lens,
-  calculatedData.discount_frame,
-  calculatedData.discount_lens,
-  formData.brand,
-  formData.lens_type_name,
-]);
+  const bgColor = useColorModeValue("white", "gray.900");
+  const cardBg = useColorModeValue("gray.50", "gray.800");
+  const textColor = useColorModeValue("gray.800", "white");
+  const borderColor = useColorModeValue("gray.200", "gray.700");
+  const selectBg = useColorModeValue("white", "gray.700");
+  const accentColor = useColorModeValue("blue.500", "blue.300");
 
-    const bgColor = useColorModeValue('white', 'gray.800');
-    const textColor = useColorModeValue('gray.800', 'white');
-    const borderColor = useColorModeValue('gray.200', 'gray.600');
-    const selectBg = useColorModeValue('white', 'gray.700');
-    
-return (
-  <Box w="100vw" >
-    <Box
-    w="100%"
-    maxW="900px"
-    mx="auto"
-    h="100%"
-  >
-      <VStack spacing={6} w="100%" px={[8, 2]}>
-        <SimpleGrid  templateColumns={["90px 1fr", null, "100px 1fr"]} spacing={6}  p={2} borderRadius="md" w="100%">
-          {/* Imagen */}
-          <Flex justify="center" align="center">
-            <Img
-              src="/assets/inventario.jpg"
-              alt="Armazón"
-              objectFit="cover"
-              borderRadius="md"
-              w={["90px", "100px", "140px"]}
-              h={["90px", "100px", "140px"]}
-            />
-          </Flex>
-
-          {/* Inputs Armazón */}
-          <VStack spacing={2} w="100%">
-            <FormControl>
-              <FormLabel fontSize="sm">Armazón</FormLabel>
-              <Input
-                name="frame1"
-                placeholder="Buscar armazón..."
-                value={searchFrame}
-                onChange={handleSearchFrame}
-                fontSize="sm"
-                height="40px"
-                borderRadius="full"
-                w="100%"
-                bg={selectBg}
-                borderColor={borderColor}
-                color={textColor}
-                _hover={{
-                borderColor: useColorModeValue('gray.300', 'gray.500')
-                }}
-                _focus={{
-                  borderColor: useColorModeValue('blue.500', 'blue.300'),
-                  boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                }}
-              />
-              {frameSuggestions.length > 0 && (
-                <Box maxH="100px" overflowY="auto" fontSize="sm">
-                  {frameSuggestions.map((item, index) => (
-                    <Box
-                      key={index}
-                      p={2}
-                      _hover={{ 
-                        bg: useColorModeValue("gray.100", "gray.600"), 
-                        cursor: "pointer" 
+  return (
+    <Box w="100vw" bg={bgColor} >
+      <Box
+        w="100%"
+        maxW="900px"
+        mx="auto"
+        h="100%"
+        borderRadius="2xl"
+        p={[4, 8]}
+        border={`1px solid ${borderColor}`}
+      >
+        <VStack spacing={8} w="100%">
+          {/* Frame Section */}
+          <Box w="100%">
+            <Text
+              fontWeight="bold"
+              fontSize="lg"
+              mb={2}
+              color={accentColor}
+              letterSpacing="wide"
+            >
+              Armazón
+            </Text>
+            <Divider mb={4} />
+            <SimpleGrid
+              templateColumns={["80px 1fr"]}
+              spacing={6}
+              alignItems="center"
+              w="100%"
+            >
+              <Flex justify="center" align="center">
+                <Img
+                  src="/assets/inventario.jpg"
+                  alt="Armazón"
+                  objectFit="cover"
+                  borderRadius="xl"
+                  w={["80px", "100px"]}
+                  h={["80px", "100px"]}
+                  boxShadow="md"
+                  border={`2px solid ${accentColor}`}
+                />
+              </Flex>
+              <VStack spacing={3} w="100%" align="stretch">
+                <FormControl>
+                  <FormLabel fontSize="sm" fontWeight="semibold">
+                    Buscar armazón
+                  </FormLabel>
+                  <Flex align="center" position="relative">
+                    <Input
+                      name="frame1"
+                      placeholder="Escribe para buscar..."
+                      value={searchFrame}
+                      onChange={handleSearchFrame}
+                      fontSize="md"
+                      height="44px"
+                      borderRadius="xl"
+                      w="100%"
+                      bg={selectBg}
+                      borderColor={borderColor}
+                      color={textColor}
+                      pr="40px"
+                      _hover={{
+                        borderColor: accentColor,
+                        boxShadow: "sm",
                       }}
-                      onClick={() => handleSuggestionClick(item, "frame", 1)}
-                    >
-                      {item.brand}
-                    </Box>
-                  ))}
-                </Box>
-              )}
-            </FormControl>
-
-            <SimpleGrid columns={3} spacing={2} w="100%">
-              <FormControl>
-                <FormLabel fontSize="sm">Valor</FormLabel>
-                <Input
-                  name="p_frame"
-                  type="number"
-                  height="40px"
-                  borderRadius="full"
-                  value={formatMoney(calculatedData.p_frame)}
-                  readOnly
-                  fontSize="sm"
-                  bg={selectBg}
-                  borderColor={borderColor}
-                  color={textColor}
-                  _hover={{
-                  borderColor: useColorModeValue('gray.300', 'gray.500')
-                  }}
-                  _focus={{
-                    borderColor: useColorModeValue('blue.500', 'blue.300'),
-                    boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                  }}
-                />
-              </FormControl>
-              <FormControl>
-                <FormLabel fontSize="sm">Desc</FormLabel>
-                <Input
-                  name="discount_frame"
-                  type="number"
-                  value={discountInput.discount_frame || ""}
-                  onChange={handleDiscountChange}
-                  fontSize="sm"
-                  h="40px"
-                  borderRadius="full"
-                  bg={selectBg}
-                  borderColor={borderColor}
-                  color={textColor}
-                  _hover={{
-                  borderColor: useColorModeValue('gray.300', 'gray.500')
-                  }}
-                  _focus={{
-                    borderColor: useColorModeValue('blue.500', 'blue.300'),
-                    boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                  }}
-                />
-              </FormControl>
-              <FormControl>
-                <FormLabel fontSize="sm">Total</FormLabel>
-                <Input
-                  name="total_p_frame"
-                  type="number"
-                  value={calculatedData.total_p_frame ?? ""}
-                  onChange={handleTotalChange}
-                  fontSize="sm"
-                  h="40px"
-                  borderRadius="full"
-                  bg={selectBg}
-                  borderColor={borderColor}
-                  color={textColor}
-                  _hover={{
-                  borderColor: useColorModeValue('gray.300', 'gray.500')
-                  }}
-                  _focus={{
-                    borderColor: useColorModeValue('blue.500', 'blue.300'),
-                    boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                  }}
-                />
-              </FormControl>
-            </SimpleGrid>
-          </VStack>
-        </SimpleGrid>
-
-        {/* Lente */}
-        <SimpleGrid templateColumns={["90px 1fr", null, "100px 1fr"]} spacing={6}  p={2} borderRadius="md" w="100%">
-          <Flex justify="center" align="center">
-            <Img
-              src="/assets/lunas.jpg"
-              alt="Lunas"
-              objectFit="cover"
-              borderRadius="md"
-              w={["90px", "100px", "140px"]}
-              h={["90px", "100px", "140px"]}
-            />
-          </Flex>
-
-          {/* Inputs Lente */}
-          <VStack spacing={2} w="100%">
-            <FormControl>
-              <FormLabel fontSize="sm">Lunas</FormLabel>
-              <Input
-                name="lens1"
-                placeholder="Buscar lente..."
-                value={searchLens}
-                onChange={handleSearchLens}
-                fontSize="sm"
-                h="40px"
-                borderRadius="full"
-                w="100%"
-                bg={selectBg}
-                borderColor={borderColor}
-                color={textColor}
-                _hover={{
-                borderColor: useColorModeValue('gray.300', 'gray.500')
-                }}
-                _focus={{
-                  borderColor: useColorModeValue('blue.500', 'blue.300'),
-                  boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                }}
-              />
-              {lensSuggestions.length > 0 && (
-                <Box maxH="100px" overflowY="auto" fontSize="sm">
-                  {lensSuggestions.map((item, index) => (
-                    <Box
-                      key={index}
-                      p={2}
-                       _hover={{ 
-                        bg: useColorModeValue("gray.100", "gray.600"), 
-                        cursor: "pointer" 
+                      _focus={{
+                        borderColor: accentColor,
+                        boxShadow: "0 0 0 2px #3182ce33",
                       }}
-                      onClick={() => handleSuggestionClick(item, "lens", 1)}
+                    />
+                    <Icon
+                      as={SearchIcon}
+                      position="absolute"
+                      right="12px"
+                      color={accentColor}
+                    />
+                  </Flex>
+                  {frameSuggestions.length > 0 && (
+                    <Box
+                      mt={2}
+                      borderRadius="md"
+                      boxShadow="md"
+                      bg={selectBg}
+                      border={`1px solid ${borderColor}`}
+                      maxH="140px"
+                      overflowY="auto"
+                      fontSize="sm"
+                      zIndex={10}
+                      position="absolute"
+                      w="100%"
                     >
-                      {item.lens_type}
+                      {frameSuggestions.map((item, index) => (
+                        <Box
+                          key={index}
+                          p={2}
+                          _hover={{
+                            bg: accentColor,
+                            color: "white",
+                            cursor: "pointer",
+                          }}
+                          transition="background 0.2s"
+                          onClick={() => handleSuggestionClick(item, "frame", 1)}
+                        >
+                          {item.brand}
+                        </Box>
+                      ))}
                     </Box>
-                  ))}
-                </Box>
-              )}
-            </FormControl>
-
-            <SimpleGrid columns={3} spacing={2} w="100%">
-              <FormControl>
-                <FormLabel fontSize="sm">Valor</FormLabel>
-                <Input
-                  name="p_lens"
-                  type="number"
-                  value={formatMoney(calculatedData.p_lens)}
-                  readOnly
-                  fontSize="sm"
-                  h="40px"
-                  borderRadius="full"
-                  bg={selectBg}
-                  borderColor={borderColor}
-                  color={textColor}
-                  _hover={{
-                  borderColor: useColorModeValue('gray.300', 'gray.500')
-                  }}
-                  _focus={{
-                    borderColor: useColorModeValue('blue.500', 'blue.300'),
-                    boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                  }}
-                />
-              </FormControl>
-              <FormControl>
-                <FormLabel fontSize="sm">Desc</FormLabel>
-                <Input
-                  name="discount_lens"
-                  type="number"
-                  value={discountInput.discount_lens || ""}
-                  onChange={handleDiscountChange}
-                  fontSize="sm"
-                  h="40px"
-                  borderRadius="full"
-                  bg={selectBg}
-                borderColor={borderColor}
-                color={textColor}
-                _hover={{
-                borderColor: useColorModeValue('gray.300', 'gray.500')
-                }}
-                _focus={{
-                  borderColor: useColorModeValue('blue.500', 'blue.300'),
-                  boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                }}
-                />
-              </FormControl>
-              <FormControl>
-                <FormLabel fontSize="sm">Total</FormLabel>
-                <Input
-                  name="total_p_lens"
-                  type="number"
-                  value={calculatedData.total_p_lens ?? ""}
-                  onChange={handleTotalChange}
-                  fontSize="sm"
-                  h="40px"
-                  borderRadius="full"
-                  bg={selectBg}
-                borderColor={borderColor}
-                color={textColor}
-                _hover={{
-                borderColor: useColorModeValue('gray.300', 'gray.500')
-                }}
-                _focus={{
-                  borderColor: useColorModeValue('blue.500', 'blue.300'),
-                  boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                }}
-                />
-              </FormControl>
+                  )}
+                </FormControl>
+                <SimpleGrid columns={3} spacing={2} w="100%">
+                  <FormControl>
+                    <FormLabel fontSize="sm" fontWeight="semibold">
+                      Valor
+                    </FormLabel>
+                    <Input
+                      name="p_frame"
+                      type="number"
+                      height="44px"
+                      borderRadius="xl"
+                      value={formatMoney(calculatedData.p_frame)}
+                      readOnly
+                      fontSize="md"
+                      bg={selectBg}
+                      borderColor={borderColor}
+                      color={textColor}
+                      textAlign="center"
+                      _hover={{
+                        borderColor: accentColor,
+                        boxShadow: "sm",
+                      }}
+                      _focus={{
+                        borderColor: accentColor,
+                        boxShadow: "0 0 0 2px #3182ce33",
+                      }}
+                    />
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel fontSize="sm" fontWeight="semibold">
+                      Descuento %
+                    </FormLabel>
+                    <Input
+                      name="discount_frame"
+                      type="number"
+                      value={discountInput.discount_frame || ""}
+                      onChange={handleDiscountChange}
+                      fontSize="md"
+                      height="44px"
+                      borderRadius="xl"
+                      bg={selectBg}
+                      borderColor={borderColor}
+                      color={textColor}
+                      textAlign="center"
+                      _hover={{
+                        borderColor: accentColor,
+                        boxShadow: "sm",
+                      }}
+                      _focus={{
+                        borderColor: accentColor,
+                        boxShadow: "0 0 0 2px #3182ce33",
+                      }}
+                    />
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel fontSize="sm" fontWeight="semibold">
+                      Total
+                    </FormLabel>
+                    <Input
+                      name="total_p_frame"
+                      type="number"
+                      value={calculatedData.total_p_frame ?? ""}
+                      onChange={handleTotalChange}
+                      fontSize="md"
+                      height="44px"
+                      borderRadius="xl"
+                      bg={selectBg}
+                      borderColor={borderColor}
+                      color={textColor}
+                      textAlign="center"
+                      _hover={{
+                        borderColor: accentColor,
+                        boxShadow: "sm",
+                      }}
+                      _focus={{
+                        borderColor: accentColor,
+                        boxShadow: "0 0 0 2px #3182ce33",
+                      }}
+                    />
+                  </FormControl>
+                </SimpleGrid>
+              </VStack>
             </SimpleGrid>
-          </VStack>
-        </SimpleGrid>
-      </VStack>
+          </Box>
+
+          {/* Lens Section */}
+          <Box w="100%">
+            <Text
+              fontWeight="bold"
+              fontSize="lg"
+              mb={2}
+              color={accentColor}
+              letterSpacing="wide"
+            >
+              Lunas
+            </Text>
+            <Divider mb={4} />
+            <SimpleGrid
+              templateColumns={["80px 1fr"]}
+              spacing={6}
+              alignItems="center"
+              w="100%"
+            >
+              <Flex justify="center" align="center">
+                <Img
+                  src="/assets/lunas.jpg"
+                  alt="Lunas"
+                  objectFit="cover"
+                  borderRadius="xl"
+                  w={["80px", "100px"]}
+                  h={["80px", "100px"]}
+                  boxShadow="md"
+                  border={`2px solid ${accentColor}`}
+                />
+              </Flex>
+              <VStack spacing={3} w="100%" align="stretch">
+                <FormControl>
+                  <FormLabel fontSize="sm" fontWeight="semibold">
+                    Buscar lente
+                  </FormLabel>
+                  <Flex align="center" position="relative">
+                    <Input
+                      name="lens1"
+                      placeholder="Escribe para buscar..."
+                      value={searchLens}
+                      onChange={handleSearchLens}
+                      fontSize="md"
+                      height="44px"
+                      borderRadius="xl"
+                      w="100%"
+                      bg={selectBg}
+                      borderColor={borderColor}
+                      color={textColor}
+                      pr="40px"
+                      _hover={{
+                        borderColor: accentColor,
+                        boxShadow: "sm",
+                      }}
+                      _focus={{
+                        borderColor: accentColor,
+                        boxShadow: "0 0 0 2px #3182ce33",
+                      }}
+                    />
+                    <Icon
+                      as={SearchIcon}
+                      position="absolute"
+                      right="12px"
+                      color={accentColor}
+                    />
+                  </Flex>
+                  {lensSuggestions.length > 0 && (
+                    <Box
+                      mt={2}
+                      borderRadius="md"
+                      boxShadow="md"
+                      bg={selectBg}
+                      border={`1px solid ${borderColor}`}
+                      maxH="140px"
+                      overflowY="auto"
+                      fontSize="sm"
+                      zIndex={10}
+                      position="absolute"
+                      w="100%"
+                    >
+                      {lensSuggestions.map((item, index) => (
+                        <Box
+                          key={index}
+                          p={2}
+                          _hover={{
+                            bg: accentColor,
+                            color: "white",
+                            cursor: "pointer",
+                          }}
+                          transition="background 0.2s"
+                          onClick={() => handleSuggestionClick(item, "lens", 1)}
+                        >
+                          {item.lens_type}
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </FormControl>
+                <SimpleGrid columns={3} spacing={2} w="100%">
+                  <FormControl>
+                    <FormLabel fontSize="sm" fontWeight="semibold">
+                      Valor
+                    </FormLabel>
+                    <Input
+                      name="p_lens"
+                      type="number"
+                      value={formatMoney(calculatedData.p_lens)}
+                      readOnly
+                      fontSize="md"
+                      height="44px"
+                      borderRadius="xl"
+                      bg={selectBg}
+                      borderColor={borderColor}
+                      color={textColor}
+                      textAlign="center"
+                      _hover={{
+                        borderColor: accentColor,
+                        boxShadow: "sm",
+                      }}
+                      _focus={{
+                        borderColor: accentColor,
+                        boxShadow: "0 0 0 2px #3182ce33",
+                      }}
+                    />
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel fontSize="sm" fontWeight="semibold">
+                      Descuento %
+                    </FormLabel>
+                    <Input
+                      name="discount_lens"
+                      type="number"
+                      value={discountInput.discount_lens || ""}
+                      onChange={handleDiscountChange}
+                      fontSize="md"
+                      height="44px"
+                      borderRadius="xl"
+                      bg={selectBg}
+                      borderColor={borderColor}
+                      color={textColor}
+                      textAlign="center"
+                      _hover={{
+                        borderColor: accentColor,
+                        boxShadow: "sm",
+                      }}
+                      _focus={{
+                        borderColor: accentColor,
+                        boxShadow: "0 0 0 2px #3182ce33",
+                      }}
+                    />
+                  </FormControl>
+                  <FormControl>
+                    <FormLabel fontSize="sm" fontWeight="semibold">
+                      Total
+                    </FormLabel>
+                    <Input
+                      name="total_p_lens"
+                      type="number"
+                      value={calculatedData.total_p_lens ?? ""}
+                      onChange={handleTotalChange}
+                      fontSize="md"
+                      height="44px"
+                      borderRadius="xl"
+                      bg={selectBg}
+                      borderColor={borderColor}
+                      color={textColor}
+                      textAlign="center"
+                      _hover={{
+                        borderColor: accentColor,
+                        boxShadow: "sm",
+                      }}
+                      _focus={{
+                        borderColor: accentColor,
+                        boxShadow: "0 0 0 2px #3182ce33",
+                      }}
+                    />
+                  </FormControl>
+                </SimpleGrid>
+              </VStack>
+            </SimpleGrid>
+          </Box>
+
+          {/* Totals */}
+          <Box
+            w="100%"
+            mt={6}
+            p={4}
+            bg={useColorModeValue("blue.50", "blue.900")}
+            borderRadius="xl"
+            boxShadow="md"
+            border={`1px solid ${accentColor}`}
+            textAlign="center"
+          >
+            <Text fontWeight="bold" fontSize="xl" color={accentColor}>
+              Total a pagar: ${calculatedData.totalP}
+            </Text>
+          </Box>
+        </VStack>
+      </Box>
     </Box>
-  </Box>
-);
-
+  );
 };
 
 export default SalesDetails;

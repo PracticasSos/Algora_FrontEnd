@@ -1,6 +1,18 @@
-import { FormControl, FormLabel, Input, Box, Text, useColorModeValue, useToast } from "@chakra-ui/react";
-import { useEffect } from "react";
-import { useState } from "react";
+import {
+  FormControl,
+  FormLabel,
+  Input,
+  Box,
+  Text,
+  useColorModeValue,
+  useToast,
+  VStack,
+  Icon,
+  Flex,
+  Divider,
+} from "@chakra-ui/react";
+import { CalendarIcon, TimeIcon } from "@chakra-ui/icons";
+import { useEffect, useState } from "react";
 
 const Delivery = ({ saleData, setSaleData }) => {
   const [deliveryDays, setDeliveryDays] = useState(null);
@@ -10,7 +22,6 @@ const Delivery = ({ saleData, setSaleData }) => {
 
   useEffect(() => {
     const now = new Date();
-    // Ajustar a zona horaria local
     const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
     const formatted = localNow.toISOString().slice(0, 16);
     setMinDateTime(formatted);
@@ -27,12 +38,8 @@ const Delivery = ({ saleData, setSaleData }) => {
       }));
       return;
     }
-
-    // Crear fecha desde el input (ya está en zona horaria local)
     const selectedDateTime = new Date(e.target.value);
     const now = new Date();
-
-    // Verificar si es fecha pasada
     if (selectedDateTime < now) {
       toast({
         title: "Fecha inválida",
@@ -52,15 +59,10 @@ const Delivery = ({ saleData, setSaleData }) => {
       }));
       return;
     }
-
-    // Calcular diferencia en días (más preciso)
     const diffInMs = selectedDateTime.getTime() - now.getTime();
     const diffInHours = diffInMs / (1000 * 60 * 60);
-    const diffInDays = Math.ceil(diffInHours / 24); // Redondear hacia arriba
-
+    const diffInDays = Math.ceil(diffInHours / 24);
     setDeliveryDays(diffInDays);
-
-    // Formatear fecha para mostrar
     const formatted = selectedDateTime.toLocaleString("es-ES", {
       weekday: "long",
       year: "numeric",
@@ -68,82 +70,99 @@ const Delivery = ({ saleData, setSaleData }) => {
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-      hour12: false // Formato 24h
+      hour12: false,
     });
-
     setSelectedDateText(formatted);
-
-    // Guardar en saleData con la fecha exacta seleccionada
     setSaleData((prev) => ({
       ...prev,
       delivery_time: `${diffInDays} día${diffInDays !== 1 ? "s" : ""}`,
       delivery_datetime: selectedDateTime.toISOString(),
-      delivery_formatted: formatted
+      delivery_formatted: formatted,
     }));
   };
 
   // Colores adaptativos
-  const boxBg = useColorModeValue('gray.100', 'gray.700');
-  const boxColor = useColorModeValue('gray.700', 'white');
-  const textColor = useColorModeValue('gray.800', 'white');
-  const secondaryTextColor = useColorModeValue('gray.600', 'gray.300');
-  const labelColor = useColorModeValue('gray.600', 'gray.300');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const selectBg = useColorModeValue('white', 'gray.600');
+  const boxBg = useColorModeValue("white", "gray.800");
+  const boxShadow = useColorModeValue("0 4px 24px rgba(0,0,0,0.08)", "0 4px 24px rgba(0,0,0,0.32)");
+  const boxColor = useColorModeValue("gray.700", "white");
+  const textColor = useColorModeValue("gray.800", "white");
+  const secondaryTextColor = useColorModeValue("gray.600", "gray.300");
+  const labelColor = useColorModeValue("teal.600", "teal.300");
+  const borderColor = useColorModeValue("teal.200", "teal.600");
+  const selectBg = useColorModeValue("gray.50", "gray.700");
 
   return (
-    <Box 
-      bg={boxBg} 
-      p={6} 
-      borderRadius="xl" 
-      color={boxColor} 
-      mx="auto" 
-      maxW="700px" 
+    <Box
+      bg={boxBg}
+      p={{ base: 6, md: 8 }}
+      borderRadius="2xl"
+      color={boxColor}
+      mx="auto"
+      maxW="480px"
       textAlign="center"
+      boxShadow={boxShadow}
+      border="1px solid"
+      borderColor={borderColor}
+      transition="box-shadow 0.2s"
     >
-      <FormControl w="100%" maxW="500px" mx="auto">
-        <FormLabel fontSize="md" color={labelColor}>
-          Fecha y hora de entrega
-        </FormLabel>
-        <Input
-          type="datetime-local"
-          name="delivery_date"
-          min={miniDateTime}
-          onChange={handleDateChange}
-          focusBorderColor="teal.500"
-          borderRadius="full"
-          height="50px"
-          pl={4}
-          pr={4}
-          bg={selectBg}
-          borderColor={borderColor}
-          color={textColor}
-          _hover={{
-            borderColor: useColorModeValue('gray.300', 'gray.500')
-          }}
-          _focus={{
-            borderColor: useColorModeValue('blue.500', 'blue.300'),
-            boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-          }}
-        />
-      </FormControl>
-
-      <Box mt={4}>
-        {deliveryDays !== null ? (
-          <>
-            <Text fontSize="md" fontWeight="medium" color={textColor}>
-              📅 Entrega en {deliveryDays} día{deliveryDays !== 1 ? "s" : ""}
-            </Text>
-            <Text fontSize="sm" color={secondaryTextColor} mt={1}>
-              📌 Fecha seleccionada: {selectedDateText}
-            </Text>
-          </>
-        ) : (
-          <Text fontSize="sm" color={secondaryTextColor}>
-            Seleccione una fecha y hora para ver el tiempo de entrega
+      <VStack spacing={6} align="stretch">
+        <Flex align="center" justify="center" mb={2}>
+          <Icon as={CalendarIcon} boxSize={7} color="teal.400" mr={2} />
+          <Text fontSize="2xl" fontWeight="bold" color={labelColor}>
+            Programar entrega
           </Text>
-        )}
-      </Box>
+        </Flex>
+        <Divider borderColor={borderColor} />
+        <FormControl w="100%">
+          <FormLabel fontSize="md" color={labelColor} fontWeight="semibold" mb={2}>
+            Selecciona fecha y hora
+          </FormLabel>
+          <Input
+            type="datetime-local"
+            name="delivery_date"
+            min={miniDateTime}
+            onChange={handleDateChange}
+            focusBorderColor="teal.500"
+            borderRadius="lg"
+            height="48px"
+            pl={4}
+            pr={4}
+            bg={selectBg}
+            borderColor={borderColor}
+            color={textColor}
+            fontSize="md"
+            fontWeight="medium"
+            _hover={{
+              borderColor: useColorModeValue("teal.300", "teal.500"),
+              boxShadow: useColorModeValue("0 0 0 2px teal.100", "0 0 0 2px teal.700"),
+            }}
+            _focus={{
+              borderColor: useColorModeValue("teal.500", "teal.300"),
+              boxShadow: useColorModeValue("0 0 0 2px teal.200", "0 0 0 2px teal.600"),
+            }}
+            transition="all 0.2s"
+          />
+        </FormControl>
+        <Box mt={2}>
+          {deliveryDays !== null ? (
+            <VStack spacing={2}>
+              <Flex align="center" justify="center">
+                <Icon as={TimeIcon} boxSize={5} color="teal.400" mr={2} />
+                <Text fontSize="lg" fontWeight="semibold" color={textColor}>
+                  Entrega en {deliveryDays} día{deliveryDays !== 1 ? "s" : ""}
+                </Text>
+              </Flex>
+              <Text fontSize="sm" color={secondaryTextColor} mt={1}>
+                <b>Fecha seleccionada:</b> {selectedDateText}
+              </Text>
+            </VStack>
+          ) : (
+            <Text fontSize="sm" color={secondaryTextColor}>
+              Selecciona una fecha y hora para ver el tiempo estimado de entrega.
+            </Text>
+          )}
+        </Box>
+      </VStack>
     </Box>
   );
 };

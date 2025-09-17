@@ -1,21 +1,37 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../api/supabase';
-import { Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, VStack, Textarea, Text, Modal,
+import {
+  Box,
+  Button,
+  Heading,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  VStack,
+  Textarea,
+  Text,
+  Modal,
   ModalOverlay,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalFooter,
   ModalCloseButton,
-  useColorModeValue 
+  useColorModeValue,
+  Spinner,
+  Card,
+  CardHeader,
+  CardBody,
 } from "@chakra-ui/react";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import SearchBar from './SearchBar';
 import SmartHeader from '../header/SmartHeader';
 
 const RetreatsPatients = () => {
   const [allPatients, setAllPatients] = useState([]); 
-  const [pendingSales, setPendingSales] = useState([]);
   const [filteredPatients, setFilteredPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -24,10 +40,11 @@ const RetreatsPatients = () => {
   const [message, setMessage] = useState("");
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(true);
   const [branches, setBranches] = useState([]);
-  const [filteredSales, setFilteredSales] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState("");
+
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     fetchPatients({});
@@ -35,15 +52,14 @@ const RetreatsPatients = () => {
   }, []);
 
   useEffect(() => {
-
-      const updatedSales = location.state?.updatedPendingSales;
-    
-      if (updatedSales) {
-          setPendingSales(updatedSales);
-      }
-      if (location.state) {
-          navigate(location.pathname, { replace: true, state: null });
-      }
+    const updatedSales = location.state?.updatedPendingSales;
+    if (updatedSales) {
+      setAllPatients(updatedSales);
+      setFilteredPatients(updatedSales);
+    }
+    if (location.state) {
+      navigate(location.pathname, { replace: true, state: null });
+    }
   }, [location.state, navigate]);
 
   useEffect(() => {
@@ -52,7 +68,6 @@ const RetreatsPatients = () => {
     }
   }, [selectedBranch]);
 
-
   const fetchBranchs = async () => {
     const { data, error } = await supabase.from("branchs").select("id, name");
     if (!error) {
@@ -60,7 +75,7 @@ const RetreatsPatients = () => {
     }
   };
 
-  const fetchPatients = async ({branchId = null, saleId = null}) => {
+  const fetchPatients = async ({ branchId = null, saleId = null }) => {
     setLoading(true);
     try {
       let query = supabase
@@ -87,14 +102,10 @@ const RetreatsPatients = () => {
         .eq('is_completed', false)
         .eq("is_refund", false);
 
-        if (branchId) {
-          query = query.eq('branchs_id', branchId);
-        }
-        if (saleId) {
-          query = query.eq('patient_id', saleId);
-        }
-        const { data, error } = await query;
+      if (branchId) query = query.eq('branchs_id', branchId);
+      if (saleId) query = query.eq('patient_id', saleId);
 
+      const { data, error } = await query;
       if (error) throw error;
 
       const formattedData = data.map(sale => ({
@@ -114,7 +125,6 @@ const RetreatsPatients = () => {
         branch: sale.branchs?.name || "N/A",
       }));
 
-      setPendingSales(formattedData);
       setAllPatients(formattedData);
       setFilteredPatients(formattedData);
     } catch (error) {
@@ -125,13 +135,13 @@ const RetreatsPatients = () => {
   };
 
   const handlePatientSelect = (sale) => {
-    if (sale && sale.sale_id) {  
+    if (sale?.sale_id) {  
       navigate(`/retreats-patients/retreats/${sale.sale_id}`, { 
         state: { patientData: sale, selectedDate: sale.date } 
       });
     }
   };
-  
+
   const filterPatients = ({ searchTerm = '', selectedPatientObj = null, suggestionName = '' } = {}) => {
     let filtered = allPatients;
     let suggestionsList = [];
@@ -203,118 +213,113 @@ const RetreatsPatients = () => {
     filterPatients({ searchTerm: e.target.value.toLowerCase() });
   };
 
-  const handlePatientClick = (selectedPatient) => {
-    filterPatients({ selectedPatientObj: selectedPatient });
-  };
-
   const handleSuggestionSelect = (selectedName) => {
     filterPatients({ suggestionName: selectedName });
   };
 
   const sortedPatients = [...filteredPatients].sort((a, b) => {
-    // Si alguna fecha es inválida, ponla al final
     if (!a.date) return 1;
     if (!b.date) return -1;
     return new Date(b.date) - new Date(a.date);
   }); 
     
-  const moduleSpecificButton = null;
-
-    const textColor = useColorModeValue('gray.800', 'white');
-    const borderColor = useColorModeValue('gray.200', 'gray.600');
-    const tableBg = useColorModeValue('white', 'gray.700');
-    const tableHoverBg = useColorModeValue('gray.100', 'gray.600');
+  const textColor = useColorModeValue('gray.800', 'white');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const tableBg = useColorModeValue('white', 'gray.700');
+  const tableHoverBg = useColorModeValue('gray.100', 'gray.600');
    
   return (
     <Box display="flex" flexDirection="column" alignItems="center" minHeight="100vh" p={6}>
-      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-      <Box w="100%" maxW= "1500px" mb={4}>
-            <Heading 
-                mb={4} 
-                textAlign="left" 
-                size="md"
-                fontWeight="700"
-                color={useColorModeValue('teal.600', 'teal.300')}
-                pb={2}
-            >
-                Retiros
-            </Heading>
-            </Box>
-      <Box w="50%" mx="auto" display="block">
-        <SearchBar
-          searchPlaceholder="Buscar por nombre..."
-          searchValue={searchTermPatients}
-          onSearchChange={handleSearch}
-          suggestions={suggestions}
-          onSuggestionSelect={handleSuggestionSelect}
-          branches={branches}
-          selectedBranch={selectedBranch}
-          onBranchChange={(e) => setSelectedBranch(e.target.value)}
-          showBranchFilter={true}
-          
-        />
-      </Box>
+      <SmartHeader />
       
-      {(!selectedBranch && !searchTermPatients) ? (
-        <Text textAlign="center" color={useColorModeValue('gray.500', 'gray.400')} mt={6}>
-          Por favor, selecciona una sucursal o busca un nombre para mostrar los datos.
-        </Text>
-      ) : filteredPatients.length === 0 ? (
-        <Text textAlign="center" color={useColorModeValue('gray.500', 'gray.400')}>
-          No se encontraron registros de pacientes.
-        </Text>
-      ) : (
-        <Box width="100%" maxWidth="1500px"  overflowX="auto">
-          <Table bg={tableBg}  borderRadius="md" overflow="hidden">
-            <Thead>
-              <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
-                <Th color={textColor} borderColor={borderColor}>Fecha</Th>
-                <Th color={textColor} borderColor={borderColor}>Nombre</Th>
-                <Th color={textColor} borderColor={borderColor} >Apellido</Th>
-                <Th color={textColor} borderColor={borderColor} >Sucursal</Th>
-                <Th color={textColor} borderColor={borderColor} >Armazón</Th>
-                <Th color={textColor} borderColor={borderColor} >Luna</Th>
-                <Th color={textColor} borderColor={borderColor} >Total</Th>
-                <Th color={textColor} borderColor={borderColor} >Abono</Th>
-                <Th color={textColor} borderColor={borderColor} >Saldo</Th>
-                <Th color={textColor} borderColor={borderColor} >TELF</Th>
-                <Th color={textColor} borderColor={borderColor} >Acción</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {sortedPatients.map((patient) => (
-                <Tr
-                  key={`${patient.sale_id}`}
-                  onClick={() => handlePatientSelect(patient)}
-                  cursor="pointer"
-                  _hover={{ bg: tableHoverBg }}
-                  borderColor={borderColor}
-                >
-                  <Td color={textColor} borderColor={borderColor} >{patient.date}</Td>
-                  <Td color={textColor} borderColor={borderColor} >{patient.pt_firstname}</Td>
-                  <Td color={textColor} borderColor={borderColor} >{patient.pt_lastname}</Td>
-                  <Td color={textColor} borderColor={borderColor} >{patient.branch}</Td>
-                  <Td color={textColor} borderColor={borderColor}>{patient.brand || "Sin Marca"}</Td>
-                  <Td color={textColor} borderColor={borderColor} >{patient.lens_type}</Td>
-                  <Td color={textColor} borderColor={borderColor} >{patient.total}</Td>
-                  <Td color={textColor} borderColor={borderColor} >{patient.balance}</Td>
-                  <Td color={textColor} borderColor={borderColor} >{patient.credit}</Td>
-                  <Td color={textColor} borderColor={borderColor} >{patient.pt_phone}</Td>
-                  <Td color={textColor} borderColor={borderColor}>
-                    <Button
-                      size="sm"
-                      colorScheme="green"
-                      onClick={(e) => handleMessageClick(e, patient)}
+      <Card w="100%" maxW="1500px" shadow="lg" borderRadius="xl">
+        <CardHeader borderBottom="1px solid" borderColor={borderColor}>
+          <Heading size="md" fontWeight="700" color={useColorModeValue('teal.600', 'teal.300')}>
+            Retiros
+          </Heading>
+        </CardHeader>
+
+        <CardBody>
+          <Box w="100%" mx="auto" mb={6}>
+            <SearchBar 
+              searchPlaceholder="Buscar por nombre..."
+              searchValue={searchTermPatients}
+              onSearchChange={handleSearch}
+              suggestions={suggestions}
+              onSuggestionSelect={handleSuggestionSelect}
+              branches={branches}
+              selectedBranch={selectedBranch}
+              onBranchChange={(e) => setSelectedBranch(e.target.value)}
+              showBranchFilter={true}
+            />
+          </Box>
+          
+          {loading ? (
+            <Box display="flex" justifyContent="center" py={10}>
+              <Spinner size="xl" color="teal.500" />
+            </Box>
+          ) : (!selectedBranch && !searchTermPatients) ? (
+            <Text textAlign="center" color={useColorModeValue('gray.500', 'gray.400')} mt={6}>
+              Por favor, selecciona una sucursal o busca un nombre para mostrar los datos.
+            </Text>
+          ) : filteredPatients.length === 0 ? (
+            <Text textAlign="center" color={useColorModeValue('gray.500', 'gray.400')}>
+              No se encontraron registros de pacientes.
+            </Text>
+          ) : (
+            <Box width="100%" overflowX="auto">
+              <Table bg={tableBg} borderRadius="md" overflow="hidden">
+                <Thead>
+                  <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
+                    <Th color={textColor}>Fecha</Th>
+                    <Th color={textColor}>Nombre</Th>
+                    <Th color={textColor}>Apellido</Th>
+                    <Th color={textColor}>Sucursal</Th>
+                    <Th color={textColor}>Armazón</Th>
+                    <Th color={textColor}>Luna</Th>
+                    <Th color={textColor}>Total</Th>
+                    <Th color={textColor}>Abono</Th>
+                    <Th color={textColor}>Saldo</Th>
+                    <Th color={textColor}>Telefono</Th>
+                    <Th color={textColor}>Acción</Th>
+                  </Tr>
+                </Thead>
+                <Tbody>
+                  {sortedPatients.map((patient) => (
+                    <Tr
+                      key={patient.sale_id}
+                      onClick={() => handlePatientSelect(patient)}
+                      cursor="pointer"
+                      _hover={{ bg: tableHoverBg }}
                     >
-                      Enviar Mensaje
-                    </Button>
-                  </Td>
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </Box>
-      )}
+                      <Td>{patient.date}</Td>
+                      <Td>{patient.pt_firstname}</Td>
+                      <Td>{patient.pt_lastname}</Td>
+                      <Td>{patient.branch}</Td>
+                      <Td>{patient.brand}</Td>
+                      <Td>{patient.lens_type}</Td>
+                      <Td>{patient.total}</Td>
+                      <Td>{patient.balance}</Td>
+                      <Td>{patient.credit}</Td>
+                      <Td>{patient.pt_phone}</Td>
+                      <Td>
+                        <Button
+                          size="sm"
+                          colorScheme="green"
+                          onClick={(e) => handleMessageClick(e, patient)}
+                        >
+                          Enviar Mensaje
+                        </Button>
+                      </Td>
+                    </Tr>
+                  ))}
+                </Tbody>
+              </Table>
+            </Box>
+          )}
+        </CardBody>
+      </Card>
+
       <Modal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} isCentered size="lg">
         <ModalOverlay />
         <ModalContent>
@@ -340,7 +345,7 @@ const RetreatsPatients = () => {
               colorScheme="green"
               onClick={() => {
                 handleSendMessage();
-                setIsFormOpen(false); // Oculta al enviar
+                setIsFormOpen(false);
               }}
               isDisabled={!message.trim()}
             >
@@ -349,7 +354,6 @@ const RetreatsPatients = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
-
     </Box>
   );
 };

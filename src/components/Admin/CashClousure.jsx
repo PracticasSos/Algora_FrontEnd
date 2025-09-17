@@ -564,7 +564,8 @@ const CashClosure = () => {
                 <Heading size="md" textAlign="center">
                     Cierre Diario
                 </Heading>
-                <Table colorScheme="teal"  overflow="hidden" overflowX="auto">
+                <Box overflowX="auto" width="100%">
+                    <Table colorScheme="teal"  overflow="hidden">
                     <Thead>
                         <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
                             <Th color={textColor} borderColor={borderColor}>Orden</Th>
@@ -609,7 +610,8 @@ const CashClosure = () => {
                             </Tr>
                         ))}
                     </Tbody>
-                </Table>
+                    </Table>
+                </Box>
                 <Divider my={6} />
                     <HStack justifyContent="space-around" spacing={6}>
                         <VStack>
@@ -637,7 +639,8 @@ const CashClosure = () => {
                 <Box>
                 <Divider my={6} />
                 <Heading size="md" textAlign="center" >Ajustes en Abonos</Heading>
-                <Table  overflow="hidden" colorScheme="teal" overflowX="auto">
+                <Box overflowX="auto" width="100%">
+                    <Table  overflow="hidden" colorScheme="teal">
                     <Thead>
                         <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
                             <Th color={textColor} borderColor={borderColor}>Fecha</Th>
@@ -678,7 +681,8 @@ const CashClosure = () => {
                                 </Tr>
                             ))}
                         </Tbody>
-                    </Table>
+                        </Table>
+                    </Box>
                 <Divider my={10} />
                 <HStack justifyContent="space-around" spacing={6}>
                     <VStack>
@@ -708,7 +712,8 @@ const CashClosure = () => {
                 <Heading size="md" textAlign="center" >
                     Egresos
                 </Heading>
-                <Table  overflow="hidden" colorScheme="teal" mb={6} overflowX="auto">
+                <Box overflowX="auto" width="100%">
+                    <Table  overflow="hidden" colorScheme="teal" mb={6}>
                     <Thead>
                         <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
                             <Th color={textColor} borderColor={borderColor}>Orden</Th>
@@ -747,7 +752,8 @@ const CashClosure = () => {
                             </Tr>
                         ))}
                     </Tbody>
-                    </Table>
+                        </Table>
+                    </Box>
                     </Box>
                         <Divider my={6} />
                             <HStack justifyContent="space-around" spacing={6}>

@@ -414,7 +414,8 @@ const PatientRecords = () => {
                 </Select>
             </Box>
             <Heading size="md" textAlign="center" >Ingresos</Heading>
-            <Table bg={tableBg} borderRadius="md" overflow="hidden" overflowX="auto">
+            <Box overflowX="auto" width="100%">
+                <Table bg={tableBg} borderRadius="md" overflow="hidden">
                 <Thead>
                     <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
                         <Th color={textColor} borderColor={borderColor} >Orden</Th>
@@ -459,7 +460,8 @@ const PatientRecords = () => {
                         </Tr>
                     ))}
                 </Tbody>
-            </Table>
+                </Table>
+            </Box>
             <Divider my={6} />
             <HStack justifyContent="space-around" spacing={6}>
                 <VStack>
@@ -488,7 +490,8 @@ const PatientRecords = () => {
             <Box>
                 <Divider my={6} />
                 <Heading size="md" textAlign="center" >Ajustes en Abonos</Heading>
-                <Table bg={tableBg} borderRadius="md" overflow="hidden">
+                <Box overflowX="auto" width="100%">
+                    <Table bg={tableBg} borderRadius="md" overflow="hidden">
                     <Thead>
                         <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
                             <Th color={textColor} borderColor={borderColor}>Fecha</Th>
@@ -529,7 +532,8 @@ const PatientRecords = () => {
                             </Tr>
                         ))}
                     </Tbody>
-                </Table>
+                    </Table>
+                </Box>
                 <Divider my={10} />
                 <HStack justifyContent="space-around" spacing={6}>
                     <VStack>
@@ -560,7 +564,8 @@ const PatientRecords = () => {
                 <Heading size="md" textAlign="center" >
                     Egresos
                 </Heading>
-                <Table  bg={tableBg} borderRadius="md" overflow="hidden" mb={6}>
+                <Box overflowX="auto" width="100%">
+                    <Table  bg={tableBg} borderRadius="md" overflow="hidden" mb={6}>
                     <Thead>
                         <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
                             <Th color={textColor} borderColor={borderColor}>Orden</Th>
@@ -599,7 +604,8 @@ const PatientRecords = () => {
                             </Tr>
                         ))}
                     </Tbody>
-                </Table>
+                    </Table>
+                </Box>
                 <Divider my={6} />
                 <HStack justifyContent="space-around" spacing={6}>
                     <VStack>

@@ -130,9 +130,6 @@ const AbonosSection = ({ branchId, formData, setAbonosTotals }) => {
     return (
         <Box>
             <Divider my={6} />
-            <Heading size="md" textAlign="center">
-                Ajustes en Abonos
-            </Heading>
             <Box overflowX="auto" width="100%">
                 <Table overflow="hidden" colorScheme="teal">
                     <Thead>

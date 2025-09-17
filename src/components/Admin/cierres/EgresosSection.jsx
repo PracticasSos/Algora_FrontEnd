@@ -85,9 +85,6 @@ const EgresosSection = ({ branchId, formData, setEgresosTotals }) => {
 
     return (
         <Box>
-            <Heading size="md" textAlign="center">
-                Egresos
-            </Heading>
             <Box overflowX="auto" width="100%">
                 <Table overflow="hidden" colorScheme="teal" mb={6}>
                     <Thead>

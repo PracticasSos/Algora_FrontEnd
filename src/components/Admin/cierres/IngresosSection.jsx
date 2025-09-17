@@ -62,7 +62,6 @@ const IngresosSection = ({ branchId, formData, setTotals }) => {
 
     return (
         <Box>
-            <Heading size="md" textAlign="center">Cierre Diario</Heading>
             <Box overflowX="auto" width="100%">
                 <Table overflow="hidden">
                     <Thead>

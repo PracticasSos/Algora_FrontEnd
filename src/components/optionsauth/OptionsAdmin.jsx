@@ -283,7 +283,7 @@ const AdminDashBoard = () => {
         transform: 'translateX(2px)'
       }}
       transition="all 0.2s"
-      py={3}
+      py={2}
       px={4}
     >
       <HStack spacing={3} width="100%">

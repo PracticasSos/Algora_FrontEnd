@@ -65,7 +65,7 @@ const HeaderAdmin = ({
     name: user?.user_metadata?.firstname || user?.firstname || "Usuario",
     lastName: user?.user_metadata?.lastname || user?.lastname || "Administrador", 
     email: user?.email || "admin@algora.com",
-    role: user?.role_name || "Sin rol asignado",
+    role: user?.role_name || "ADMIN",
     title: user?.user_metadata?.title || user?.title || null,
     tenant_id: user?.tenant_id,
     role_id: user?.role_id,
@@ -103,7 +103,7 @@ const HeaderAdmin = ({
         transform: 'translateX(2px)'
       }}
       transition="all 0.2s"
-      py={3}
+      py={2}
       px={4}
     >
       <HStack spacing={3} width="100%">

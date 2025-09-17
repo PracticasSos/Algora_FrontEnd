@@ -122,7 +122,7 @@ const LoginForm = () => {
       setLoading(false);
       switch (userData.role_id) {
         case 1: navigate('/admin'); break;
-        case 4: navigate('/SuperAdmin'); break;
+        case 4: navigate('/Super-Admin'); break;
         case 2: navigate('/optometra'); break;
         case 3: navigate('/vendedor'); break;
         default:

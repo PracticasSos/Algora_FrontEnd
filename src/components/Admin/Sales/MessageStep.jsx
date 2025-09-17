@@ -3,9 +3,7 @@ import MessageSection from "./MenssageSection";
 import { useEffect } from "react";
 import { supabase } from "../../../api/supabase";
 
-
 const MessageStep = ({ selectedBranch, formData, setFormData }) => {
-
 
   useEffect(() => {
     const fetchMessage = async () => {

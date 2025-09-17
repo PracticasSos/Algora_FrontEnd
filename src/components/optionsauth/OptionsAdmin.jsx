@@ -95,7 +95,8 @@ const options = [
   { label: "Sucursal", icon: iconosucursal },
   { label: "Consultar Cierre", icon: iconoconsultarcierre },
   { label: "Registar Lunas", icon: iconolunas },
-  { label: "Créditos", icon: iconocreditos }
+  { label: "Créditos", icon: iconocreditos },
+  { label: "Logos", icon: iconoenvios }
 ];
 
 const AdminDashBoard = () => {
@@ -266,6 +267,9 @@ const AdminDashBoard = () => {
       case "Mensajes":
         navigate('/message-manager');
       break;
+      case "Logos":
+        navigate('/upload-logo');
+      break;
       default:
     }
   };
@@ -304,7 +308,7 @@ const AdminDashBoard = () => {
   const moreItems = [
     { label: "Créditos", icon: iconocreditos },
     { label: "Saldos", icon: iconossaldos },
-    { label: "Envios", icon: iconoenvios },
+    { label: "Logos", icon: iconoenvios },
     { label: "Mensajes", icon: iconomensajes }
   ];
 

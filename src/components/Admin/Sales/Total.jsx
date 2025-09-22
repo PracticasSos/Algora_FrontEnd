@@ -63,7 +63,7 @@ const Total = ({ formData, setFormData }) => {
   return (
     <Box w="100vw" display="flex" justifyContent="center" alignItems="center" >
       <Box
-        w="100%"
+        w="90%"
         maxW="800px"
         px={[2, 4, 6]}
         py={4}
@@ -76,7 +76,7 @@ const Total = ({ formData, setFormData }) => {
         </Text>
         <Divider mb={6} />
 
-        <SimpleGrid columns={3} spacing={4} mb={6}>
+        <SimpleGrid columns={3} spacing={4} mb={6} p={4}>
           {paymentMethods.map(({ src, alt, value }) => (
             <Tooltip label={alt} key={value} hasArrow>
               <Box

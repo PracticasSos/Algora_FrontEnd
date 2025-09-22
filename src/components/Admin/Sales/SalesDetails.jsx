@@ -311,7 +311,7 @@ const SalesDetails = ({
   return (
     <Box w="100vw" bg={bgColor} >
       <Box
-        w="100%"
+        w="90%"
         maxW="900px"
         mx="auto"
         h="100%"
@@ -397,7 +397,7 @@ const SalesDetails = ({
                       fontSize="sm"
                       zIndex={10}
                       position="absolute"
-                      w="100%"
+                      w="90%"
                     >
                       {frameSuggestions.map((item, index) => (
                         <Box
@@ -446,7 +446,7 @@ const SalesDetails = ({
                   </FormControl>
                   <FormControl>
                     <FormLabel fontSize="sm" fontWeight="semibold">
-                      Descuento %
+                      Desc %
                     </FormLabel>
                     <Input
                       name="discount_frame"
@@ -627,7 +627,7 @@ const SalesDetails = ({
                   </FormControl>
                   <FormControl>
                     <FormLabel fontSize="sm" fontWeight="semibold">
-                      Descuento %
+                      Desc %
                     </FormLabel>
                     <Input
                       name="discount_lens"

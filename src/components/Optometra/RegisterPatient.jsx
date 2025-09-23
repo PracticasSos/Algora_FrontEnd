@@ -73,7 +73,7 @@ const RegisterPatientForm = () => {
 
       if (error) {
         // Verificar si el error es por cédula repetida (pt_ci debe ser única)
-        if (error.message && error.message.toLowerCase().includes('duplicate') && error.message.toLowerCase().includes('pt_ci')) {
+          if (error.message && error.message.toLowerCase().includes('duplicate') && error.message.toLowerCase().includes('patients_unique_ci_per_tenant')) {
           toast({
             title: "Cédula repetida",
             description: "Ya existe un paciente registrado con esta cédula.",

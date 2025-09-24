@@ -356,6 +356,7 @@ const Sales = () => {
     payment_in: formData.payment_in && formData.payment_in !== "" ? formData.payment_in : saleData.payment_in,
     measure_id: formData.measure_id && formData.measure_id !== "" ? formData.measure_id : saleData.measure_id,
     message: formData.message,
+    observation_text: formData.observation_text,
     termsMessage: formData.termsMessage,
   };
 
@@ -424,6 +425,8 @@ const Sales = () => {
     inventario_id: mergedFormData.brand_id || null,
     measure_id: mergedFormData.measure_id || null,
     signature: mergedFormData.signature || null,
+  observation_text: mergedFormData.observation_text || null,
+    observation_img: mergedFormData.observation_img || null,
   };
 
   try {

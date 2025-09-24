@@ -72,12 +72,14 @@ const ObservationSection = ({ setFormData }) => {
         observation_img: data.publicUrl,
       }));
 
-      if (prev && prev.id) {
-        try {
-          await supabase.from('sales').update({ observation_img: data.publicUrl }).eq('id', prev.id);
-        } catch (err) {
-          console.error('Error actualizando observation_img en sales:', err);
-        }
+      // Actualiza observation_img en la base de datos
+      if (typeof setFormData === 'function') {
+        setFormData((prev) => {
+          if (prev && prev.id) {
+            supabase.from('sales').update({ observation_img: data.publicUrl }).eq('id', prev.id);
+          }
+          return prev;
+        });
       }
     }
 
@@ -89,6 +91,18 @@ const ObservationSection = ({ setFormData }) => {
   const borderColor = useColorModeValue('gray.300', 'gray.600');
   const selectBg = useColorModeValue('gray.50', 'gray.700');
   const accentColor = useColorModeValue('blue.500', 'blue.300');
+
+  const handleObservationChange = async (e) => {
+    const value = e.target.value;
+    setObservation(value);
+    setFormData((prev) => ({ ...prev, observation_text: value }));
+    setFormData((prev) => {
+      if (prev && prev.id) {
+        supabase.from('sales').update({ observation_text: value }).eq('id', prev.id);
+      }
+      return prev;
+    });
+  };
 
   return (
     <Box
@@ -110,10 +124,7 @@ const ObservationSection = ({ setFormData }) => {
           </FormLabel>
           <Textarea
             value={observation}
-            onChange={(e) => {
-              setObservation(e.target.value);
-              setFormData((prev) => ({ ...prev, observation: e.target.value }));
-            }}
+            onChange={handleObservationChange}
             minHeight="110px"
             minWidth="350px"
             resize="vertical"

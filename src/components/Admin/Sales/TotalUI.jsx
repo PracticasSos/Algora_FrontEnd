@@ -21,11 +21,11 @@ const TotalUI = ({
   lensName = "",
   total_p_frame = "",
   total_p_lens = "",
+  total = undefined,
   onFormDataChange,
   initialFormData = {},
 }) => {
   const [branches, setBranches] = useState([]);
-
   useEffect(() => {
     fetchData("branchs", setBranches);
   }, []);
@@ -44,8 +44,8 @@ const TotalUI = ({
     onFormDataChange({ [name]: value });
   };
 
-  const total =
-    (parseFloat(total_p_frame) || 0) + (parseFloat(total_p_lens) || 0);
+  const totalValue = typeof total !== 'undefined' ? Number(total) : (parseFloat(total_p_frame) || 0) + (parseFloat(total_p_lens) || 0);
+  console.log('[TotalUI] Valor mostrado en Total:', totalValue);
 
   const textColor = useColorModeValue("gray.800", "white");
   const borderColor = useColorModeValue("gray.200", "gray.600");

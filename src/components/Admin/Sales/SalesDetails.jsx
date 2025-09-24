@@ -313,19 +313,23 @@ const SalesDetails = ({
 
   useEffect(() => {
     if (onTotalsChange) {
+      let total_p_frame, total_p_lens, total;
+      if ((calculatedData.discount_frame && calculatedData.discount_frame > 0) || (calculatedData.discount_lens && calculatedData.discount_lens > 0)) {
+        total_p_frame = formatMoney(calculatedData.discount_frame > 0 ? calculatedData.total_p_frame : calculatedData.p_frame);
+        total_p_lens = formatMoney(calculatedData.discount_lens > 0 ? calculatedData.total_p_lens : calculatedData.p_lens);
+        total = Number(total_p_frame) + Number(total_p_lens);
+      } else {
+        // Si no hay descuento, manda p_frame y p_lens como total
+        total_p_frame = formatMoney(calculatedData.p_frame);
+        total_p_lens = formatMoney(calculatedData.p_lens);
+        total = Number(total_p_frame) + Number(total_p_lens);
+      }
       onTotalsChange({
         frameName: formData.brand || "",
         lensName: formData.lens_type_name || "",
-        total_p_frame: formatMoney(
-          calculatedData.discount_frame && calculatedData.discount_frame > 0
-            ? calculatedData.total_p_frame
-            : calculatedData.p_frame
-        ),
-        total_p_lens: formatMoney(
-          calculatedData.discount_lens && calculatedData.discount_lens > 0
-            ? calculatedData.total_p_lens
-            : calculatedData.p_lens
-        ),
+        total_p_frame,
+        total_p_lens,
+        total,
       });
     }
   }, [

@@ -499,15 +499,26 @@ const Sales = () => {
       return prevTotals;
     });
     setFormData((prev) => {
+      // Si no hay descuento, pasa el valor de p_frame + p_lens a total
+      if (prev.discount_frame === 0 && prev.discount_lens === 0) {
+        const newTotal = Number(prev.p_frame) + Number(prev.p_lens);
+        if (prev.total !== newTotal) {
+          console.log('[handleTotalsChange] Actualizando total sin descuento:', newTotal);
+          return {
+            ...prev,
+            total: newTotal,
+          };
+        }
+        return prev;
+      }
+      // ...lógica anterior para descuentos...
       let updates = {};
-      // Solo actualiza si hay descuento
       if (prev.discount_frame > 0 && totals.total_p_frame !== undefined) {
         updates.total_p_frame = Number(totals.total_p_frame);
       }
       if (prev.discount_lens > 0 && totals.total_p_lens !== undefined) {
         updates.total_p_lens = Number(totals.total_p_lens);
       }
-      // Si no hay descuento, no actualices los totales
       if (
         (updates.total_p_frame !== undefined && prev.total_p_frame !== updates.total_p_frame) ||
         (updates.total_p_lens !== undefined && prev.total_p_lens !== updates.total_p_lens)
@@ -545,10 +556,23 @@ const Sales = () => {
             />
           );
         case 3:
+          console.log('[Sales] Valores enviados a TotalUI:', {
+            frameName: totals.frameName,
+            lensName: totals.lensName,
+            total_p_frame: totals.total_p_frame,
+            total_p_lens: totals.total_p_lens,
+            total: totals.total,
+            formData,
+          });
           return (
             <TotalStep
               formData={formData}
               onFormDataChange={handleFormDataChange}
+              frameName={totals.frameName}
+              lensName={totals.lensName}
+              total_p_frame={totals.total_p_frame}
+              total_p_lens={totals.total_p_lens}
+              total={totals.total}
             />
           );
         case 4:

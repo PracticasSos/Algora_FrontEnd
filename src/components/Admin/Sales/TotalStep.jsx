@@ -1,10 +1,8 @@
 import { Box, Text, useColorModeValue, Flex, Divider } from "@chakra-ui/react";
 import TotalUI from "./TotalUI";
 
-const TotalStep = ({ formData, onFormDataChange }) => {
+const TotalStep = ({ formData, onFormDataChange, frameName, lensName, total_p_frame, total_p_lens, total }) => {
   const cardBg = useColorModeValue("white", "gray.800");
-  const shadow = useColorModeValue("lg", "dark-lg");
-  const borderColor = useColorModeValue("gray.200", "gray.700");
 
   return (
     <Flex
@@ -22,10 +20,11 @@ const TotalStep = ({ formData, onFormDataChange }) => {
         px={[4, 6]}
       >
         <TotalUI
-          frameName={formData.brand || ""}
-          lensName={formData.lens_type_name || ""}
-          total_p_frame={formData.total_p_frame}
-          total_p_lens={formData.total_p_lens}
+          frameName={frameName || ""}
+          lensName={lensName || ""}
+          total_p_frame={total_p_frame}
+          total_p_lens={total_p_lens}
+          total={total}
           initialFormData={formData}
           onFormDataChange={onFormDataChange}
         />

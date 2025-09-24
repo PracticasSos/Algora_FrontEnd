@@ -86,8 +86,7 @@ const Sales = () => {
   p_lens: 0,
   discount_frame: 0,
   discount_lens: 0,
-  total_p_frame: 0,
-  total_p_lens: 0,
+
   total: 0,
   credit: 0,
   balance: 0,
@@ -412,8 +411,14 @@ const Sales = () => {
     patient_id: mergedFormData.patient_id || null,
     lens_id: mergedFormData.lens_id || null,
     branchs_id: mergedFormData.branchs_id,
-    total_p_frame: isNaN(parseFloat(mergedFormData.total_p_frame)) ? 0 : parseFloat(mergedFormData.total_p_frame),
-    total_p_lens: isNaN(parseFloat(mergedFormData.total_p_lens)) ? 0 : parseFloat(mergedFormData.total_p_lens),
+    total_p_frame:
+      mergedFormData.discount_frame > 0
+        ? (isNaN(parseFloat(mergedFormData.total_p_frame)) ? null : parseFloat(mergedFormData.total_p_frame))
+        : null,
+    total_p_lens:
+      mergedFormData.discount_lens > 0
+        ? (isNaN(parseFloat(mergedFormData.total_p_lens)) ? null : parseFloat(mergedFormData.total_p_lens))
+        : null,
     discount_frame: isNaN(parseFloat(mergedFormData.discount_frame)) ? 0 : parseFloat(mergedFormData.discount_frame),
     discount_lens: isNaN(parseFloat(mergedFormData.discount_lens)) ? 0 : parseFloat(mergedFormData.discount_lens),
     inventario_id: mergedFormData.brand_id || null,
@@ -471,7 +476,16 @@ const Sales = () => {
   };
 
   const handleTotalsChange = (totals) => {
+      // Ignora actualizaciones automáticas con totales en 0 si ya existen valores previos
+      if (
+        (totals.total_p_frame === 0 && formData.total_p_frame > 0) ||
+        (totals.total_p_lens === 0 && formData.total_p_lens > 0)
+      ) {
+        console.log('[handleTotalsChange] Ignorado: totales en 0 pero ya existen valores previos');
+        return;
+      }
     // Solo actualiza los campos si realmente cambiaron, nunca limpia ni reinicia
+    console.log('[handleTotalsChange] Totals recibidos:', totals);
     setTotals((prevTotals) => {
       if (
         prevTotals.total_p_frame !== totals.total_p_frame ||
@@ -479,23 +493,32 @@ const Sales = () => {
         prevTotals.frameName !== totals.frameName ||
         prevTotals.lensName !== totals.lensName
       ) {
+        console.log('[handleTotalsChange] Actualizando totals:', { ...prevTotals, ...totals });
         return { ...prevTotals, ...totals };
       }
       return prevTotals;
     });
     setFormData((prev) => {
-      const newTotalFrame = totals.total_p_frame !== undefined ? Number(totals.total_p_frame) : prev.total_p_frame;
-      const newTotalLens = totals.total_p_lens !== undefined ? Number(totals.total_p_lens) : prev.total_p_lens;
+      let updates = {};
+      // Solo actualiza si hay descuento
+      if (prev.discount_frame > 0 && totals.total_p_frame !== undefined) {
+        updates.total_p_frame = Number(totals.total_p_frame);
+      }
+      if (prev.discount_lens > 0 && totals.total_p_lens !== undefined) {
+        updates.total_p_lens = Number(totals.total_p_lens);
+      }
+      // Si no hay descuento, no actualices los totales
       if (
-        prev.total_p_frame !== newTotalFrame ||
-        prev.total_p_lens !== newTotalLens
+        (updates.total_p_frame !== undefined && prev.total_p_frame !== updates.total_p_frame) ||
+        (updates.total_p_lens !== undefined && prev.total_p_lens !== updates.total_p_lens)
       ) {
+        console.log('[handleTotalsChange] Actualizando formData:', { ...prev, ...updates });
         return {
           ...prev,
-          total_p_frame: newTotalFrame,
-          total_p_lens: newTotalLens,
+          ...updates,
         };
       }
+      console.log('[handleTotalsChange] No se actualiza formData, valores iguales o sin descuento:', prev);
       return prev;
     });
   };

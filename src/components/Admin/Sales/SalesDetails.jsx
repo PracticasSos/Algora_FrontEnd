@@ -139,6 +139,16 @@ const SalesDetails = ({
       ...prev,
       p_frame: formData.p_frame || 0,
       p_lens: formData.p_lens || 0,
+      discount_frame: formData.discount_frame ?? 0,
+      discount_lens: formData.discount_lens ?? 0,
+      total_p_frame:
+        typeof formData.total_p_frame === "number" && formData.discount_frame > 0
+          ? formData.total_p_frame
+          : null,
+      total_p_lens:
+        typeof formData.total_p_lens === "number" && formData.discount_lens > 0
+          ? formData.total_p_lens
+          : null,
     }));
   }, [formData]);
 
@@ -152,8 +162,7 @@ const SalesDetails = ({
     setDiscountInput((prev) => ({ ...prev, [name]: value }));
 
     const discount = parseFloat(value);
-
-    if (!isNaN(discount) && discount >= 0 && discount <= 100) {
+    if (!isNaN(discount) && discount > 0 && discount <= 100) {
       if (name === "discount_frame") {
         const total_p_frame = formatMoney(
           calculatedData.p_frame * (1 - discount / 100)
@@ -162,6 +171,11 @@ const SalesDetails = ({
           ...prev,
           discount_frame: discount,
           total_p_frame,
+        }));
+        setFormData((prev) => ({
+          ...prev,
+          discount_frame: discount,
+          total_p_frame: total_p_frame,
         }));
       } else if (name === "discount_lens") {
         const total_p_lens = formatMoney(
@@ -172,14 +186,35 @@ const SalesDetails = ({
           discount_lens: discount,
           total_p_lens,
         }));
+        setFormData((prev) => ({
+          ...prev,
+          discount_lens: discount,
+          total_p_lens: total_p_lens,
+        }));
       }
-    } else {
-      setCalculatedData((prev) => ({
-        ...prev,
-        [name]: 0,
-        [name === "discount_frame" ? "total_p_frame" : "total_p_lens"]:
-          name === "discount_frame" ? prev.p_frame : prev.p_lens,
-      }));
+    } else if (value === "" || isNaN(discount) || discount === 0) {
+      // Si el usuario borra el campo o pone 0, elimina el total y el descuento
+      if (name === "discount_frame") {
+        setCalculatedData((prev) => ({
+          ...prev,
+          discount_frame: 0,
+          total_p_frame: null,
+        }));
+        setFormData((prev) => {
+          const { discount_frame, total_p_frame, ...rest } = prev;
+          return { ...rest, discount_frame: 0 };
+        });
+      } else if (name === "discount_lens") {
+        setCalculatedData((prev) => ({
+          ...prev,
+          discount_lens: 0,
+          total_p_lens: null,
+        }));
+        setFormData((prev) => {
+          const { discount_lens, total_p_lens, ...rest } = prev;
+          return { ...rest, discount_lens: 0 };
+        });
+      }
     }
   };
 
@@ -203,14 +238,9 @@ const SalesDetails = ({
 
     if (name === "total_p_frame" || name === "total_p_lens") {
       if (value === "") {
-        setCalculatedData((prev) => ({
-          ...prev,
-          [name]: null,
-          [`discount_${name === "total_p_frame" ? "frame" : "lens"}`]: 0,
-        }));
+        // Si el usuario borra el campo, NO modificar nada, mantener el último valor válido
         return;
       }
-
       const totalValue = formatMoney(value);
       if (!isNaN(totalValue)) {
         if (name === "total_p_frame") {
@@ -219,9 +249,13 @@ const SalesDetails = ({
               ? parseFloat(
                   (100 - (totalValue / calculatedData.p_frame) * 100).toFixed(2)
                 )
-              : 0;
-
+              : calculatedData.discount_frame;
           setCalculatedData((prev) => ({
+            ...prev,
+            total_p_frame: totalValue,
+            discount_frame: discount_frame,
+          }));
+          setFormData((prev) => ({
             ...prev,
             total_p_frame: totalValue,
             discount_frame: discount_frame,
@@ -232,9 +266,13 @@ const SalesDetails = ({
               ? parseFloat(
                   (100 - (totalValue / calculatedData.p_lens) * 100).toFixed(2)
                 )
-              : 0;
-
+              : calculatedData.discount_lens;
           setCalculatedData((prev) => ({
+            ...prev,
+            total_p_lens: totalValue,
+            discount_lens: discount_lens,
+          }));
+          setFormData((prev) => ({
             ...prev,
             total_p_lens: totalValue,
             discount_lens: discount_lens,
@@ -477,7 +515,7 @@ const SalesDetails = ({
                     <Input
                       name="total_p_frame"
                       type="number"
-                      value={calculatedData.total_p_frame ?? ""}
+                      value={calculatedData.total_p_frame !== null && calculatedData.total_p_frame !== undefined ? calculatedData.total_p_frame : ""}
                       onChange={handleTotalChange}
                       fontSize="md"
                       height="44px"
@@ -658,7 +696,7 @@ const SalesDetails = ({
                     <Input
                       name="total_p_lens"
                       type="number"
-                      value={calculatedData.total_p_lens ?? ""}
+                      value={calculatedData.total_p_lens !== null && calculatedData.total_p_lens !== undefined ? calculatedData.total_p_lens : ""}
                       onChange={handleTotalChange}
                       fontSize="md"
                       height="44px"

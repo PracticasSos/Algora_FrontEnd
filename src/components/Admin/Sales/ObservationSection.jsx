@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -18,13 +18,21 @@ import {
 import { supabase } from "../../../api/supabase";
 import { FiCamera, FiUpload } from "react-icons/fi";
 
-const ObservationSection = ({ setFormData }) => {
+const ObservationSection = ({ formData, setFormData }) => {
   const cameraInputRef = useRef();
   const fileInputRef = useRef();
 
   const [observation, setObservation] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadedUrl, setUploadedUrl] = useState("");
+
+  // Solo sincroniza al montar el componente (primer render)
+  useEffect(() => {
+    if (formData) {
+      if (formData.observation_text) setObservation(formData.observation_text);
+      if (formData.observation_img) setUploadedUrl(formData.observation_img);
+    }
+  }, []); // Solo una vez al montar
 
   function resizeImage(file, maxWidth = 800, maxHeight = 800, quality = 0.7) {
     return new Promise((resolve) => {

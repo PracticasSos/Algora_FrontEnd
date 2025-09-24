@@ -169,18 +169,24 @@ const Sales = () => {
 
   const handleFormDataChange = (newFormData) => {
     setFormData((prevFormData) => {
-    const updated = { ...prevFormData, ...newFormData };
-    if (JSON.stringify(updated) !== JSON.stringify(prevFormData)) {
-      if ('branchs_id' in newFormData) {
-        setSaleData((prevSaleData) => ({
-          ...prevSaleData,
-          branchs_id: newFormData.branchs_id
-        }));
+      // Mantén los campos de observación si existen en el nuevo formData
+      const updated = {
+        ...prevFormData,
+        ...newFormData,
+        observation_text: newFormData.observation_text !== undefined ? newFormData.observation_text : prevFormData.observation_text,
+        observation_img: newFormData.observation_img !== undefined ? newFormData.observation_img : prevFormData.observation_img,
+      };
+      if (JSON.stringify(updated) !== JSON.stringify(prevFormData)) {
+        if ('branchs_id' in newFormData) {
+          setSaleData((prevSaleData) => ({
+            ...prevSaleData,
+            branchs_id: newFormData.branchs_id
+          }));
+        }
+        return updated; 
       }
-      return updated; 
-    }
-    return prevFormData;
-  });
+      return prevFormData;
+    });
 
     const saleDataKeys = ["brand_id", "lens_id"];
     const saleDataUpdates = {};
@@ -603,6 +609,7 @@ const Sales = () => {
         case 7:
           return (
             <ObservationStep
+              formData={formData}
               setFormData={setFormData}
             />
           );

@@ -122,6 +122,7 @@ const Delivery = ({ saleData, setSaleData }) => {
             name="delivery_date"
             min={miniDateTime}
             onChange={handleDateChange}
+            value={saleData.delivery_datetime ? saleData.delivery_datetime.slice(0, 16) : ""}
             focusBorderColor="teal.500"
             borderRadius="lg"
             height="48px"

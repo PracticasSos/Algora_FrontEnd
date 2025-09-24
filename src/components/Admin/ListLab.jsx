@@ -188,7 +188,7 @@ const ListLab = () => {
                             {filteredLabs.map((lab) => (
                                 <Tr key={lab.id} cursor="pointer" _hover={{ bg: tableHoverBg }} borderColor={borderColor}>
                                     {[
-                                        'name', 'address', 'email', 'phone', 'ruc'
+                                        'name', 'address', 'email', 'cell', 'ruc'
                                     ].map((field) => (
                                         <Td key={field} color={textColor} borderColor={borderColor}>
                                             {editingId === lab.id ? (

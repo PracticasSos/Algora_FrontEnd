@@ -16,7 +16,7 @@ import ListLab from "../components/Admin/ListLab.jsx";
 import CashClousure from "../components/Admin/cierres/CashClousure.jsx";
 import RegisterLens from "../components/Admin/RegisterLens.jsx";
 import MeasuresFinal from "../components/Admin/MeasuresFinal.jsx"
-import PatientRecords from "../components/Admin/PatientRecords.jsx"
+import PatientRecords from "../components/Admin/CierreDiario/PatientRecords.jsx"
 import Egresos from "../components/Admin/Egresos.jsx"
 import PatientHistory from "../components/Admin/PatientHistory.jsx"
 import LaboratoryOrder from "../components/Admin/OrderLaboratory/LaboratoryOrder.jsx"

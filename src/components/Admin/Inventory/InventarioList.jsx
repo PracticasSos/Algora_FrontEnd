@@ -1,8 +1,30 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../../api/supabase.js";
-import { Box, Button, Heading, Input, Table, Tbody, Text, Td, Th, Thead, Tr, Select, useToast, useColorModeValue, HStack } from "@chakra-ui/react";
-import { FaEye } from 'react-icons/fa';
+import {
+  Box,
+  Button,
+  Heading,
+  Input,
+  Table,
+  Tbody,
+  Text,
+  Td,
+  Th,
+  Thead,
+  Tr,
+  Select,
+  useToast,
+  useColorModeValue,
+  HStack,
+  Flex,
+  Spacer,
+  IconButton,
+  Tooltip,
+  Divider,
+  Stack,
+} from "@chakra-ui/react";
+import { FaEye, FaEdit, FaTrash, FaSave } from "react-icons/fa";
 import SmartHeader from "../../header/SmartHeader.jsx";
 import GenerateInventoryReport from "./Report.jsx";
 
@@ -50,7 +72,9 @@ const InventarioList = () => {
       setTotalStock(0);
       return;
     }
-    const filteredInventory = inventoryList.filter((item) => item.branchs_id === Number(branchFilter));  
+    const filteredInventory = inventoryList.filter(
+      (item) => item.branchs_id === Number(branchFilter)
+    );
     const total = filteredInventory.reduce((acc, item) => acc + item.quantity, 0);
     setTotalStock(total);
   };
@@ -123,209 +147,335 @@ const InventarioList = () => {
   };
 
   const moduleSpecificButton = (
-  <Button 
-    onClick={() => handleNavigate('/Inventory')} 
-    bg={useColorModeValue(
-      'rgba(255, 255, 255, 0.8)', 
-      'rgba(255, 255, 255, 0.1)'
-    )}
-    backdropFilter="blur(10px)"
-    border="1px solid"
-    borderColor={useColorModeValue(
-      'rgba(56, 178, 172, 0.3)', 
-      'rgba(56, 178, 172, 0.5)'
-    )}
-    color={useColorModeValue('teal.600', 'teal.300')}
-    size="sm"
-    borderRadius="15px"
-    px={4}
-    _hover={{
-      bg: useColorModeValue(
-        'rgba(56, 178, 172, 0.1)', 
-        'rgba(56, 178, 172, 0.2)'
-      ),
-      borderColor: 'teal.400',
-      transform: 'translateY(-1px)',
-    }}
-    transition="all 0.2s"
-  >
-    <HStack spacing={2} align="center" justify="center">
-      <FaEye size="14px" />
-      <Text fontWeight="600" lineHeight="1" m={0}>
-        Registrar Inventario
-      </Text>
-    </HStack>
-  </Button>
+    <Button
+      onClick={() => handleNavigate('/Inventory')}
+      bg={useColorModeValue(
+        'rgba(255, 255, 255, 0.8)',
+        'rgba(255, 255, 255, 0.1)'
+      )}
+      backdropFilter="blur(10px)"
+      border="1px solid"
+      borderColor={useColorModeValue(
+        'rgba(56, 178, 172, 0.3)',
+        'rgba(56, 178, 172, 0.5)'
+      )}
+      color={useColorModeValue('teal.600', 'teal.300')}
+      size="sm"
+      borderRadius="15px"
+      px={4}
+      _hover={{
+        bg: useColorModeValue(
+          'rgba(56, 178, 172, 0.1)',
+          'rgba(56, 178, 172, 0.2)'
+        ),
+        borderColor: 'teal.400',
+        transform: 'translateY(-1px)',
+      }}
+      transition="all 0.2s"
+    >
+      <HStack spacing={2} align="center" justify="center">
+        <FaEye size="14px" />
+        <Text fontWeight="600" lineHeight="1" m={0}>
+          Registrar Inventario
+        </Text>
+      </HStack>
+    </Button>
   );
 
-  const bgColor = useColorModeValue('white', 'gray.800');
-  const textColor = useColorModeValue('gray.800', 'white');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const tableBg = useColorModeValue('white', 'gray.700');
-  const tableHoverBg = useColorModeValue('gray.100', 'gray.600');
-  const selectBg = useColorModeValue('white', 'gray.700');
+  const bgColor = useColorModeValue("gray.50", "gray.900");
+  const textColor = useColorModeValue("gray.800", "gray.100");
+  const borderColor = useColorModeValue("gray.200", "gray.700");
+  const tableBg = useColorModeValue("white", "gray.800");
+  const tableHoverBg = useColorModeValue("teal.50", "teal.900");
+  const selectBg = useColorModeValue("white", "gray.800");
 
   const handleNavigate = (route = null) => {
-    const user = JSON.parse(localStorage.getItem('user'));
+    const user = JSON.parse(localStorage.getItem("user"));
     if (route) {
-        navigate(route);
-        return;
+      navigate(route);
+      return;
     }
     if (!user || !user.role_id) {
-        navigate('/LoginForm');
-        return;
+      navigate("/LoginForm");
+      return;
     }
     switch (user.role_id) {
-        case 1:
-            navigate('/Admin');
-            break;
-        case 2:
-            navigate('/Optometra');
-            break;
-        case 3:
-            navigate('/Vendedor');
-            break;
-        case 4:
-            navigate('/SuperAdmin');
-            break;
-        default:
-            navigate('/');
+      case 1:
+        navigate("/Admin");
+        break;
+      case 2:
+        navigate("/Optometra");
+        break;
+      case 3:
+        navigate("/Vendedor");
+        break;
+      case 4:
+        navigate("/SuperAdmin");
+        break;
+      default:
+        navigate("/");
     }
   };
 
   return (
-    <Box 
-      p={6} 
-      maxW="1300px" 
-      mx="auto" 
-      bg={bgColor}
-      color={textColor}
-      minH="100vh"
-    >
-      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-      <Box w="100%" maxW= "800px" mb={4}>
-            <Heading 
-                mb={4} 
-                textAlign="left" 
-                size="md"
-                fontWeight="700"
-                color={useColorModeValue('teal.600', 'teal.300')}
-                pb={2}
-            >
-                Listar Inventario
-            </Heading>
-            </Box>
-      <Box w="50%" mx="auto" display="block">
-      <Select placeholder="Filtrar por sucursal" onChange={(e) => setBranchFilter(parseInt(e.target.value))} mt={4} mb={4}
-        bg={selectBg}
-                  borderColor={borderColor}
-                  color={textColor}
-                  _hover={{
-                    borderColor: useColorModeValue('gray.300', 'gray.500')
-                  }}
-                  _focus={{
-                    borderColor: useColorModeValue('blue.500', 'blue.300'),
-                    boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                  }}
+    <Box w="100%" bg={bgColor}
+      color={textColor}>
+      <Box
+        p={{ base: 2, md: 8 }}
+        mx="auto"
+        bg={bgColor}
+        color={textColor}
+        minH="100vh"
+        w="80%"
+      >
+        <SmartHeader moduleSpecificButton={moduleSpecificButton} />
+        <Flex
+          direction={{ base: "column", md: "row" }}
+          align="center"
+          justify="space-between"
+          mb={6}
+          gap={4}
         >
-        {branches.map((branch) => (
-          <option key={branch.id} value={branch.id}>{branch.name}</option>
-        ))}
-      </Select>
-      </Box>
-      {branchFilter && inventoryList.filter(item => item.branchs_id === Number(branchFilter)).length === 0 ? (
-        <Text textAlign="center" color="gray.500">No hay inventario para esta sucursal</Text>
-      ) : (
-        branchFilter && (
-          <>
-            <Input
-              placeholder="Buscar por marca"
-              value={search}
-              onChange={handleSearchChange}
-              mt={4}
-              mb={4}
+          <Heading
+            textAlign="left"
+            size="lg"
+            fontWeight="extrabold"
+            color={useColorModeValue("teal.700", "teal.200")}
+            letterSpacing="tight"
+          >
+            Inventario
+          </Heading>
+          <Box minW="250px" >
+            <Select
+              placeholder="Filtrar por sucursal"
+              onChange={(e) => setBranchFilter(parseInt(e.target.value))}
               bg={selectBg}
               borderColor={borderColor}
               color={textColor}
+              size="md"
+              borderRadius="full"
+              boxShadow="sm"
               _hover={{
-                borderColor: useColorModeValue('gray.300', 'gray.500')
+                borderColor: useColorModeValue("teal.300", "teal.500"),
               }}
               _focus={{
-                borderColor: useColorModeValue('blue.500', 'blue.300'),
-                boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
+                borderColor: useColorModeValue("teal.500", "teal.300"),
+                boxShadow: useColorModeValue(
+                  "0 0 0 1px teal.500",
+                  "0 0 0 1px teal.300"
+                ),
               }}
-            />
-            <Box width="100%" maxWidth="1500px"  overflowX="auto">
-              <Table bg={tableBg}  borderRadius="md" overflow="hidden">
-                <Thead>
-                  <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
-                    <Th color={textColor} borderColor={borderColor}>Marca</Th>
-                    <Th color={textColor} borderColor={borderColor}>Cantidad</Th>
-                    <Th color={textColor} borderColor={borderColor}>Precio</Th>
-                    <Th color={textColor} borderColor={borderColor}>Sucursal</Th>
-                    <Th color={textColor} borderColor={borderColor}>Acciones</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {inventoryList
-                    .filter(item => item.branchs_id === Number(branchFilter)) 
-                    .filter(item => item.brand.toLowerCase().includes(search.toLowerCase()))
-                    .map((item) => (
-                      <Tr key={item.id} onClick={(e) => { if (editingId && editingId !== item.id) setEditingId(null); e.stopPropagation(); }} cursor="pointer" _hover={{ bg: tableHoverBg }} borderColor={borderColor}>
-                        <Td color={textColor} borderColor={borderColor}>
-                          {editingId === item.id ? (
-                            <Input value={editableData.brand} onChange={(e) => handleChange(e, "brand")} />
-                          ) : (
-                            item.brand
-                          )}
-                        </Td>
-                        <Td color={textColor} borderColor={borderColor}>
-                          {editingId === item.id ? (
-                            <Input type="number" value={editableData.quantity} onChange={(e) => handleChange(e, "quantity")} />
-                          ) : (
-                            item.quantity
-                          )}
-                        </Td>
-                        <Td color={textColor} borderColor={borderColor}>
-                          {editingId === item.id ? (
-                            <Input type="number" value={editableData.price} onChange={(e) => handleChange(e, "price")} />
-                          ) : (
-                            item.price
-                          )}
-                        </Td>
-                        <Td color={textColor} borderColor={borderColor}>{item.branchs?.name || "N/A"}</Td>
-                        <Td color={textColor} borderColor={borderColor}>
-                          {editingId === item.id ? (
-                            <Button colorScheme="green" size="sm" onClick={() => handleSave(item.id)}>Guardar</Button>
-                          ) : (
-                            <Button colorScheme="teal" size="sm" mr={2} onClick={() => handleEdit(item.id, item)}>Editar</Button>
-                          )}
-                          <Button colorScheme="red" size="sm" onClick={() => handleDelete(item.id)}>Eliminar</Button>
-                        </Td>
-                      </Tr>
-                    ))}
-                </Tbody>
-              </Table>
-              <Box mt={4} p={2} borderRadius="md" textAlign="right"
-                bg={selectBg}
-          borderColor={borderColor}
-          color={textColor}
-          _hover={{
-            borderColor: useColorModeValue('gray.300', 'gray.500')
-          }}
-          _focus={{
-            borderColor: useColorModeValue('blue.500', 'blue.300'),
-            boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-          }}
+            >
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </option>
+              ))}
+            </Select>
+          </Box>
+        </Flex>
+        <Divider mb={4} />
+        {branchFilter &&
+          inventoryList.filter((item) => item.branchs_id === Number(branchFilter))
+            .length === 0 ? (
+          <Box py={10}>
+            <Text textAlign="center" color="gray.400" fontSize="xl">
+              No hay inventario para esta sucursal
+            </Text>
+          </Box>
+        ) : (
+          branchFilter && (
+            <>
+              <Flex
+                mb={4}
+                align="center"
+                justify="space-between"
+                direction={{ base: "column", md: "row" }}
+                gap={4}
               >
-                <Text fontSize="lg" fontWeight="bold">Stock total en esta sucursal: {totalStock}</Text>
-              </Box>
-              <GenerateInventoryReport branchFilter={branchFilter} inventoryList={inventoryList} />
+                <Input
+                  placeholder="Buscar por marca"
+                  value={search}
+                  onChange={handleSearchChange}
+                  bg={selectBg}
+                  borderColor={borderColor}
+                  color={textColor}
+                  fontWeight="medium"
+                  size="md"
+                  borderRadius="full"
+                  boxShadow="sm"
+                  maxW="350px"
+                  _hover={{
+                    borderColor: useColorModeValue("teal.300", "teal.500"),
+                  }}
+                  _focus={{
+                    borderColor: useColorModeValue("teal.500", "teal.300"),
+                    boxShadow: useColorModeValue(
+                      "0 0 0 1px teal.500",
+                      "0 0 0 1px teal.300"
+                    ),
+                  }}
+                />
+                <Box>
+                  <Text
+                    fontSize="md"
+                    fontWeight="bold"
+                    color={useColorModeValue("teal.700", "teal.200")}
+                    bg={useColorModeValue("teal.50", "teal.900")}
+                    px={4}
+                    py={2}
+                    borderRadius="full"
+                    boxShadow="sm"
+                    display="inline-block"
+                  >
+                    Stock total: {totalStock}
+                  </Text>
+                </Box>
+              </Flex>
+              <Box
+                width="100%"
+                overflowX="auto"
+                borderRadius="xl"
+                boxShadow="lg"
+                bg={tableBg}
+                p={2}
+              >
+                <Table variant="simple" size="md">
+                  <Thead>
+                    <Tr bg={useColorModeValue("teal.100", "teal.800")}>
+                      <Th color={textColor} borderColor={borderColor} py={3}>
+                        Marca
+                      </Th>
+                      <Th color={textColor} borderColor={borderColor} py={3}>
+                        Cantidad
+                      </Th>
+                      <Th color={textColor} borderColor={borderColor} py={3}>
+                        Precio
+                      </Th>
+                      <Th color={textColor} borderColor={borderColor} py={3}>
+                        Sucursal
+                      </Th>
+                      <Th color={textColor} borderColor={borderColor} py={3}>
+                        Acciones
+                      </Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {inventoryList
+                      .filter((item) => item.branchs_id === Number(branchFilter))
+                      .filter((item) =>
+                        item.brand.toLowerCase().includes(search.toLowerCase())
+                      )
+                      .map((item) => (
+                        <Tr
+                          key={item.id}
+                          onClick={(e) => {
+                            if (editingId && editingId !== item.id)
+                              setEditingId(null);
+                            e.stopPropagation();
+                          }}
+                          cursor="pointer"
+                          _hover={{ bg: tableHoverBg }}
+                          borderColor={borderColor}
+                          transition="background 0.2s"
+                        >
+                          <Td color={textColor} borderColor={borderColor}>
+                            {editingId === item.id ? (
+                              <Input
+                                value={editableData.brand}
+                                onChange={(e) => handleChange(e, "brand")}
+                                size="sm"
+                                borderRadius="md"
+                                bg={useColorModeValue("gray.50", "gray.700")}
+                              />
+                            ) : (
+                              <Text fontWeight="semibold">{item.brand}</Text>
+                            )}
+                          </Td>
+                          <Td color={textColor} borderColor={borderColor}>
+                            {editingId === item.id ? (
+                              <Input
+                                type="number"
+                                value={editableData.quantity}
+                                onChange={(e) => handleChange(e, "quantity")}
+                                size="sm"
+                                borderRadius="md"
+                                bg={useColorModeValue("gray.50", "gray.700")}
+                              />
+                            ) : (
+                              <Text>{item.quantity}</Text>
+                            )}
+                          </Td>
+                          <Td color={textColor} borderColor={borderColor}>
+                            {editingId === item.id ? (
+                              <Input
+                                type="number"
+                                value={editableData.price}
+                                onChange={(e) => handleChange(e, "price")}
+                                size="sm"
+                                borderRadius="md"
+                                bg={useColorModeValue("gray.50", "gray.700")}
+                              />
+                            ) : (
+                              <Text>${item.price}</Text>
+                            )}
+                          </Td>
+                          <Td color={textColor} borderColor={borderColor}>
+                            <Text>{item.branchs?.name || "N/A"}</Text>
+                          </Td>
+                          <Td color={textColor} borderColor={borderColor}>
+                            <Stack direction="row" spacing={2}>
+                              {editingId === item.id ? (
+                                <Tooltip label="Guardar" hasArrow>
+                                  <IconButton
+                                    icon={<FaSave />}
+                                    colorScheme="green"
+                                    size="sm"
+                                    onClick={() => handleSave(item.id)}
+                                    aria-label="Guardar"
+                                    borderRadius="md"
+                                  />
+                                </Tooltip>
+                              ) : (
+                                <Tooltip label="Editar" hasArrow>
+                                  <IconButton
+                                    icon={<FaEdit />}
+                                    colorScheme="teal"
+                                    size="sm"
+                                    onClick={() => handleEdit(item.id, item)}
+                                    aria-label="Editar"
+                                    borderRadius="md"
+                                  />
+                                </Tooltip>
+                              )}
+                              <Tooltip label="Eliminar" hasArrow>
+                                <IconButton
+                                  icon={<FaTrash />}
+                                  colorScheme="red"
+                                  size="sm"
+                                  onClick={() => handleDelete(item.id)}
+                                  aria-label="Eliminar"
+                                  borderRadius="md"
+                                />
+                              </Tooltip>
+                            </Stack>
+                          </Td>
+                        </Tr>
+                      ))}
+                  </Tbody>
+                </Table>
 
-            </Box>
-          </>
-        )
-      )}
+              </Box>
+              <Box mt={6} >
+                <GenerateInventoryReport
+                  branchFilter={branchFilter}
+                  inventoryList={inventoryList}
+                />
+              </Box>
+            </>
+          )
+        )}
+      </Box>
     </Box>
   );
 };

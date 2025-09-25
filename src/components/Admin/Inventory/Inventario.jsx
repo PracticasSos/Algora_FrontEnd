@@ -1,5 +1,20 @@
 import { useNavigate } from "react-router-dom";
-import {Box, Button, FormControl, FormLabel, Input, Heading, VStack, useToast, Select, useColorModeValue, Text, HStack} from "@chakra-ui/react";
+import {
+  Box,
+  Button,
+  FormControl,
+  FormLabel,
+  Input,
+  Heading,
+  VStack,
+  useToast,
+  Select,
+  useColorModeValue,
+  Text,
+  HStack,
+  Divider,
+  Flex,
+} from "@chakra-ui/react";
 import { useState, useEffect } from "react";
 import { supabase } from "../../../api/supabase.js";
 import { FaEye } from 'react-icons/fa';
@@ -91,46 +106,46 @@ const Inventario = () => {
     }
   };
   const moduleSpecificButton = (
-  <Button 
-    onClick={() => handleNavigate('/list-inventory')} 
-    bg={useColorModeValue(
-      'rgba(255, 255, 255, 0.8)', 
-      'rgba(255, 255, 255, 0.1)'
-    )}
-    backdropFilter="blur(10px)"
-    border="1px solid"
-    borderColor={useColorModeValue(
-      'rgba(56, 178, 172, 0.3)', 
-      'rgba(56, 178, 172, 0.5)'
-    )}
-    color={useColorModeValue('teal.600', 'teal.300')}
-    size="sm"
-    borderRadius="15px"
-    px={4}
-    _hover={{
-      bg: useColorModeValue(
-        'rgba(56, 178, 172, 0.1)', 
-        'rgba(56, 178, 172, 0.2)'
-      ),
-      borderColor: 'teal.400',
-      transform: 'translateY(-1px)',
-    }}
-    transition="all 0.2s"
-  >
-    <HStack spacing={2} align="center" justify="center">
-      <FaEye size="14px" />
-      <Text fontWeight="600" lineHeight="1" m={0}>
-        Listar Inventario
-      </Text>
-    </HStack>
-  </Button>
+    <Button 
+      onClick={() => handleNavigate('/list-inventory')} 
+      bg={useColorModeValue(
+        'rgba(255, 255, 255, 0.8)', 
+        'rgba(255, 255, 255, 0.1)'
+      )}
+      backdropFilter="blur(10px)"
+      border="1px solid"
+      borderColor={useColorModeValue(
+        'rgba(56, 178, 172, 0.3)', 
+        'rgba(56, 178, 172, 0.5)'
+      )}
+      color={useColorModeValue('teal.600', 'teal.300')}
+      size="sm"
+      borderRadius="15px"
+      px={4}
+      _hover={{
+        bg: useColorModeValue(
+          'rgba(56, 178, 172, 0.1)', 
+          'rgba(56, 178, 172, 0.2)'
+        ),
+        borderColor: 'teal.400',
+        transform: 'translateY(-1px)',
+      }}
+      transition="all 0.2s"
+    >
+      <HStack spacing={2} align="center" justify="center">
+        <FaEye size="14px" />
+        <Text fontWeight="600" lineHeight="1" m={0}>
+          Listar Inventario
+        </Text>
+      </HStack>
+    </Button>
   );
 
   const textColor = useColorModeValue('gray.800', 'white');
-    const borderColor = useColorModeValue('gray.200', 'gray.600');
-    const selectBg = useColorModeValue('white', 'gray.700');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const selectBg = useColorModeValue('white', 'gray.700');
 
-    return (
+  return (
     <Box
       className="signup-form"
       display="flex"
@@ -139,34 +154,44 @@ const Inventario = () => {
       alignItems="center"
       minHeight="100vh"
       pt={8}
+      bg={useColorModeValue('gray.50', 'gray.900')}
     >
-        <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-        
-        <Box 
-          width="100%" 
-          maxWidth="800px" 
-          p={6} 
-          borderRadius="lg" 
-          boxShadow="lg"
-          bg={useColorModeValue('white', 'gray.800')}
+      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
+
+      <Box
+        width="100%"
+        maxWidth="480px"
+        p={{ base: 4, md: 8 }}
+        borderRadius="2xl"
+        boxShadow="2xl"
+        bg={useColorModeValue('white', 'gray.800')}
+        mt={6}
+      >
+        <Heading
+          mb={2}
+          textAlign="center"
+          size="lg"
+          fontWeight="800"
+          color={useColorModeValue('teal.600', 'teal.300')}
+          letterSpacing="tight"
         >
-          <Heading 
-            mb={4} 
-            textAlign="left" 
-            size="md"
-            fontWeight="700"
-            color={useColorModeValue('teal.600', 'teal.300')}
-            pb={2}
-          >
-            Registrar Usuario
-          </Heading>
-          <Box 
-            as="form" 
-            onSubmit={handleSubmit}
-            display="grid" 
-            gridTemplateColumns="1fr 1fr" 
-            gap={4}
-          >
+          Inventario
+        </Heading>
+        <Text
+          mb={4}
+          textAlign="center"
+          color={useColorModeValue('gray.500', 'gray.400')}
+          fontSize="md"
+        >
+          Registra un nuevo producto en el inventario.
+        </Text>
+        <Divider mb={6} />
+
+        <Box
+          as="form"
+          onSubmit={handleSubmit}
+        >
+          <VStack spacing={5}>
             <FormControl isRequired>
               <FormLabel color={useColorModeValue('gray.700', 'gray.200')}>Marca</FormLabel>
               <Input
@@ -175,14 +200,18 @@ const Inventario = () => {
                 value={formData.brand}
                 onChange={handleChange}
                 placeholder="Ingrese la marca"
-                borderColor={useColorModeValue('gray.200', 'gray.600')}
-                _focus={{ borderColor: "#008B94" }}
+                borderColor={borderColor}
+                bg={useColorModeValue('gray.100', 'gray.700')}
+                _focus={{ borderColor: "teal.500", bg: useColorModeValue('white', 'gray.800') }}
                 _hover={{
-                  borderColor: useColorModeValue('gray.300', 'gray.500')
+                  borderColor: useColorModeValue('teal.400', 'teal.300'),
+                  bg: useColorModeValue('white', 'gray.800')
                 }}
+                size="lg"
+                borderRadius="md"
               />
             </FormControl>
-            
+
             <FormControl isRequired>
               <FormLabel color={useColorModeValue('gray.700', 'gray.200')}>Cantidad</FormLabel>
               <Input
@@ -191,14 +220,19 @@ const Inventario = () => {
                 value={formData.quantity}
                 onChange={handleChange}
                 placeholder="Ingrese la cantidad"
-                borderColor={useColorModeValue('gray.200', 'gray.600')}
-                _focus={{ borderColor: "#008B94" }}
+                borderColor={borderColor}
+                bg={useColorModeValue('gray.100', 'gray.700')}
+                _focus={{ borderColor: "teal.500", bg: useColorModeValue('white', 'gray.800') }}
                 _hover={{
-                  borderColor: useColorModeValue('gray.300', 'gray.500')
+                  borderColor: useColorModeValue('teal.400', 'teal.300'),
+                  bg: useColorModeValue('white', 'gray.800')
                 }}
+                size="lg"
+                borderRadius="md"
+                min={0}
               />
             </FormControl>
-            
+
             <FormControl isRequired>
               <FormLabel color={useColorModeValue('gray.700', 'gray.200')}>Precio</FormLabel>
               <Input
@@ -207,14 +241,19 @@ const Inventario = () => {
                 value={formData.price}
                 onChange={handleChange}
                 placeholder="Ingrese el precio"
-                borderColor={useColorModeValue('gray.200', 'gray.600')}
-                _focus={{ borderColor: "#008B94" }}
+                borderColor={borderColor}
+                bg={useColorModeValue('gray.100', 'gray.700')}
+                _focus={{ borderColor: "teal.500", bg: useColorModeValue('white', 'gray.800') }}
                 _hover={{
-                  borderColor: useColorModeValue('gray.300', 'gray.500')
+                  borderColor: useColorModeValue('teal.400', 'teal.300'),
+                  bg: useColorModeValue('white', 'gray.800')
                 }}
+                size="lg"
+                borderRadius="md"
+                min={0}
               />
             </FormControl>
-            
+
             <FormControl isRequired>
               <FormLabel color={useColorModeValue('gray.700', 'gray.200')}>Sucursal</FormLabel>
               <Select
@@ -225,17 +264,20 @@ const Inventario = () => {
                 bg={selectBg}
                 borderColor={borderColor}
                 color={textColor}
+                size="lg"
+                borderRadius="md"
                 _hover={{
-                  borderColor: useColorModeValue('gray.300', 'gray.500')
+                  borderColor: useColorModeValue('teal.400', 'teal.300'),
+                  bg: useColorModeValue('white', 'gray.800')
                 }}
                 _focus={{
-                  borderColor: useColorModeValue('blue.500', 'blue.300'),
-                  boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
+                  borderColor: useColorModeValue('teal.500', 'teal.300'),
+                  boxShadow: useColorModeValue('0 0 0 1px teal.500', '0 0 0 1px teal.300')
                 }}
               >
                 {branches.map((branch) => (
-                  <option 
-                    key={branch.id} 
+                  <option
+                    key={branch.id}
                     value={branch.id}
                     style={{
                       backgroundColor: useColorModeValue('white', '#2D3748'),
@@ -247,26 +289,31 @@ const Inventario = () => {
                 ))}
               </Select>
             </FormControl>
-          </Box>
-          
-           <Box display="flex" justifyContent="center" mt={6}>
-            <Button 
-              type="submit" 
-              width="80%"
-              bg={useColorModeValue("teal.500", "teal.600")}
+          </VStack>
+
+          <Flex justify="center" mt={8}>
+            <Button
+              type="submit"
+              width="60%"
+              bgGradient="linear(to-r, teal.400, teal.600)"
               color="white"
-              _hover={{ 
-                bg: useColorModeValue("teal.600", "teal.500")
+              fontWeight="bold"
+              fontSize="lg"
+              _hover={{
+                bgGradient: "linear(to-r, teal.500, teal.700)",
+                boxShadow: "md"
               }}
-              borderRadius="8px"
+              borderRadius="xl"
+              boxShadow="sm"
               onClick={handleSubmit}
+              py={6}
             >
-              Registrar
+              Registrar Inventario
             </Button>
-          </Box>
+          </Flex>
         </Box>
+      </Box>
     </Box>
   );
 };
 export default Inventario;
-

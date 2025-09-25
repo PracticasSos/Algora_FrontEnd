@@ -223,14 +223,22 @@ const RetreatsPatients = () => {
     return new Date(b.date) - new Date(a.date);
   }); 
     
+  const moduleSpecificButton = null;
+
+  const bgColor = useColorModeValue('white', 'gray.900');
   const textColor = useColorModeValue('gray.800', 'white');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const tableBg = useColorModeValue('white', 'gray.700');
-  const tableHoverBg = useColorModeValue('gray.100', 'gray.600');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const tableBg = useColorModeValue('white', 'gray.800');
+  const tableHoverBg = useColorModeValue('teal.50', 'teal.900');
+  const inputBg = useColorModeValue('gray.50', 'gray.800');
+  const selectBg = useColorModeValue('gray.50', 'gray.800');
+  const headerBg = useColorModeValue('teal.600', 'teal.400');
+  const headerText = useColorModeValue('white', 'gray.900');
    
   return (
+    <Box p={{ base: 2, md: 8 }} minH="100vh" bg={useColorModeValue('gray.50', 'gray.900')}>
+      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
     <Box display="flex" flexDirection="column" alignItems="center" minHeight="100vh" p={6}>
-      <SmartHeader />
       
       <Card w="100%" maxW="1500px" shadow="lg" borderRadius="xl">
         <CardHeader borderBottom="1px solid" borderColor={borderColor}>
@@ -354,6 +362,7 @@ const RetreatsPatients = () => {
           </ModalFooter>
         </ModalContent>
       </Modal>
+    </Box>
     </Box>
   );
 };

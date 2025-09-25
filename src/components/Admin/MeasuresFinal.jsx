@@ -4,7 +4,7 @@ import {
   Box, Button, FormControl, Input, SimpleGrid, Heading, 
   Table, Thead, Tbody, Tr, Th, Td, Textarea, RadioGroup, 
   Radio, Stack, Checkbox, Text, FormLabel, useColorModeValue, 
-  HStack, useToast
+  HStack, useToast, Divider, Alert, AlertIcon, Icon, Badge
 } from "@chakra-ui/react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaEye } from 'react-icons/fa';
@@ -23,7 +23,7 @@ const MeasuresFinal = () => {
     add_right: "",
     av_vl_right: "",
     av_vp_right: "",
-    dnp_right: "",
+    dnp_right: "",          
     alt_right: "",
     sphere_left: "",
     cylinder_left: "",
@@ -228,237 +228,296 @@ const MeasuresFinal = () => {
 
   const moduleSpecificButton = null;
 
-    return (
-      <Box display="flex" flexDirection="column" alignItems="center" minHeight="100dvh" p={[2, 4, 6]}>
-        {error && (
-          <Alert status="error" mb={4}>
-            <AlertIcon />
-            {error}
-          </Alert>
-        )}
-        <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-        <Box w="100%" pt={5} mb={4}>
-      <Heading 
-          mb={4} 
-          textAlign="left" 
-          size="md"
-          fontWeight="700"
-          color={useColorModeValue('teal.600', 'teal.300')}
+  return (
+    <Box
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      minHeight="100dvh"
+      bg={useColorModeValue("gray.50", "gray.900")}
+      p={[2, 4, 8]}
+    >
+      {error && (
+        <Alert status="error" mb={4} borderRadius="md">
+          <AlertIcon />
+          {error}
+        </Alert>
+      )}
+      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
+      <Box w="80%" pt={5} mb={4}>
+        <Heading
+          mb={2}
+          textAlign="left"
+          size="lg"
+          fontWeight="800"
+          color={useColorModeValue('teal.700', 'teal.300')}
           pb={2}
-      >
-          Registrar Medidas Finales 
-      </Heading>
+          letterSpacing="tight"
+        >
+          Registrar Medidas Finales
+        </Heading>
+        <Divider mb={2} />
       </Box>
-        <Box as="form" onSubmit={(e) => { e.preventDefault(); handleSubmit(); }} width="100%" maxWidth="1300px" boxShadow="lg" borderRadius="md" p={[2, 4, 6]}>
-          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
-            <FormControl id="patient-search">
-              <Input type="text" placeholder="Buscar por nombre..." value={searchTermPatients} onChange={handleSearchPatients} />
-              {searchTermPatients && (
-                <Box border="1px solid #ccc" borderRadius="md" mt={2} maxHeight="150px" overflowY="auto">
-                  {filteredPatients.map((patient) => (
-                    <Box key={patient.id} p={2} _hover={{ bg: "teal.100", cursor: "pointer" }} onClick={() => handlePatientSelect(patient)}>
-                      {patient.pt_firstname} {patient.pt_lastname}
-                    </Box>
-                  ))}
-                </Box>
-              )}
-            </FormControl>
-          </SimpleGrid>
-          
-          <Box display={{ base: "none", lg: "block" }} overflowX="auto" mb={4}>
-            <Table variant="simple" size="md">
-              <Thead>
-                <Tr>
-                  <Th>Rx Final</Th>
-                  <Th>Esfera</Th>
-                  <Th>Cilindro</Th>
-                  <Th>Eje</Th>
-                  <Th>Prisma</Th>
-                  <Th>ADD</Th>
-                  <Th>AV VL</Th>
-                  <Th>AV VP</Th>
-                  <Th>DNP</Th>
-                  <Th>ALT</Th>
-                </Tr>
-              </Thead>
-              <Tbody>
-                {['OD', 'OI'].map((eye) => (
-                  <Tr key={eye}>
-                    <Td>{eye}</Td>
-                    {['sphere', 'cylinder', 'axis', 'prism', 'add', 'av_vl', 'av_vp', 'dnp', 'alt'].map((field) => (
-                      <Td key={field}>
-                        <Input 
-                          name={`${field}_${eye === 'OD' ? 'right' : 'left'}`} 
-                          value={formData[`${field}_${eye === 'OD' ? 'right' : 'left'}`]} 
-                          onChange={handleChange}
-                          size="sm"
-                        />
-                      </Td>
-                    ))}
-                  </Tr>
-                ))}
-              </Tbody>
-            </Table>
-          </Box>
-    
-          <Box display={{ base: "block", lg: "none" }} mb={4}>
-            {['OD', 'OI'].map((eye) => (
-              <Box key={eye} mb={6} p={3} borderWidth="1px" borderRadius="md">
-                <Heading size="md" mb={3}>{eye === 'OD' ? 'Ojo Derecho (OD)' : 'Ojo Izquierdo (OI)'}</Heading>
-                <SimpleGrid columns={2} spacing={3}>
-                  <FormControl>
-                    <FormLabel fontSize="sm">Esfera</FormLabel>
-                    <Input 
-                      name={`sphere_${eye === 'OD' ? 'right' : 'left'}`} 
-                      value={formData[`sphere_${eye === 'OD' ? 'right' : 'left'}`]} 
-                      onChange={handleChange}
-                      size="sm"
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel fontSize="sm">Cilindro</FormLabel>
-                    <Input 
-                      name={`cylinder_${eye === 'OD' ? 'right' : 'left'}`} 
-                      value={formData[`cylinder_${eye === 'OD' ? 'right' : 'left'}`]} 
-                      onChange={handleChange}
-                      size="sm"
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel fontSize="sm">Eje</FormLabel>
-                    <Input 
-                      name={`axis_${eye === 'OD' ? 'right' : 'left'}`} 
-                      value={formData[`axis_${eye === 'OD' ? 'right' : 'left'}`]} 
-                      onChange={handleChange}
-                      size="sm"
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel fontSize="sm">Prisma</FormLabel>
-                    <Input 
-                      name={`prism_${eye === 'OD' ? 'right' : 'left'}`} 
-                      value={formData[`prism_${eye === 'OD' ? 'right' : 'left'}`]} 
-                      onChange={handleChange}
-                      size="sm"
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel fontSize="sm">ADD</FormLabel>
-                    <Input 
-                      name={`add_${eye === 'OD' ? 'right' : 'left'}`} 
-                      value={formData[`add_${eye === 'OD' ? 'right' : 'left'}`]} 
-                      onChange={handleChange}
-                      size="sm"
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel fontSize="sm">AV VL</FormLabel>
-                    <Input 
-                      name={`av_vl_${eye === 'OD' ? 'right' : 'left'}`} 
-                      value={formData[`av_vl_${eye === 'OD' ? 'right' : 'left'}`]} 
-                      onChange={handleChange}
-                      size="sm"
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel fontSize="sm">AV VP</FormLabel>
-                    <Input 
-                      name={`av_vp_${eye === 'OD' ? 'right' : 'left'}`} 
-                      value={formData[`av_vp_${eye === 'OD' ? 'right' : 'left'}`]} 
-                      onChange={handleChange}
-                      size="sm"
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel fontSize="sm">DNP</FormLabel>
-                    <Input 
-                      name={`dnp_${eye === 'OD' ? 'right' : 'left'}`} 
-                      value={formData[`dnp_${eye === 'OD' ? 'right' : 'left'}`]} 
-                      onChange={handleChange}
-                      size="sm"
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel fontSize="sm">ALT</FormLabel>
-                    <Input 
-                      name={`alt_${eye === 'OD' ? 'right' : 'left'}`} 
-                      value={formData[`alt_${eye === 'OD' ? 'right' : 'left'}`]} 
-                      onChange={handleChange}
-                      size="sm"
-                    />
-                  </FormControl>
-                </SimpleGrid>
-              </Box>
-            ))}
-          </Box>
-    
-          <Box p={[2, 3, 4]} maxWidth="1000px" mx="auto" border="1px solid #ccc" borderRadius="8px">
-            <Heading size="md" mb={4}>Su diagnóstico es:</Heading>
-            <Textarea placeholder="Escriba el diagnóstico del paciente" value={formData.diagnosis} onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })} mb={4} />
-
-            <Box mb={6}>
-              <Heading size="sm" mb={2}>Visión cercana</Heading>
-              <Text mb={2} fontSize={["sm", "md"]}>Capacidad de leer como mínimo, las letras de la escala 1 de la carta normalizada Jaeger...</Text>
-              <RadioGroup value={formData.near_vision}onChange={(val) => setFormData({ ...formData, near_vision: val })} mb={2}>
-                <Stack direction={{ base: "column", sm: "row" }} spacing={[1, 2, 4]}>
-                  <Radio value="Aprobado">Aprobado</Radio>
-                  <Radio value="No Aprobado">No Aprobado</Radio>
-                </Stack>
-              </RadioGroup>
-              <Checkbox isChecked={formData.needs_lenses_near} onChange={(e) => setFormData({ ...formData, needs_lenses_near: e.target.checked })}>Precisa lentes</Checkbox>
-            </Box>
-            
-            <Box mb={6}>
-              <Heading size="sm" mb={2}>Visión lejana</Heading>
-              <RadioGroup value={formData.far_vision} onChange={(val) => setFormData({ ...formData, far_vision: val })} mb={2}>
-                <Stack direction={{ base: "column", sm: "row" }} spacing={[1, 2, 4]}>
-                  <Radio value="20/20">Mayor o igual a 20/20 en la escala SNELLEN</Radio>
-                  <Radio value="Menor a 20/20">Menor a 20/20</Radio>
-                </Stack>
-              </RadioGroup>
-              <Checkbox isChecked={formData.needs_lenses_far} onChange={(e) => setFormData({ ...formData, needs_lenses_far: e.target.checked })}>Precisa lentes</Checkbox>
-            </Box>
-            
-            <Box mb={6}>
-              <Heading size="sm" mb={2}>Percepción de colores</Heading>
-              <Checkbox isChecked={formData.color_perception} onChange={(e) => setFormData({ ...formData, color_perception: e.target.checked })}>
-                Ha demostrado capacidad para distinguir y diferenciar los colores.
-              </Checkbox>
-            </Box>
-            
-            <Box mb={6}>
-              <Checkbox
-                isChecked={showColorIssuesInput}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setShowColorIssuesInput(checked);
-                  if (!checked) {
-                    setFormData({ ...formData, color_issues: "" });
-                  }
-                }}
+      <Box
+        as="form"
+        onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
+        width="100%"
+        maxWidth="1200px"
+        boxShadow="2xl"
+        borderRadius="xl"
+        bg={useColorModeValue("white", "gray.800")}
+        p={[4, 8]}
+        mb={8}
+      >
+        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} mb={6}>
+          <FormControl id="patient-search">
+            <FormLabel fontWeight="bold" color="teal.600" mb={1}>Buscar Paciente</FormLabel>
+            <Input
+              type="text"
+              placeholder="Buscar por nombre o CI..."
+              value={searchTermPatients}
+              onChange={handleSearchPatients}
+              size="lg"
+              borderColor="teal.300"
+              focusBorderColor="teal.500"
+              bg={useColorModeValue("gray.100", "gray.700")}
+            />
+            {searchTermPatients && (
+              <Box
+                border="1px solid #e2e8f0"
+                borderRadius="md"
+                mt={2}
+                maxHeight="180px"
+                overflowY="auto"
+                bg={useColorModeValue("white", "gray.700")}
+                boxShadow="md"
               >
-                Tiene problemas para distinguir o diferenciar los siguientes colores.
-              </Checkbox>
+                {filteredPatients.map((patient) => (
+                  <Box
+                    key={patient.id}
+                    p={2}
+                    _hover={{ bg: "teal.50", cursor: "pointer" }}
+                    onClick={() => handlePatientSelect(patient)}
+                    borderBottom="1px solid #f1f1f1"
+                  >
+                    <HStack>
+                      <Icon as={FaEye} color="teal.400" />
+                      <Text fontWeight="500">{patient.pt_firstname} {patient.pt_lastname}</Text>
+                      <Badge colorScheme="teal" ml={2}>{patient.pt_ci}</Badge>
+                    </HStack>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </FormControl>
+        </SimpleGrid>
 
-              {showColorIssuesInput && (
-                <Input
-                  placeholder="Especifique los colores con los que tiene problemas"
-                  value={formData.color_issues}
-                  onChange={(e) =>
-                    setFormData({ ...formData, color_issues: e.target.value })
-                  }
-                  mt={2}
-                />
-              )}
+        <Box display={{ base: "none", lg: "block" }} overflowX="auto" mb={6}>
+          <Table variant="striped" colorScheme="teal" size="md"  borderRadius="xl">
+            <Thead bg={useColorModeValue("teal.100", "teal.900")}>
+              <Tr>
+                <Th>Rx Final</Th>
+                <Th>Esfera</Th>
+                <Th>Cilindro</Th>
+                <Th>Eje</Th>
+                <Th>Prisma</Th>
+                <Th>ADD</Th>
+                <Th>AV VL</Th>
+                <Th>AV VP</Th>
+                <Th>DNP</Th>
+                <Th>ALT</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {['OD', 'OI'].map((eye) => (
+                <Tr key={eye}>
+                  <Td fontWeight="bold" color="teal.600"> {eye}</Td>
+                  {['Esfera', 'Cilindro', 'Eje', 'Prisma', 'ADD', 'AV VL', 'AV VP', 'DNP', 'ALT'].map((field) => (
+                    <Td key={field}>
+                      <Input
+                        name={`${field}_${eye === 'OD' ? 'right' : 'left'}`}
+                        value={formData[`${field}_${eye === 'OD' ? 'right' : 'left'}`]}
+                        onChange={handleChange}
+                        size="sm"
+                        borderColor="teal.200"
+                        bg={useColorModeValue("gray.50", "gray.700")}
+                        _focus={{ borderColor: "teal.400" }}
+                      />
+                    </Td>
+                  ))}
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </Box>
+
+        <Box display={{ base: "block", lg: "none" }} mb={6}>
+          {['OD', 'OI'].map((eye) => (
+            <Box key={eye} mb={6} p={4} borderWidth="1px" borderRadius="lg" bg={useColorModeValue("gray.50", "gray.700")}>
+              <Heading size="sm" mb={3} color="teal.600">{eye === 'OD' ? 'Ojo Derecho (OD)' : 'Ojo Izquierdo (OI)'}</Heading>
+              <SimpleGrid columns={2} spacing={4}>
+                {['Esfera', 'Cilindro', 'Eje', 'Prisma', 'ADD', 'AV VL', 'AV VP', 'DNP', 'ALT'].map((field) => (
+                  <FormControl key={field}>
+                    <FormLabel fontSize="sm" color="teal.500">{field.replace('_', ' ').toUpperCase()}</FormLabel>
+                    <Input
+                      name={`${field}_${eye === 'OD' ? 'right' : 'left'}`}
+                      value={formData[`${field}_${eye === 'OD' ? 'right' : 'left'}`]}
+                      onChange={handleChange}
+                      size="sm"
+                      borderColor="teal.200"
+                      bg={useColorModeValue("white", "gray.800")}
+                      _focus={{ borderColor: "teal.400" }}
+                    />
+                  </FormControl>
+                ))}
+              </SimpleGrid>
             </Box>
-            <Stack direction={{ base: "column", sm: "row" }} spacing={4} justify="center">
-              <Button colorScheme="teal" onClick={handleSubmit} width={["100%", "auto"]}>GUARDAR</Button>
-              <Button colorScheme="teal" onClick={() => handleNavigate(`/sales/${formData.patient_id}`)} width={["100%", "auto"]}>Realizar Venta</Button>
-            </Stack>
+          ))}
+        </Box>
+
+        <Box
+          p={[4, 6]}
+          maxWidth="800px"
+          mx="auto"
+          border="1px solid"
+          borderColor={useColorModeValue("teal.100", "teal.700")}
+          borderRadius="xl"
+          bg={useColorModeValue("gray.50", "gray.800")}
+          boxShadow="md"
+        >
+          <Heading size="md" mb={4} color="teal.700">Diagnóstico</Heading>
+          <Textarea
+            placeholder="Escriba el diagnóstico del paciente"
+            value={formData.diagnosis}
+            onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })}
+            mb={4}
+            size="lg"
+            borderColor="teal.200"
+            bg={useColorModeValue("white", "gray.700")}
+            _focus={{ borderColor: "teal.400" }}
+          />
+
+          <Divider mb={4} />
+
+          <Box mb={6}>
+            <Heading size="sm" mb={2} color="teal.600">Visión cercana</Heading>
+            <Text mb={2} fontSize={["sm", "md"]} color="gray.600">
+              Capacidad de leer como mínimo, las letras de la escala 1 de la carta normalizada Jaeger...
+            </Text>
+            <RadioGroup
+              value={formData.near_vision}
+              onChange={(val) => setFormData({ ...formData, near_vision: val })}
+              mb={2}
+            >
+              <Stack direction={{ base: "column", sm: "row" }} spacing={[2, 4]}>
+                <Radio value="Aprobado" colorScheme="teal">Aprobado</Radio>
+                <Radio value="No Aprobado" colorScheme="red">No Aprobado</Radio>
+              </Stack>
+            </RadioGroup>
+            <Checkbox
+              isChecked={formData.needs_lenses_near}
+              onChange={(e) => setFormData({ ...formData, needs_lenses_near: e.target.checked })}
+              colorScheme="teal"
+              mt={2}
+            >
+              Precisa lentes
+            </Checkbox>
           </Box>
+
+          <Divider mb={4} />
+
+          <Box mb={6}>
+            <Heading size="sm" mb={2} color="teal.600">Visión lejana</Heading>
+            <RadioGroup
+              value={formData.far_vision}
+              onChange={(val) => setFormData({ ...formData, far_vision: val })}
+              mb={2}
+            >
+              <Stack direction={{ base: "column", sm: "row" }} spacing={[2, 4]}>
+                <Radio value="20/20" colorScheme="teal">Mayor o igual a 20/20 en la escala SNELLEN</Radio>
+                <Radio value="Menor a 20/20" colorScheme="red">Menor a 20/20</Radio>
+              </Stack>
+            </RadioGroup>
+            <Checkbox
+              isChecked={formData.needs_lenses_far}
+              onChange={(e) => setFormData({ ...formData, needs_lenses_far: e.target.checked })}
+              colorScheme="teal"
+              mt={2}
+            >
+              Precisa lentes
+            </Checkbox>
+          </Box>
+
+          <Divider mb={4} />
+
+          <Box mb={6}>
+            <Heading size="sm" mb={2} color="teal.600">Percepción de colores</Heading>
+            <Checkbox
+              isChecked={formData.color_perception}
+              onChange={(e) => setFormData({ ...formData, color_perception: e.target.checked })}
+              colorScheme="teal"
+            >
+              Ha demostrado capacidad para distinguir y diferenciar los colores.
+            </Checkbox>
+          </Box>
+
+          <Box mb={6}>
+            <Checkbox
+              isChecked={showColorIssuesInput}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setShowColorIssuesInput(checked);
+                if (!checked) {
+                  setFormData({ ...formData, color_issues: "" });
+                }
+              }}
+              colorScheme="orange"
+            >
+              Tiene problemas para distinguir o diferenciar los siguientes colores.
+            </Checkbox>
+            {showColorIssuesInput && (
+              <Input
+                placeholder="Especifique los colores con los que tiene problemas"
+                value={formData.color_issues}
+                onChange={(e) =>
+                  setFormData({ ...formData, color_issues: e.target.value })
+                }
+                mt={2}
+                borderColor="orange.300"
+                bg={useColorModeValue("white", "gray.700")}
+                _focus={{ borderColor: "orange.400" }}
+              />
+            )}
+          </Box>
+          <Divider mb={4} />
+
+          <Stack direction={{ base: "column", sm: "row" }} spacing={6} justify="center" mt={6}>
+            <Button
+              colorScheme="teal"
+              onClick={handleSubmit}
+              width={["100%", "auto"]}
+              size="lg"
+              fontWeight="bold"
+              boxShadow="md"
+            >
+              GUARDAR
+            </Button>
+            <Button
+              colorScheme="teal"
+              variant="outline"
+              onClick={() => handleNavigate(`/sales/${formData.patient_id}`)}
+              width={["100%", "auto"]}
+              size="lg"
+              fontWeight="bold"
+              boxShadow="md"
+            >
+              Realizar Venta
+            </Button>
+          </Stack>
         </Box>
       </Box>
-    );
+    </Box>
+  );
 };
 
 export default MeasuresFinal;

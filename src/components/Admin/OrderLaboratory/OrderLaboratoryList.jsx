@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../../api/supabase';
-import { Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Input, FormControl, FormLabel, Select, Spinner, Grid, useColorModeValue } from "@chakra-ui/react";
+import { Divider, Text, Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Input, FormControl, FormLabel, Select, Spinner, Grid, useColorModeValue,Flex,Icon} from "@chakra-ui/react";
 import { useNavigate } from 'react-router-dom';
 import SmartHeader from '../../header/SmartHeader';
+import { FaClinicMedical, FaFilter } from "react-icons/fa";
 
 const OrderLaboratoryList = () => {
   const [patients, setPatients] = useState([]);
@@ -184,157 +185,205 @@ const OrderLaboratoryList = () => {
 
   const moduleSpecificButton = null;
 
-  const bgColor = useColorModeValue('white', 'gray.800');
+  const bgColor = useColorModeValue('white', 'gray.900');
   const textColor = useColorModeValue('gray.800', 'white');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const tableBg = useColorModeValue('white', 'gray.700');
-  const tableHoverBg = useColorModeValue('gray.100', 'gray.600');
-  const inputBg = useColorModeValue('white', 'gray.700');
-  const selectBg = useColorModeValue('white', 'gray.700');
+  const borderColor = useColorModeValue('gray.200', 'gray.700');
+  const tableBg = useColorModeValue('white', 'gray.800');
+  const tableHoverBg = useColorModeValue('teal.50', 'teal.900');
+  const inputBg = useColorModeValue('gray.50', 'gray.800');
+  const selectBg = useColorModeValue('gray.50', 'gray.800');
+  const headerBg = useColorModeValue('teal.600', 'teal.400');
+  const headerText = useColorModeValue('white', 'gray.900');
 
   return (
-    <Box 
-      p={6} 
-      maxW="1300px" 
-      mx="auto" 
+    <Box p={{ base: 2, md: 8 }} minH="100vh" bg={useColorModeValue('gray.50', 'gray.900')}>
+      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
+    <Box
+      p={{ base: 2, md: 8 }}
+      maxW="1300px"
+      mx="auto"
       bg={bgColor}
       color={textColor}
-      minH="100vh"
+      borderRadius="xl"
+      boxShadow="lg"
     >
-      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-      <Heading 
-        mb={4} 
-        textAlign="left" 
-        size="md"
-        fontWeight="700"
-        color={useColorModeValue('teal.600', 'teal.300')}
-        pb={2}
+      <Flex align="center" mb={6} gap={3}>
+        <Icon as={FaClinicMedical} boxSize={8} color={headerBg} />
+        <Heading
+          size="md"
+          fontWeight="bold"
+          color={headerBg}
+          letterSpacing="tight"
+        >
+          Lista Pendiente de Órdenes de Laboratorio
+        </Heading>
+      </Flex>
+      <Divider mb={6} />
+
+      <Flex
+        direction={{ base: "column", md: "row" }}
+        gap={6}
+        mb={8}
+        align="center"
+        justify="space-between"
+        bg={useColorModeValue('gray.50', 'gray.800')}
+        p={4}
+        borderRadius="lg"
+        boxShadow="md"
       >
-        Lista Pendiente de Órdenes de Laboratorio
-      </Heading>
-      <FormControl mb={4}>
-        <FormLabel color={textColor}>Sucursal</FormLabel>
-        <Select 
-          placeholder="Selecciona una sucursal"
-          value={selectedBranch}
-          onChange={(e) => setSelectedBranch(e.target.value)}
-          bg={selectBg}
-          borderColor={borderColor}
-          color={textColor}
-          _hover={{
-            borderColor: useColorModeValue('gray.300', 'gray.500')
-          }}
-          _focus={{
-            borderColor: useColorModeValue('blue.500', 'blue.300'),
-            boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-          }}
-        >
-          {branches.map(branch => (
-            <option 
-              key={branch.id} 
-              value={branch.id}
-              style={{
-                backgroundColor: useColorModeValue('white', '#2D3748'),
-                color: useColorModeValue('black', 'white')
+        <FormControl maxW="300px">
+          <FormLabel color={textColor} fontWeight="bold">
+            Sucursal
+          </FormLabel>
+          <Select
+            placeholder="Selecciona una sucursal"
+            value={selectedBranch}
+            onChange={(e) => setSelectedBranch(e.target.value)}
+            bg={selectBg}
+            borderColor={borderColor}
+            color={textColor}
+            fontWeight="medium"
+            size="md"
+            borderRadius="md"
+            _hover={{ borderColor: useColorModeValue('teal.400', 'teal.300') }}
+            _focus={{
+              borderColor: useColorModeValue('teal.600', 'teal.300'),
+              boxShadow: useColorModeValue('0 0 0 1px teal.600', '0 0 0 1px teal.300')
+            }}
+          >
+            {branches.map(branch => (
+              <option
+                key={branch.id}
+                value={branch.id}
+                style={{
+                  backgroundColor: useColorModeValue('white', '#2D3748'),
+                  color: useColorModeValue('black', 'white')
+                }}
+              >
+                {branch.name}
+              </option>
+            ))}
+          </Select>
+        </FormControl>
+
+        <Flex gap={4} align="flex-end">
+          <FormControl>
+            <FormLabel color={textColor} fontWeight="bold">
+              Desde
+            </FormLabel>
+            <Input
+              type="date"
+              name="since"
+              value={formData.since}
+              onChange={handleChange}
+              bg={inputBg}
+              borderColor={borderColor}
+              color={textColor}
+              size="md"
+              borderRadius="md"
+              _hover={{ borderColor: useColorModeValue('teal.400', 'teal.300') }}
+              _focus={{
+                borderColor: useColorModeValue('teal.600', 'teal.300'),
+                boxShadow: useColorModeValue('0 0 0 1px teal.600', '0 0 0 1px teal.300')
               }}
-            >
-              {branch.name}
-            </option>
-          ))}
-        </Select>
-      </FormControl>
-      <Grid templateColumns="repeat(3, 1fr)" gap={4} mb={6}>
-        <FormControl>
-          <FormLabel color={textColor}>Desde</FormLabel>
-          <Input 
-            type="date" 
-            name="since" 
-            value={formData.since} 
-            onChange={handleChange}
-            bg={inputBg}
-            borderColor={borderColor}
-            color={textColor}
-            _hover={{
-              borderColor: useColorModeValue('gray.300', 'gray.500')
-            }}
-            _focus={{
-              borderColor: useColorModeValue('blue.500', 'blue.300'),
-              boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-            }}
-          />
-        </FormControl>
-        
-        <FormControl>
-          <FormLabel color={textColor}>Hasta</FormLabel>
-          <Input 
-            type="date" 
-            name="till" 
-            value={formData.till} 
-            onChange={handleChange}
-            bg={inputBg}
-            borderColor={borderColor}
-            color={textColor}
-            _hover={{
-              borderColor: useColorModeValue('gray.300', 'gray.500')
-            }}
-            _focus={{
-              borderColor: useColorModeValue('blue.500', 'blue.300'),
-              boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-            }}
-          />
-        </FormControl>
-        
-        <Button 
-          type="submit" 
-          colorScheme="blue" 
-          mt={6} 
-          onClick={fetchFilteredPatients}
-          isDisabled={!selectedBranch}
-        >
-          Filtrar
-        </Button>
-      </Grid>
+            />
+          </FormControl>
+          <FormControl>
+            <FormLabel color={textColor} fontWeight="bold">
+              Hasta
+            </FormLabel>
+            <Input
+              type="date"
+              name="till"
+              value={formData.till}
+              onChange={handleChange}
+              bg={inputBg}
+              borderColor={borderColor}
+              color={textColor}
+              size="md"
+              borderRadius="md"
+              _hover={{ borderColor: useColorModeValue('teal.400', 'teal.300') }}
+              _focus={{
+                borderColor: useColorModeValue('teal.600', 'teal.300'),
+                boxShadow: useColorModeValue('0 0 0 1px teal.600', '0 0 0 1px teal.300')
+              }}
+            />
+          </FormControl>
+          <Button
+            leftIcon={<FaFilter />}
+            colorScheme="teal"
+            size="md"
+            borderRadius="md"
+            mt={{ base: 0, md: 6 }}
+            onClick={fetchFilteredPatients}
+            isDisabled={!selectedBranch}
+            fontWeight="bold"
+            px={6}
+          >
+            Filtrar
+          </Button>
+        </Flex>
+      </Flex>
 
       {loading ? (
-        <Spinner size="xl" color={useColorModeValue('blue.500', 'blue.300')} />
+        <Flex justify="center" align="center" minH="200px">
+          <Spinner size="md" color={headerBg} thickness="5px" speed="0.7s" />
+        </Flex>
       ) : (
-        <Box className="w-full max-w-4xl">
-          <Table bg={tableBg} borderRadius="md" overflow="hidden">
+        <Box
+          w="full"
+          mx="auto"
+          bg={tableBg}
+          borderRadius="lg"
+          boxShadow="md"
+          overflow="hidden"
+        >
+          <Table variant="simple">
             <Thead>
-              <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
-                <Th color={textColor} borderColor={borderColor}>Nombre</Th>
-                <Th color={textColor} borderColor={borderColor}>Apellido</Th>
-                <Th color={textColor} borderColor={borderColor}>Cédula</Th>
-                <Th color={textColor} borderColor={borderColor}>Fecha</Th>
+              <Tr bg={headerBg}>
+                <Th color={headerText} borderColor={borderColor} fontWeight="bold" fontSize="sm">Nombre</Th>
+                <Th color={headerText} borderColor={borderColor} fontWeight="bold" fontSize="sm">Apellido</Th>
+                <Th color={headerText} borderColor={borderColor} fontWeight="bold" fontSize="sm">Cédula</Th>
+                <Th color={headerText} borderColor={borderColor} fontWeight="bold" fontSize="sm">Fecha</Th>
               </Tr>
             </Thead>
             <Tbody>
-              {filteredPatients.map((patient) => (
-                <Tr 
-                  key={patient.patient_id}  
-                  onClick={() => handlePatientSelect(patient)} 
-                  cursor="pointer"
-                  _hover={{ bg: tableHoverBg }}
-                  borderColor={borderColor}
-                >
-                  <Td color={textColor} borderColor={borderColor}>{patient.pt_firstname}</Td>
-                  <Td color={textColor} borderColor={borderColor}>{patient.pt_lastname}</Td>
-                  <Td color={textColor} borderColor={borderColor}>{patient.pt_ci}</Td>
-                  <Td color={textColor} borderColor={borderColor}>
-                    {new Date(patient.date + 'T00:00:00').toLocaleDateString('es-ES', {
-                      year: 'numeric',
-                      month: '2-digit',
-                      day: '2-digit'
-                    })}
+              {filteredPatients.length === 0 ? (
+                <Tr>
+                  <Td colSpan={4} textAlign="center" py={8} color="gray.500">
+                    <Text fontSize="lg">No hay pacientes en el rango seleccionado.</Text>
                   </Td>
                 </Tr>
-              ))}
+              ) : (
+                filteredPatients.map((patient) => (
+                  <Tr
+                    key={patient.patient_id}
+                    onClick={() => handlePatientSelect(patient)}
+                    cursor="pointer"
+                    _hover={{ bg: tableHoverBg, transition: "background 0.2s" }}
+                    borderColor={borderColor}
+                  >
+                    <Td color={textColor} borderColor={borderColor} fontWeight="medium">{patient.pt_firstname}</Td>
+                    <Td color={textColor} borderColor={borderColor} fontWeight="medium">{patient.pt_lastname}</Td>
+                    <Td color={textColor} borderColor={borderColor}>{patient.pt_ci}</Td>
+                    <Td color={textColor} borderColor={borderColor}>
+                      {new Date(patient.date + 'T00:00:00').toLocaleDateString('es-ES', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                      })}
+                    </Td>
+                  </Tr>
+                ))
+              )}
             </Tbody>
           </Table>
         </Box>
       )}
     </Box>
-  );
+
+    </Box>
+  );  
 };
 
 export default OrderLaboratoryList;

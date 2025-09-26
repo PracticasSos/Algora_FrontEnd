@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { supabase } from "../../api/supabase";
-import { 
-    Box, 
-    Button, 
-    FormControl, 
-    FormLabel, 
-    Input, 
-    Heading, 
-    SimpleGrid, 
-    useColorModeValue, 
-    Text, 
-    HStack, 
-    useToast 
+import {
+    Box,
+    Button,
+    FormControl,
+    FormLabel,
+    Input,
+    Heading,
+    SimpleGrid,
+    useColorModeValue,
+    Text,
+    HStack,
+    useToast,
+    VStack,
+    Divider,
 } from '@chakra-ui/react';
 import { useNavigate } from "react-router-dom";
 import { FaEye } from 'react-icons/fa';
@@ -68,14 +70,23 @@ const RegisterLens = () => {
 
     const renderInputField = (label, name, type, required) => {
         return (
-            <FormControl isRequired={required}>
-                <FormLabel htmlFor={name}>{label}</FormLabel>
+            <FormControl isRequired={required} mb={4}>
+                <FormLabel htmlFor={name} fontWeight="600" color={useColorModeValue('teal.700', 'teal.200')}>
+                    {label}
+                </FormLabel>
                 <Input
                     id={name}
                     name={name}
                     type={type}
                     value={formData[name]}
                     onChange={handleChange}
+                    borderRadius="12px"
+                    bg={useColorModeValue('white', 'gray.800')}
+                    boxShadow={useColorModeValue('sm', 'md')}
+                    _focus={{
+                        borderColor: 'teal.400',
+                        boxShadow: '0 0 0 1px #38B2AC',
+                    }}
                 />
             </FormControl>
         );
@@ -110,63 +121,97 @@ const RegisterLens = () => {
     };
 
     const moduleSpecificButton = (
-      <Button 
-        onClick={() => handleNavigate('/list-lens')} 
-        bg={useColorModeValue(
-          'rgba(255, 255, 255, 0.8)', 
-          'rgba(255, 255, 255, 0.1)'
-        )}
-        backdropFilter="blur(10px)"
-        border="1px solid"
-        borderColor={useColorModeValue(
-          'rgba(56, 178, 172, 0.3)', 
-          'rgba(56, 178, 172, 0.5)'
-        )}
-        color={useColorModeValue('teal.600', 'teal.300')}
-        size="sm"
-        borderRadius="15px"
-        px={4}
-        _hover={{
-          bg: useColorModeValue(
-            'rgba(56, 178, 172, 0.1)', 
-            'rgba(56, 178, 172, 0.2)'
-          ),
-          borderColor: 'teal.400',
-          transform: 'translateY(-1px)',
-        }}
-        transition="all 0.2s"
-      >
-        <HStack spacing={2} align="center" justify="center">
-          <FaEye size="14px" />
-          <Text fontWeight="600" lineHeight="1" m={0}>
-            Listar Lunas
-          </Text>
-        </HStack>
-      </Button>
-      );
+        <Button
+            onClick={() => handleNavigate('/list-lens')}
+            bg={useColorModeValue('whiteAlpha.800', 'whiteAlpha.100')}
+            backdropFilter="blur(10px)"
+            border="1px solid"
+            borderColor={useColorModeValue('teal.200', 'teal.500')}
+            color={useColorModeValue('teal.600', 'teal.300')}
+            size="sm"
+            borderRadius="15px"
+            px={4}
+            _hover={{
+                bg: useColorModeValue('teal.50', 'teal.900'),
+                borderColor: 'teal.400',
+                transform: 'scale(1.05)',
+            }}
+            transition="all 0.2s"
+        >
+            <HStack spacing={2} align="center" justify="center">
+                <FaEye size="14px" />
+                <Text fontWeight="600" lineHeight="1" m={0}>
+                    Listar Lunas
+                </Text>
+            </HStack>
+        </Button>
+    );
 
     return (
-        <Box className="register-lens-form" display="flex" flexDirection="column" alignItems="center" pt={6}>
+        <Box
+            className="register-lens-form"
+            minH="100vh"
+            bg={useColorModeValue('gray.50', 'gray.900')}
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            pt={10}
+        >
             <SmartHeader moduleSpecificButton={moduleSpecificButton} />
 
-            <Box as="form" onSubmit={handleSubmit} width="100%" maxWidth="800px" padding={6} boxShadow="lg" borderRadius="md">
-                <Heading 
-                    mb={4} 
-                    textAlign="left" 
-                    size="md"
-                    fontWeight="700"
+            <Box
+                as="form"
+                onSubmit={handleSubmit}
+                width="100%"
+                maxWidth="420px"
+                padding={8}
+                boxShadow="2xl"
+                borderRadius="2xl"
+                bg={useColorModeValue('white', 'gray.800')}
+                mt={8}
+            >
+                <Heading
+                    mb={2}
+                    textAlign="center"
+                    size="lg"
+                    fontWeight="800"
                     color={useColorModeValue('teal.600', 'teal.300')}
                     pb={2}
                 >
                     Registrar Lunas
                 </Heading>
-                <SimpleGrid columns={[1, 2]} spacing={4}>
+                <Divider mb={6} />
+                <VStack spacing={2} align="stretch">
                     {renderInputField('Lunas', 'lens_type', 'text', true)}
                     {renderInputField('Precio', 'lens_price', 'number', true)}
-                </SimpleGrid>
-                <Box display="flex" justifyContent="space-around" mt={6}>
-                    <Button type="submit" colorScheme="teal">Guardar</Button>
-                    <Button onClick={handleReset} colorScheme="gray">Limpiar</Button>
+                </VStack>
+                <Box display="flex" justifyContent="space-between" mt={8}>
+                    <Button
+                        type="submit"
+                        colorScheme="teal"
+                        borderRadius="12px"
+                        fontWeight="700"
+                        px={8}
+                        _hover={{
+                            bg: 'teal.500',
+                            transform: 'scale(1.04)',
+                        }}
+                    >
+                        Guardar
+                    </Button>
+                    <Button
+                        onClick={handleReset}
+                        colorScheme="gray"
+                        borderRadius="12px"
+                        fontWeight="700"
+                        px={8}
+                        _hover={{
+                            bg: 'gray.300',
+                            transform: 'scale(1.04)',
+                        }}
+                    >
+                        Limpiar
+                    </Button>
                 </Box>
             </Box>
         </Box>

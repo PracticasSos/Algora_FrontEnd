@@ -51,6 +51,19 @@ const MeasuresFinal = () => {
   const [error, setError] = useState(null);
   const { id } = useParams();
 
+  // Definimos campos de medida (label para UI, key para formData)
+  const measureFields = [
+    { label: "Esfera", key: "sphere" },
+    { label: "Cilindro", key: "cylinder" },
+    { label: "Eje", key: "axis" },
+    { label: "Prisma", key: "prism" },
+    { label: "ADD", key: "add" },
+    { label: "AV VL", key: "av_vl" },
+    { label: "AV VP", key: "av_vp" },
+    { label: "DNP", key: "dnp" },
+    { label: "ALT", key: "alt" },
+  ];
+
   useEffect(() => {
     if (id && patients.length > 0) {
       const found = patients.find(p => String(p.id) === String(id));
@@ -105,7 +118,7 @@ const MeasuresFinal = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSearchPatients = (e) => {
@@ -332,11 +345,11 @@ const MeasuresFinal = () => {
               {['OD', 'OI'].map((eye) => (
                 <Tr key={eye}>
                   <Td fontWeight="bold" color="teal.600"> {eye}</Td>
-                  {['Esfera', 'Cilindro', 'Eje', 'Prisma', 'ADD', 'AV VL', 'AV VP', 'DNP', 'ALT'].map((field) => (
-                    <Td key={field}>
+                  {measureFields.map(({ key }) => (
+                    <Td key={key}>
                       <Input
-                        name={`${field}_${eye === 'OD' ? 'right' : 'left'}`}
-                        value={formData[`${field}_${eye === 'OD' ? 'right' : 'left'}`]}
+                        name={`${key}_${eye === 'OD' ? 'right' : 'left'}`}
+                        value={formData[`${key}_${eye === 'OD' ? 'right' : 'left'}`] || ""}
                         onChange={handleChange}
                         size="sm"
                         borderColor="teal.200"
@@ -356,12 +369,12 @@ const MeasuresFinal = () => {
             <Box key={eye} mb={6} p={4} borderWidth="1px" borderRadius="lg" bg={useColorModeValue("gray.50", "gray.700")}>
               <Heading size="sm" mb={3} color="teal.600">{eye === 'OD' ? 'Ojo Derecho (OD)' : 'Ojo Izquierdo (OI)'}</Heading>
               <SimpleGrid columns={2} spacing={4}>
-                {['Esfera', 'Cilindro', 'Eje', 'Prisma', 'ADD', 'AV VL', 'AV VP', 'DNP', 'ALT'].map((field) => (
-                  <FormControl key={field}>
-                    <FormLabel fontSize="sm" color="teal.500">{field.replace('_', ' ').toUpperCase()}</FormLabel>
+                {measureFields.map(({ label, key }) => (
+                  <FormControl key={key}>
+                    <FormLabel fontSize="sm" color="teal.500">{label}</FormLabel>
                     <Input
-                      name={`${field}_${eye === 'OD' ? 'right' : 'left'}`}
-                      value={formData[`${field}_${eye === 'OD' ? 'right' : 'left'}`]}
+                      name={`${key}_${eye === 'OD' ? 'right' : 'left'}`}
+                      value={formData[`${key}_${eye === 'OD' ? 'right' : 'left'}`] || ""}
                       onChange={handleChange}
                       size="sm"
                       borderColor="teal.200"

@@ -76,8 +76,8 @@ const ListBalance = () => {
     };
 
     const filteredBalance = listBalance.filter((balance) =>
-        balance.patients.pt_firstname.toLowerCase().includes(search.toLowerCase()) ||
-        balance.patients.pt_lastname.toLowerCase().includes(search.toLowerCase())
+    (balance.patients?.pt_firstname?.toLowerCase().includes(search.toLowerCase()) ||
+    balance.patients?.pt_lastname?.toLowerCase().includes(search.toLowerCase()))
     );
 
     const handleNavigate = (route = null) => {

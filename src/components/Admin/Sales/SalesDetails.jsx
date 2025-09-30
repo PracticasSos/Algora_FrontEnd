@@ -44,9 +44,17 @@ const SalesDetails = ({
     discount_lens: "",
   });
 
+  // Estado local para los inputs editables de totales
+  const [totalInput, setTotalInput] = useState({
+    total_p_frame: "",
+    total_p_lens: "",
+  });
+
   const formatMoney = (amount) => {
-    return Math.round(parseFloat(amount));
+    if (amount === null || amount === undefined || amount === "") return 0;
+    return parseFloat(parseFloat(amount).toFixed(2));
   };
+
 
   useEffect(() => {
     if (formData.brand && formData.brand !== searchFrame) {
@@ -233,9 +241,29 @@ const SalesDetails = ({
     });
   }, [calculatedData.discount_frame, calculatedData.discount_lens]);
 
+  // Sincroniza el estado local de los totales con los datos calculados
+  useEffect(() => {
+    setTotalInput({
+      total_p_frame:
+        calculatedData.total_p_frame !== null && calculatedData.total_p_frame !== undefined
+          ? calculatedData.total_p_frame.toString()
+          : "",
+      total_p_lens:
+        calculatedData.total_p_lens !== null && calculatedData.total_p_lens !== undefined
+          ? calculatedData.total_p_lens.toString()
+          : "",
+    });
+  }, [calculatedData.total_p_frame, calculatedData.total_p_lens]);
+
   const handleTotalChange = (e) => {
     const { name, value } = e.target;
+    // Permite edición libre
+    setTotalInput((prev) => ({ ...prev, [name]: value }));
+  };
 
+  // Formatea y aplica el valor solo al perder el foco
+  const handleTotalBlur = (e) => {
+    const { name, value } = e.target;
     if (name === "total_p_frame" || name === "total_p_lens") {
       if (value === "") {
         // Si el usuario borra el campo, NO modificar nada, mantener el último valor válido
@@ -260,6 +288,7 @@ const SalesDetails = ({
             total_p_frame: totalValue,
             discount_frame: discount_frame,
           }));
+          setTotalInput((prev) => ({ ...prev, total_p_frame: totalValue.toFixed(2) }));
         } else {
           const discount_lens =
             calculatedData.p_lens > 0
@@ -277,6 +306,7 @@ const SalesDetails = ({
             total_p_lens: totalValue,
             discount_lens: discount_lens,
           }));
+          setTotalInput((prev) => ({ ...prev, total_p_lens: totalValue.toFixed(2) }));
         }
       }
     }
@@ -519,8 +549,9 @@ const SalesDetails = ({
                     <Input
                       name="total_p_frame"
                       type="number"
-                      value={calculatedData.total_p_frame !== null && calculatedData.total_p_frame !== undefined ? calculatedData.total_p_frame : ""}
+                      value={totalInput.total_p_frame}
                       onChange={handleTotalChange}
+                      onBlur={handleTotalBlur}
                       fontSize="md"
                       height="44px"
                       borderRadius="xl"
@@ -700,8 +731,9 @@ const SalesDetails = ({
                     <Input
                       name="total_p_lens"
                       type="number"
-                      value={calculatedData.total_p_lens !== null && calculatedData.total_p_lens !== undefined ? calculatedData.total_p_lens : ""}
+                      value={totalInput.total_p_lens}
                       onChange={handleTotalChange}
+                      onBlur={handleTotalBlur}
                       fontSize="md"
                       height="44px"
                       borderRadius="xl"
@@ -736,7 +768,7 @@ const SalesDetails = ({
             textAlign="center"
           >
             <Text fontWeight="bold" fontSize="xl" color={accentColor}>
-              Total a pagar: ${calculatedData.totalP}
+              Total a pagar: ${Number(calculatedData.totalP).toFixed(2)}
             </Text>
           </Box>
         </VStack>

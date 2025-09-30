@@ -78,7 +78,7 @@ export const generateCertificatePDF = async (formData, patientData, doctorData, 
             .replace(/{{doctorName}}/g, doctor.name)
             .replace(/{{doctorTitle}}/g, doctor.title)
             .replace(/{{doctorRegistration}}/g, doctor.registration)
-            .replace(/{{doctorSeal}}/g, doctorSeal ? `<img src="${doctorSeal}" alt="Sello del doctor" style="max-width:120px; max-height:80px; display:block; margin:auto;" />` : 'Sin sello configurado')
+            .replace(/{{doctorSeal}}/g, doctorSeal ? `<img src="${doctorSeal}" alt="Sello del doctor" style="max-width:120px; max-height:80px; display:block; margin:auto;" />` : '')
             .replace(/{{footerInfo}}/g, footerInfo || 'Sin información de pie de página')
             // Firma del paciente
             .replace(/{{patientSignature}}/g, formData?.signature

@@ -13,6 +13,13 @@ import {
   useColorModeValue,
   Select,
   Divider,
+  Card,
+  CardBody,
+  CardHeader,
+  CardFooter,
+  HStack,
+  Badge,
+  Tooltip,
 } from "@chakra-ui/react";
 import { supabase } from "../../api/supabase";
 import { EditIcon, DeleteIcon } from "@chakra-ui/icons";
@@ -45,6 +52,7 @@ const MessageManager = () => {
   useEffect(() => {
     getTenantId();
     fetchBranches();
+    // eslint-disable-next-line
   }, []);
 
   const getTenantId = async () => {
@@ -94,6 +102,7 @@ const MessageManager = () => {
     if (selectedBranch && selectedRoute) {
       fetchMessages();
     }
+    // eslint-disable-next-line
   }, [selectedBranch, selectedRoute]);
 
   const handleSave = async () => {
@@ -150,99 +159,160 @@ const MessageManager = () => {
 
   const moduleSpecificButton = null;
 
-  const boxBg = useColorModeValue("gray.100", "gray.700");
+  const boxBg = useColorModeValue("gray.50", "gray.800");
   const textColor = useColorModeValue("gray.800", "white");
   const borderColor = useColorModeValue("gray.200", "gray.600");
-  const selectBg = useColorModeValue("white", "gray.600");
+  const selectBg = useColorModeValue("white", "gray.700");
+  const cardBg = useColorModeValue("white", "gray.700");
 
   return (
-    <Box p={6}  mx="auto">
+    <Box p={{ base: 2, md: 6 }} mx="auto" minHeight="100vh" bg={useColorModeValue("gray.50", "gray.900")}>
       <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-      <Heading size="lg" mb={4} textAlign="center">Gestión de Mensajes</Heading>
-      
-      <VStack spacing={4} align="stretch" maxW="800px" mx="auto">
-        <Box>
-          <Text fontWeight="bold" mb={2}>Selecciona una sucursal:</Text>
-          <Select
-            placeholder="Selecciona una sucursal"
-            value={selectedBranch || ""}
-            onChange={(e) => {
-              setSelectedBranch(Number(e.target.value));
-              setEditingId(null);
-            }}
-            bg={selectBg}
-            borderColor={borderColor}
+      <Heading mt="4" size="lg" mb={6} textAlign="center" color="teal.600" letterSpacing="tight">
+        Gestión de Mensajes
+      </Heading>
+
+      <Card bg={cardBg} boxShadow="lg" borderRadius="xl" mb={8} maxW="900px" mx="auto">
+        <CardHeader pb={0}>
+          <Heading size="md" color="teal.500" mb={2}>Nuevo Mensaje</Heading>
+        </CardHeader>
+        <CardBody>
+          <VStack spacing={4} align="stretch">
+            <Box>
+              <Text fontWeight="bold" mb={1}>Sucursal</Text>
+              <Select
+                placeholder="Selecciona una sucursal"
+                value={selectedBranch || ""}
+                onChange={(e) => {
+                  setSelectedBranch(Number(e.target.value));
+                  setEditingId(null);
+                }}
+                bg={selectBg}
+                borderColor={borderColor}
+                size="md"
+                fontWeight="medium"
+                _focus={{ borderColor: "teal.400" }}
+              >
+                {branches.map(branch => (
+                  <option key={branch.id} value={branch.id}>{branch.name}</option>
+                ))}
+              </Select>
+            </Box>
+
+            <Box>
+              <Text fontWeight="bold" mb={1}>Ruta (interfaz)</Text>
+              <Select
+                placeholder="Selecciona una ruta"
+                value={selectedRoute}
+                onChange={(e) => {
+                  setSelectedRoute(e.target.value);
+                  setEditingId(null);
+                }}
+                bg={selectBg}
+                borderColor={borderColor}
+                size="md"
+                fontWeight="medium"
+                _focus={{ borderColor: "teal.400" }}
+              >
+                {predefinedRoutes.map(route => (
+                  <option key={route.value} value={route.value}>{route.label}</option>
+                ))}
+              </Select>
+            </Box>
+
+            <Box>
+              <Text fontWeight="bold" mb={1}>Mensaje</Text>
+              <Textarea
+                placeholder="Escribe un mensaje..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                rows={5}
+                bg={selectBg}
+                borderColor={borderColor}
+                size="md"
+                _focus={{ borderColor: "teal.400" }}
+                resize="vertical"
+              />
+            </Box>
+          </VStack>
+        </CardBody>
+        <CardFooter pt={0} justify="flex-end">
+          <Button
+            colorScheme="teal"
+            onClick={handleSave}
+            isLoading={loading}
+            isDisabled={!selectedBranch || !selectedRoute}
+            px={8}
+            borderRadius="full"
+            fontWeight="bold"
+            shadow="md"
           >
-            {branches.map(branch => (
-              <option key={branch.id} value={branch.id}>{branch.name}</option>
-            ))}
-          </Select>
-        </Box>
+            {editingId ? "Actualizar Mensaje" : "Guardar Mensaje"}
+          </Button>
+        </CardFooter>
+      </Card>
 
-        <Box>
-          <Text fontWeight="bold" mb={2}>Selecciona una ruta (interfaz):</Text>
-          <Select
-            placeholder="Selecciona una ruta"
-            value={selectedRoute}
-            onChange={(e) => {
-              setSelectedRoute(e.target.value);
-              setEditingId(null);
-            }}
-            bg={selectBg}
-            borderColor={borderColor}
-          >
-            {predefinedRoutes.map(route => (
-              <option key={route.value} value={route.value}>{route.label}</option>
-            ))}
-          </Select>
-        </Box>
+      <Divider my={4} />
 
-        <Textarea
-          placeholder="Escribe un mensaje..."
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          rows={5}
-          bg={selectBg}
-          borderColor={borderColor}
-        />
+      <Heading size="md" mt={6} mb={4} color="teal.600" letterSpacing="tight" maxW={900} mx="auto" textAlign="center">
+        Mensajes Guardados
+      </Heading>
 
-        <Button
-          colorScheme="teal"
-          onClick={handleSave}
-          isLoading={loading}
-          alignSelf="flex-end"
-          isDisabled={!selectedBranch || !selectedRoute}
-        >
-          {editingId ? "Actualizar Mensaje" : "Guardar Mensaje"}
-        </Button>
+      {loading && <Spinner size="lg" color="teal.500" mt={4} />}
+      {!loading && messages.length === 0 && (
+        <Text color="gray.500" textAlign="center" mt={6}>
+          No hay mensajes guardados para esta sucursal y ruta.
+        </Text>
+      )}
 
-        <Divider my={4} />
-        <Heading size="md" mt={6}>Mensajes Guardados</Heading>
-        {loading && <Spinner />}
-        {!loading && messages.length === 0 && (
-          <Text>No hay mensajes guardados para esta sucursal y ruta.</Text>
-        )}
+      <VStack spacing={4} align="stretch" mt={2} maxW={900} mx="auto">
         {!loading && messages.map((msg) => (
-          <Flex
+          <Card
             key={msg.id}
-            p={4}
-            boxShadow="md"
-            borderRadius="md"
-            justify="space-between"
-            align="center"
-            bg={boxBg}
+            bg="white"
             border={`1px solid ${borderColor}`}
-            mb={2}
+            borderRadius="lg"
+            boxShadow="sm"
+            _hover={{ boxShadow: "md", borderColor: "teal.300" }}
+            transition="all 0.2s"
           >
-            <Box>
-              <Text fontWeight="semibold" color="teal.500">Ruta: {getRouteLabel(msg.route)}</Text>
-              <Text whiteSpace="pre-wrap">{msg.content}</Text>
-            </Box>
-            <Box>
-              <IconButton icon={<EditIcon />} size="sm" mr={2} onClick={() => handleEdit(msg)} />
-              <IconButton icon={<DeleteIcon />} size="sm" colorScheme="red" onClick={() => handleDelete(msg.id)} />
-            </Box>
-          </Flex>
+            <CardBody py={3} px={4}>
+              <Flex justify="space-between" align="flex-start">
+                <Box flex="1">
+                  <HStack mb={1}>
+                    <Badge colorScheme="teal" fontSize="0.85em">
+                      {getRouteLabel(msg.route)}
+                    </Badge>
+                  </HStack>
+                  <Text fontWeight="medium" color={textColor} whiteSpace="pre-wrap" fontSize="md">
+                    {msg.content}
+                  </Text>
+                </Box>
+                <HStack spacing={1} ml={4}>
+                  <Tooltip label="Editar" hasArrow>
+                    <IconButton
+                      icon={<EditIcon />}
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="teal"
+                      aria-label="Editar"
+                      onClick={() => handleEdit(msg)}
+                    />
+                  </Tooltip>
+                  <Tooltip label="Eliminar" hasArrow>
+                    <IconButton
+                      icon={<DeleteIcon />}
+                      size="sm"
+                      variant="ghost"
+                      colorScheme="red"
+                      aria-label="Eliminar"
+                      onClick={() => handleDelete(msg.id)}
+                    />
+                  </Tooltip>
+                </HStack>
+              </Flex>
+            </CardBody>
+          </Card>
         ))}
       </VStack>
     </Box>

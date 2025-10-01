@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../api/supabase';
 import {
-  Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Input, Text, HStack, useToast, IconButton, useColorModeValue
+    Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Input, Text, HStack, useToast, IconButton, useColorModeValue, Flex, Spacer, chakra
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import { BiEdit, BiTrash, BiCheck, BiX } from 'react-icons/bi';
@@ -69,7 +69,7 @@ const ListLab = () => {
     const handleCancel = () => setIsOpen(false);
 
     const handleDelete = async (id) => {
-        const { error } = await supabase.from('labs').delete().match({ id });       
+        const { error } = await supabase.from('labs').delete().match({ id });
         if (!error) {
             toast({ title: 'Éxito', description: 'Laboratorio eliminado correctamente.', status: 'success' });
             fetchLabs();
@@ -78,7 +78,7 @@ const ListLab = () => {
         }
     };
 
-    const filteredLabs = labs.filter((lab) => 
+    const filteredLabs = labs.filter((lab) =>
         [lab.name].some((field) => field.toLowerCase().includes(search.toLowerCase()))
     );
 
@@ -111,123 +111,214 @@ const ListLab = () => {
     };
 
     const moduleSpecificButton = (
-      <Button 
-        onClick={() => handleNavigate('/labs')} 
-        bg={useColorModeValue(
-          'rgba(255, 255, 255, 0.8)', 
-          'rgba(255, 255, 255, 0.1)'
-        )}
-        backdropFilter="blur(10px)"
-        border="1px solid"
-        borderColor={useColorModeValue(
-          'rgba(56, 178, 172, 0.3)', 
-          'rgba(56, 178, 172, 0.5)'
-        )}
-        color={useColorModeValue('teal.600', 'teal.300')}
-        size="sm"
-        borderRadius="15px"
-        px={4}
-        _hover={{
-          bg: useColorModeValue(
-            'rgba(56, 178, 172, 0.1)', 
-            'rgba(56, 178, 172, 0.2)'
-          ),
-          borderColor: 'teal.400',
-          transform: 'translateY(-1px)',
-        }}
-        transition="all 0.2s"
-      >
-        <HStack spacing={2} align="center" justify="center">
-          <FaEye size="14px" />
-          <Text fontWeight="600" lineHeight="1" m={0}>
-            Registrar Laboratorio
-          </Text>
-        </HStack>
-      </Button>
-      );
+        <Button
+            onClick={() => handleNavigate('/labs')}
+            bg={useColorModeValue(
+                'rgba(255, 255, 255, 0.8)',
+                'rgba(255, 255, 255, 0.1)'
+            )}
+            backdropFilter="blur(10px)"
+            border="1px solid"
+            borderColor={useColorModeValue(
+                'rgba(56, 178, 172, 0.3)',
+                'rgba(56, 178, 172, 0.5)'
+            )}
+            color={useColorModeValue('teal.600', 'teal.300')}
+            size="sm"
+            borderRadius="15px"
+            px={4}
+            _hover={{
+                bg: useColorModeValue(
+                    'rgba(56, 178, 172, 0.1)',
+                    'rgba(56, 178, 172, 0.2)'
+                ),
+                borderColor: 'teal.400',
+                transform: 'translateY(-1px)',
+            }}
+            transition="all 0.2s"
+        >
+            <HStack spacing={2} align="center" justify="center">
+                <FaEye size="14px" />
+                <Text fontWeight="600" lineHeight="1" m={0}>
+                    Registrar Laboratorio
+                </Text>
+            </HStack>
+        </Button>
+    );
 
     const bgColor = useColorModeValue('white', 'gray.800');
-      const textColor = useColorModeValue('gray.800', 'white');
-      const borderColor = useColorModeValue('gray.200', 'gray.600');
-      const tableBg = useColorModeValue('white', 'gray.700');
-      const tableHoverBg = useColorModeValue('gray.100', 'gray.600');
-      const selectBg = useColorModeValue('white', 'gray.700');
+    const textColor = useColorModeValue('gray.800', 'white');
+    const borderColor = useColorModeValue('gray.200', 'gray.600');
+    const tableBg = useColorModeValue('white', 'gray.700');
+    const tableHoverBg = useColorModeValue('teal.50', 'teal.900');
+    const selectBg = useColorModeValue('white', 'gray.700');
+    const shadow = useColorModeValue('lg', 'dark-lg');
 
     return (
-        <Box 
-            p={6} 
-            maxW="1300px" 
-            mx="auto" 
-            bg={bgColor}
+        <Box
+            p={{ base: 2, md: 6 }}
+            mx="auto"
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            bg={useColorModeValue("gray.50", "gray.900")}
             color={textColor}
             minH="100vh"
         >
-                <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-                <Input placeholder='Buscar Laboratorio...' value={search} onChange={(e) => setSearch(e.target.value)} mb={4}  w="50%" mx="auto" display="block" 
+            <SmartHeader moduleSpecificButton={moduleSpecificButton} />
+            <Flex align="center" mb={6} mt={4}>
+                <Heading size="lg" fontWeight="bold" color={useColorModeValue('teal.600', 'teal.300')}>
+                    Laboratorios
+                </Heading>
+                <Spacer />
+            </Flex>
+            <Box
+                mb={6}
+                w={{ base: '100%', md: '60%' }}
+                mx="auto"
+                boxShadow={shadow}
+                borderRadius="xl"
+                p={3}
+                bg={useColorModeValue('gray.50', 'gray.700')}
+            >
+                <Input
+                    placeholder='Buscar Laboratorio...'
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
                     bg={selectBg}
                     borderColor={borderColor}
                     color={textColor}
+                    borderRadius="full"
+                    size="lg"
                     _hover={{
-                        borderColor: useColorModeValue('gray.300', 'gray.500')
+                        borderColor: useColorModeValue('teal.300', 'teal.500')
                     }}
                     _focus={{
-                        borderColor: useColorModeValue('blue.500', 'blue.300'),
-                        boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
+                        borderColor: useColorModeValue('teal.500', 'teal.300'),
+                        boxShadow: useColorModeValue('0 0 0 1px teal.500', '0 0 0 1px teal.300')
                     }}
                 />
-                <Box width="100%" maxWidth="1500px"  overflowX="auto">
-                    <Table bg={tableBg}  borderRadius="md" overflow="hidden">
-                        <Thead>
-                            <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
-                                {['Nombre', 'Dirección', 'Correo', 'Celular', 'RUC', 'Acciones'].map((header) => (
-                                    <Th key={header} color={textColor} borderColor={borderColor}>{header}</Th>     
-                                ))}
+            </Box>
+            <Box
+                width="100%"
+                maxWidth="1500px"
+                overflowX="auto"
+                boxShadow={shadow}
+                borderRadius="xl"
+                bg={useColorModeValue('gray.50', 'gray.700')}
+                p={2}
+            >
+                <Table variant="simple" bg={tableBg} borderRadius="xl" overflow="hidden">
+                    <Thead>
+                        <Tr bg={useColorModeValue('teal.100', 'teal.800')}>
+                            {['Nombre', 'Dirección', 'Correo', 'Celular', 'RUC', 'Acciones'].map((header) => (
+                                <Th
+                                    key={header}
+                                    color={useColorModeValue('teal.800', 'teal.200')}
+                                    borderColor={borderColor}
+                                    fontWeight="bold"
+                                    fontSize="md"
+                                    py={3}
+                                    letterSpacing="wide"
+                                >
+                                    {header}
+                                </Th>
+                            ))}
+                        </Tr>
+                    </Thead>
+                    <Tbody>
+                        {filteredLabs.length === 0 && (
+                            <Tr>
+                                <Td colSpan={6} textAlign="center" py={8}>
+                                    <Text color="gray.400" fontSize="lg">
+                                        No se encontraron laboratorios.
+                                    </Text>
+                                </Td>
                             </Tr>
-                        </Thead>
-                        <Tbody>
-                            {filteredLabs.map((lab) => (
-                                <Tr key={lab.id} cursor="pointer" _hover={{ bg: tableHoverBg }} borderColor={borderColor}>
-                                    {[
-                                        'name', 'address', 'email', 'cell', 'ruc'
-                                    ].map((field) => (
-                                        <Td key={field} color={textColor} borderColor={borderColor}>
-                                            {editingId === lab.id ? (
-                                                <Input
-                                                    name={field}
-                                                    value={editableData[field] || ''}
-                                                    onChange={handleChange}
-                                                />
-                                            ) : (
-                                                lab[field] || 'N/A'
-                                            )}
-                                        </Td>
-                                    ))}
-                                    <Td textAlign="center" color={textColor} borderColor={borderColor}>
+                        )}
+                        {filteredLabs.map((lab) => (
+                            <Tr
+                                key={lab.id}
+                                cursor="pointer"
+                                _hover={{ bg: tableHoverBg, transition: 'background 0.2s' }}
+                                borderColor={borderColor}
+                                borderRadius="xl"
+                            >
+                                {['name', 'address', 'email', 'cell', 'ruc'].map((field) => (
+                                    <Td
+                                        key={field}
+                                        color={textColor}
+                                        borderColor={borderColor}
+                                        py={3}
+                                        px={2}
+                                        fontSize="md"
+                                    >
                                         {editingId === lab.id ? (
-                                            <>
-                                                <IconButton icon={<BiCheck />} colorScheme="green" onClick={() => handleSave(lab.id)} mr={2} />
-                                                <IconButton icon={<BiX />} colorScheme="gray" onClick={() => setEditingId(null)} />
-                                            </>
+                                            <Input
+                                                name={field}
+                                                value={editableData[field] || ''}
+                                                onChange={handleChange}
+                                                size="sm"
+                                                borderRadius="md"
+                                                bg={useColorModeValue('white', 'gray.800')}
+                                            />
                                         ) : (
-                                            <>
-                                                <IconButton icon={<BiEdit />} colorScheme="yellow" onClick={() => handleEdit(lab.id, lab)} mr={2} />
-                                                <IconButton icon={<BiTrash />} colorScheme="red" onClick={() => openConfirm(lab.id)} />
-                                            </>
+                                            <chakra.span fontWeight="medium">
+                                                {lab[field] || 'N/A'}
+                                            </chakra.span>
                                         )}
                                     </Td>
-                                </Tr>
-                            ))}
-                        </Tbody>
-                    </Table>
-                </Box>
+                                ))}
+                                <Td textAlign="center" color={textColor} borderColor={borderColor} py={3}>
+                                    {editingId === lab.id ? (
+                                        <HStack spacing={2} justify="center">
+                                            <IconButton
+                                                icon={<BiCheck />}
+                                                colorScheme="green"
+                                                onClick={() => handleSave(lab.id)}
+                                                size="sm"
+                                                aria-label="Guardar"
+                                            />
+                                            <IconButton
+                                                icon={<BiX />}
+                                                colorScheme="gray"
+                                                onClick={() => setEditingId(null)}
+                                                size="sm"
+                                                aria-label="Cancelar"
+                                            />
+                                        </HStack>
+                                    ) : (
+                                        <HStack spacing={2} justify="center">
+                                            <IconButton
+                                                icon={<BiEdit />}
+                                                colorScheme="yellow"
+                                                onClick={() => handleEdit(lab.id, lab)}
+                                                size="sm"
+                                                aria-label="Editar"
+                                            />
+                                            <IconButton
+                                                icon={<BiTrash />}
+                                                colorScheme="red"
+                                                onClick={() => openConfirm(lab.id)}
+                                                size="sm"
+                                                aria-label="Eliminar"
+                                            />
+                                        </HStack>
+                                    )}
+                                </Td>
+                            </Tr>
+                        ))}
+                    </Tbody>
+                </Table>
+            </Box>
 
-                <ConfirmDialog
-                    isOpen={isOpen}
-                    onClose={handleCancel}
-                    onConfirm={handleConfirm}
-                    title="¿Eliminar laboratorio?"
-                    body="Estas seguro de que deseas eliminar este laboratorio? "
-                />
+            <ConfirmDialog
+                isOpen={isOpen}
+                onClose={handleCancel}
+                onConfirm={handleConfirm}
+                title="¿Eliminar laboratorio?"
+                body="Estas seguro de que deseas eliminar este laboratorio? "
+            />
         </Box>
     );
 };

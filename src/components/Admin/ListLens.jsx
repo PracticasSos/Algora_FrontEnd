@@ -144,13 +144,16 @@ const ListLens = () => {
 
   return (
     <Box
-      p={{ base: 2, md: 8 }}
-      mx="auto"
-      bg={bgColor}
-      color={textColor}
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
       minH="100vh"
-      borderRadius="2xl"
-      boxShadow="xl"
+      p={[2, 4, 8]}
+      bg={useColorModeValue("gray.50", "gray.900")}
+    >
+    <Box
+      p={{ base: 2, md: 8 }}
+      w={'90%'}
     >
       <SmartHeader moduleSpecificButton={moduleSpecificButton} />
       <Flex direction={{ base: 'column', md: 'row' }} align="center" mb={6}>
@@ -182,10 +185,6 @@ const ListLens = () => {
             borderColor: useColorModeValue('teal.300', 'teal.600'),
             boxShadow: 'md',
           }}
-          _focus={{
-            borderColor: useColorModeValue('teal.500', 'teal.300'),
-            boxShadow: useColorModeValue('0 0 0 2px teal.200', '0 0 0 2px teal.700'),
-          }}
         />
       </Flex>
       <Divider mb={6} />
@@ -196,7 +195,6 @@ const ListLens = () => {
           overflow="hidden"
           boxShadow="md"
           variant="striped"
-          colorScheme="teal"
         >
           <Thead>
             <Tr bg={useColorModeValue('teal.100', 'teal.900')}>
@@ -250,9 +248,7 @@ const ListLens = () => {
                           borderRadius="md"
                           bg={useColorModeValue('gray.100', 'gray.700')}
                           borderColor={useColorModeValue('teal.200', 'teal.700')}
-                          _focus={{
-                            borderColor: useColorModeValue('teal.500', 'teal.300'),
-                          }}
+
                         />
                       ) : (
                         <Text fontWeight="medium">{item[field] || 'N/A'}</Text>
@@ -323,6 +319,7 @@ const ListLens = () => {
         title="¿Eliminar lente?"
         body="Estas seguro de que deseas eliminar esta lente?"
       />
+    </Box>
     </Box>
   );
 };

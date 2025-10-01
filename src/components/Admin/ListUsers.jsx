@@ -162,90 +162,181 @@ const ListUsers = () => {
   const selectBg = useColorModeValue('white', 'gray.700');
 
   return (
-    <Box p={6} 
-      maxW="1300px" 
-      mx="auto" 
-      bg={bgColor}
-      color={textColor}
-      minH="100vh">
+    <Box
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      minH="100vh"
+      p={[2, 4, 8]}
+      bg={useColorModeValue("gray.50", "gray.900")}
+    >
       <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-      <Box w="100%" maxW= "800px" mb={4}>
-      <Heading 
-          mb={4} 
-          textAlign="left" 
-          size="md"
-          fontWeight="700"
+      <Box mb={6}>
+        <Heading
+          mb={2}
+          mt={4}
+          textAlign="center"
+          size="lg"
+          fontWeight="800"
           color={useColorModeValue('teal.600', 'teal.300')}
           pb={2}
-      >
-          Registrar Usuario
-      </Heading>
+          letterSpacing="tight"
+        >
+          Lista De Usuarios
+        </Heading>
+        <Text color={useColorModeValue('gray.500', 'gray.400')} mb={2} fontSize="md">
+          Administra y busca usuarios fácilmente.
+        </Text>
       </Box>
-      <Input
-        placeholder="Buscar por nombre, apellido o username"
-        value={search}
-        onChange={handleSearchChange}
-        mb={4}
-        w="50%"
-        mx="auto"
-        display="block"
-        bg={selectBg}
+      <Box
+        display="flex"
+        alignItems="center"
+        mb={6}
+        gap={4}
+        minW={'400px'}
+      >
+        <Input
+          placeholder="Buscar por nombre, apellido o username"
+          value={search}
+          onChange={handleSearchChange}
+          bg={selectBg}
           borderColor={borderColor}
           color={textColor}
           _hover={{
             borderColor: useColorModeValue('gray.300', 'gray.500')
           }}
           _focus={{
-            borderColor: useColorModeValue('blue.500', 'blue.300'),
-            boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
+            borderColor: useColorModeValue('teal.500', 'teal.300'),
+            boxShadow: useColorModeValue('0 0 0 1px teal.500', '0 0 0 1px teal.300')
           }}
-      />
-      <Box width="100%" maxWidth="1500px"  overflowX="auto">
-        <Table bg={tableBg}  borderRadius="md" overflow="hidden">
+          borderRadius="full"
+          px={6}
+          py={3}
+          fontSize="md"
+          transition="all 0.2s"
+        />
+      </Box>
+      <Box
+        width="100%"
+        maxWidth="1500px"
+        overflowX="auto"
+        borderRadius="lg"
+        boxShadow={useColorModeValue('md', 'dark-md')}
+        bg={tableBg}
+        p={2}
+      >
+        <Table variant="simple" size="md">
           <Thead>
-            <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
+            <Tr bg={useColorModeValue('teal.500', 'teal.700')}>
               {['Nombre', 'Apellido', 'Username', 'Edad', 'Rol', 'Email', 'Teléfono', 'CI', 'Sucursal', 'Acciones'].map(header => (
-                <Th key={header} fontWeight="bold" color="white" textAlign="center">{header}</Th>
+                <Th
+                  key={header}
+                  fontWeight="bold"
+                  color="white"
+                  textAlign="center"
+                  py={3}
+                  fontSize="md"
+                  letterSpacing="wide"
+                  borderColor={borderColor}
+                >
+                  {header}
+                </Th>
               ))}
             </Tr>
           </Thead>
           <Tbody>
-            {filteredUsers.map(user => (
-              <Tr key={user.id} cursor="pointer" _hover={{ bg: tableHoverBg }} borderColor={borderColor}>
-                {['firstname', 'lastname', 'username', 'age', 'role', 'email', 'phone_number', 'ci', 'branchs'].map(field => (
-                  <Td key={field} color={textColor} borderColor={borderColor}>
-                    {editingId === user.id ? (
-                      <Input
-                        name={field}
-                        value={
-                          field === 'role' ? editableData.role?.role_name || user.role?.role_name || '' :
-                          field === 'branchs' ? editableData.branchs?.name || user.branchs?.name || '' :
-                          editableData[field] || user[field]
-                        }
-                        onChange={handleChange}
-                      />
-                    ) : (
-                      field === 'role' ? user.role?.role_name || 'N/A' :
-                      field === 'branchs' ? user.branchs?.name || 'N/A' :
-                      user[field] || 'N/A'
-                    )}
-                  </Td>
-                ))}
-                <Td textAlign="center" color={textColor} borderColor={borderColor}>
-                  {editingId === user.id ? (
-                    <>
-                      <IconButton icon={<BiCheck />} colorScheme="green" onClick={() => handleSave(user.id)} mr={2} />
-                      <IconButton icon={<BiX />} colorScheme="red" onClick={() => setEditingId(null)} />
-                    </>
-                  ) : (
-                    <>
-                      <IconButton icon={<BiEdit />} colorScheme="blue" onClick={() => handleEdit(user.id, user)} mr={2} />
-                      <IconButton icon={<BiTrash />} colorScheme="red" onClick={() => openConfirm(user.id)} />
-                    </>
-                  )}
+            {filteredUsers.length === 0 ? (
+              <Tr>
+                <Td colSpan={10} textAlign="center" py={8} color="gray.400" fontSize="lg">
+                  No se encontraron usuarios.
                 </Td>
               </Tr>
-            ))}
+            ) : (
+              filteredUsers.map(user => (
+                <Tr
+                  key={user.id}
+                  _hover={{
+                    bg: tableHoverBg,
+                    transition: "background 0.2s"
+                  }}
+                  borderColor={borderColor}
+                >
+                  {['firstname', 'lastname', 'username', 'age', 'role', 'email', 'phone_number', 'ci', 'branchs'].map(field => (
+                    <Td
+                      key={field}
+                      color={textColor}
+                      borderColor={borderColor}
+                      textAlign="center"
+                      px={3}
+                      py={2}
+                      fontSize="sm"
+                    >
+                      {editingId === user.id ? (
+                        <Input
+                          name={field}
+                          value={
+                            field === 'role' ? editableData.role?.role_name || user.role?.role_name || '' :
+                            field === 'branchs' ? editableData.branchs?.name || user.branchs?.name || '' :
+                            editableData[field] || user[field]
+                          }
+                          onChange={handleChange}
+                          size="sm"
+                          borderRadius="md"
+                          bg={selectBg}
+                        />
+                      ) : (
+                        field === 'role' ? user.role?.role_name || 'N/A' :
+                        field === 'branchs' ? user.branchs?.name || 'N/A' :
+                        user[field] || 'N/A'
+                      )}
+                    </Td>
+                  ))}
+                  <Td textAlign="center" color={textColor} borderColor={borderColor}>
+                    <HStack spacing={2} justify="center">
+                      {editingId === user.id ? (
+                        <>
+                          <IconButton
+                            icon={<BiCheck />}
+                            colorScheme="green"
+                            aria-label="Guardar"
+                            onClick={() => handleSave(user.id)}
+                            size="sm"
+                            borderRadius="full"
+                          />
+                          <IconButton
+                            icon={<BiX />}
+                            colorScheme="red"
+                            aria-label="Cancelar"
+                            onClick={() => setEditingId(null)}
+                            size="sm"
+                            borderRadius="full"
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <IconButton
+                            icon={<BiEdit />}
+                            colorScheme="blue"
+                            aria-label="Editar"
+                            onClick={() => handleEdit(user.id, user)}
+                            size="sm"
+                            borderRadius="full"
+                          />
+                          <IconButton
+                            icon={<BiTrash />}
+                            colorScheme="red"
+                            aria-label="Eliminar"
+                            onClick={() => openConfirm(user.id)}
+                            size="sm"
+                            borderRadius="full"
+                          />
+                        </>
+                      )}
+                    </HStack>
+                  </Td>
+                </Tr>
+              ))
+            )}
           </Tbody>
         </Table>
       </Box>
@@ -255,7 +346,7 @@ const ListUsers = () => {
         onClose={handleCancel}
         onConfirm={handleConfirm}
         title="¿Eliminar usuario?"
-        body="Estas seguro de que deseas eliminar este usuario?"
+        body="¿Estás seguro de que deseas eliminar este usuario?"
       />
     </Box>
   );

@@ -1,14 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../api/supabase";
-import { Box, Button, Heading, Table, Tbody, Td, Th, Thead, Tr, Spinner, Text, Textarea, VStack, Modal, ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalCloseButton,
-    useColorModeValue
+import {
+    Box, Button, Heading, Table, Tbody, Td, Th, Thead, Tr, Spinner, Text, Textarea, VStack, Modal, ModalOverlay,
+    ModalContent, ModalHeader, ModalBody, ModalFooter, ModalCloseButton, useColorModeValue, Flex, Icon, HStack, Divider
 } from "@chakra-ui/react";
+import { FaWhatsapp, FaUserCircle, FaSearch, FaStore } from "react-icons/fa";
 import SearchBar from "./SearchBar";
 import SmartHeader from "../header/SmartHeader";
 
@@ -28,10 +25,10 @@ const BalancesPatient = () => {
 
     useEffect(() => {
         fetchBranches();
-        fetchPatients(); 
-      }, []);
+        fetchPatients();
+    }, []);
 
-      useEffect(() => {
+    useEffect(() => {
         if (selectedBranch) {
             fetchSales({ branchId: selectedBranch });
         }
@@ -40,7 +37,7 @@ const BalancesPatient = () => {
     const handleSearch = (e) => {
         const value = e.target.value.toLowerCase();
         setSearchTermPatients(value);
-        const filteredSuggestions = sales // Usar sales en lugar de patients
+        const filteredSuggestions = sales
             .filter((sale) => {
                 const fullName = `${sale.patient.pt_firstname} ${sale.patient.pt_lastname}`.toLowerCase();
                 return fullName.includes(value);
@@ -49,7 +46,7 @@ const BalancesPatient = () => {
         setSuggestions(filteredSuggestions);
         updateFilteredSales(value);
     };
-    
+
     const updateFilteredSales = (searchTerm) => {
         if (!searchTerm) {
             setFilteredSales(sales);
@@ -62,7 +59,7 @@ const BalancesPatient = () => {
         setFilteredSales(filtered);
     };
 
-    const fetchSales = async ({branchId = null, patientId = null}) => {
+    const fetchSales = async ({ branchId = null, patientId = null }) => {
         setLoading(true);
         try {
             let query = supabase
@@ -79,23 +76,23 @@ const BalancesPatient = () => {
                     branchs:branchs_id(id, name),
                     is_refund
                 `)
-                .gt('credit', 0) 
+                .gt('credit', 0)
                 .order('date', { ascending: false })
                 .eq("is_refund", false);
 
-            if  (branchId) {
+            if (branchId) {
                 query = query.eq('branchs_id', branchId);
             }
             if (patientId) {
                 query = query.eq('patient_id', patientId);
             }
             const { data, error } = await query;
-            
+
             if (error) throw error;
 
             const formattedSales = data.map(sale => ({
                 id: sale.id,
-                date: sale.date, // Mantener formato original para ordenamiento
+                date: sale.date,
                 brand: sale.inventario?.brand || "Sin Marca",
                 lens_type: sale.lens?.lens_type || "N/A",
                 total: sale.total,
@@ -125,7 +122,7 @@ const BalancesPatient = () => {
             setBranches(data);
         }
     };
-    
+
     const fetchPatients = async () => {
         try {
             const { data, error } = await supabase
@@ -141,44 +138,42 @@ const BalancesPatient = () => {
     const handleSuggestionSelect = (selectedName) => {
         setSearchTermPatients(selectedName);
         setSuggestions([]);
-    
+
         const selectedSale = sales.find(
-          (sale) =>
-            `${sale.patient.pt_firstname} ${sale.patient.pt_lastname}`.toLowerCase() ===
-            selectedName.toLowerCase()
+            (sale) =>
+                `${sale.patient.pt_firstname} ${sale.patient.pt_lastname}`.toLowerCase() ===
+                selectedName.toLowerCase()
         );
-    
+
         if (selectedSale) {
-          setSelectedPatient(selectedSale.patient);
-          const patientSales = sales.filter(sale => 
-            sale.patient.pt_firstname === selectedSale.patient.pt_firstname && 
-            sale.patient.pt_lastname === selectedSale.patient.pt_lastname
-          );
-          setFilteredSales(patientSales);
+            setSelectedPatient(selectedSale.patient);
+            const patientSales = sales.filter(sale =>
+                sale.patient.pt_firstname === selectedSale.patient.pt_firstname &&
+                sale.patient.pt_lastname === selectedSale.patient.pt_lastname
+            );
+            setFilteredSales(patientSales);
         }
     };
 
     const mensajeDefault = `Le saludamos desde Veoptics, le recordamos que tiene un saldo pendiente por cancelar.
-    Para más información puede comunicarse con nosotros.
-    Nuestro horario de atención es:
-    Lunes a viernes desde 09:00 am hasta las 19:00 pm
-    Sábados desde las 10:00 am hasta las 16:00 pm`;
+Para más información puede comunicarse con nosotros.
+Nuestro horario de atención es:
+Lunes a viernes desde 09:00 am hasta las 19:00 pm
+Sábados desde las 10:00 am hasta las 16:00 pm`;
 
     const handleMessageClick = (e, sale) => {
         e.stopPropagation();
-        setSelectedPatient(sale.patient); // Usar sale.patient
+        setSelectedPatient(sale.patient);
         setIsFormOpen(true);
         setMessage(mensajeDefault);
     };
 
     const handleSendMessage = () => {
         if (!selectedPatient || !message.trim()) return;
-
         const whatsappUrl = `https://wa.me/${selectedPatient.pt_phone}?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, "_blank");
     };
 
-    // Ordenar las ventas filtradas por fecha más reciente
     const sortedSales = [...filteredSales].sort((a, b) => {
         if (!a.date) return 1;
         if (!b.date) return -1;
@@ -215,30 +210,34 @@ const BalancesPatient = () => {
 
     const moduleSpecificButton = null;
 
-
-      const textColor = useColorModeValue('gray.800', 'white');
-      const borderColor = useColorModeValue('gray.200', 'gray.600');
-      const tableBg = useColorModeValue('white', 'gray.700');
-      const tableHoverBg = useColorModeValue('gray.100', 'gray.600');
-
+    const textColor = useColorModeValue('gray.800', 'white');
+    const borderColor = useColorModeValue('gray.200', 'gray.600');
+    const tableBg = useColorModeValue('white', 'gray.700');
+    const tableHoverBg = useColorModeValue('teal.50', 'gray.600');
+    const tableAltBg = useColorModeValue('gray.50', 'gray.800');
+    const headerBg = useColorModeValue('teal.100', 'teal.900');
 
     return (
-        <Box display="flex" flexDirection="column" alignItems="center" minHeight="100vh" p={6}>
-
+        <Box display="flex" flexDirection="column" alignItems="center" minHeight="100vh" p={{ base: 2, md: 6 }} bg={useColorModeValue('gray.50', 'gray.900')}>
             <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-            <Box w="100%" maxW= "1500px" mb={4}>
-                        <Heading 
-                            mb={4} 
-                            textAlign="left" 
-                            size="md"
-                            fontWeight="700"
-                            color={useColorModeValue('teal.600', 'teal.300')}
-                            pb={2}
-                        >
-                            Gestión de Abonos
-                        </Heading>
-                        </Box>
-            <Box w="50%" mx="auto" display="block">
+            <Box w="100%" maxW="1500px" mb={4}>
+                <Flex align="center" mb={2} pt={4} >
+                    <Icon as={FaUserCircle} w={7} h={7} color={useColorModeValue('teal.600', 'teal.300')} mr={2} />
+                    <Heading
+                        alignItems="center"
+                        textAlign="center"
+                        size="lg"
+                        fontWeight="700"
+                        color={useColorModeValue('teal.700', 'teal.200')}
+                        pb={2}
+                        letterSpacing="tight"
+                    >
+                        Gestión de Abonos
+                    </Heading>
+                </Flex>
+                <Divider mb={2} />
+            </Box>
+            <Box w={{ base: "100%", md: "60%" }} mx="auto" mb={6}>
                 <SearchBar
                     searchPlaceholder="Buscar por nombre..."
                     searchValue={searchTermPatients}
@@ -258,15 +257,15 @@ const BalancesPatient = () => {
                 </Text>
             ) : loading ? (
                 <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-                    <Spinner size="xl" />
+                    <Spinner size="xl" color="teal.400" />
                 </Box>
             ) : filteredSales.length === 0 ? (
                 <Text textAlign="center" color="gray.500">No se encontraron registros de ventas con saldos pendientes.</Text>
             ) : (
-                <Box width="100%" maxWidth="1500px" padding={6} boxShadow="lg" overflowX="auto">
-                    <Table bg={tableBg} borderRadius="md" overflow="hidden">
-                        <Thead>
-                            <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
+                <Box width="100%" maxWidth="1500px" px={{ base: 1, md: 6 }} py={4} boxShadow="xl" borderRadius="lg" bg={tableBg} overflowX="auto">
+                    <Table variant="simple" size="md">
+                        <Thead position="sticky" top={0} zIndex={1} bg={headerBg}>
+                            <Tr>
                                 <Th color={textColor} borderColor={borderColor}>Fecha</Th>
                                 <Th color={textColor} borderColor={borderColor}>Nombre</Th>
                                 <Th color={textColor} borderColor={borderColor}>Apellido</Th>
@@ -281,8 +280,15 @@ const BalancesPatient = () => {
                             </Tr>
                         </Thead>
                         <Tbody>
-                            {sortedSales.map(sale => (
-                                <Tr key={sale.id} cursor="pointer" _hover={{ bg: tableHoverBg }} borderColor={borderColor}>
+                            {sortedSales.map((sale, idx) => (
+                                <Tr
+                                    key={sale.id}
+                                    cursor="pointer"
+                                    _hover={{ bg: tableHoverBg }}
+                                    borderColor={borderColor}
+                                    bg={idx % 2 === 0 ? "transparent" : tableAltBg}
+                                    transition="background 0.2s"
+                                >
                                     <Td color={textColor} borderColor={borderColor}>{new Date(sale.date).toLocaleDateString()}</Td>
                                     <Td color={textColor} borderColor={borderColor}>{sale.patient.pt_firstname}</Td>
                                     <Td color={textColor} borderColor={borderColor}>{sale.patient.pt_lastname}</Td>
@@ -294,12 +300,18 @@ const BalancesPatient = () => {
                                     <Td color={textColor} borderColor={borderColor}>${sale.credit}</Td>
                                     <Td color={textColor} borderColor={borderColor}>{sale.patient.pt_phone}</Td>
                                     <Td color={textColor} borderColor={borderColor}>
-                                        <Button 
-                                            size="sm" 
-                                            colorScheme="green" 
+                                        <Button
+                                            size="sm"
+                                            bg="blue.500"
+                                            color="white"
+                                            _hover={{ bg: "blue.600" }}
+                                            leftIcon={<FaWhatsapp />}
                                             onClick={(e) => handleMessageClick(e, sale)}
+                                            variant="solid"
+                                            fontWeight="bold"
+                                            shadow="md"
                                         >
-                                            Enviar Mensaje
+                                            WhatsApp
                                         </Button>
                                     </Td>
                                 </Tr>
@@ -312,36 +324,55 @@ const BalancesPatient = () => {
             <Modal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} isCentered size="lg">
                 <ModalOverlay />
                 <ModalContent>
-                    <ModalHeader>Enviar mensaje por WhatsApp</ModalHeader>
+                    <ModalHeader bg={headerBg} borderTopRadius="md">
+                        <HStack>
+                            <Icon as={FaWhatsapp} color="whatsapp.500" boxSize={6} />
+                            <Text fontWeight="bold">Enviar mensaje por WhatsApp</Text>
+                        </HStack>
+                    </ModalHeader>
                     <ModalCloseButton />
                     <ModalBody>
                         <VStack align="stretch" spacing={4}>
-                          <Text fontSize="md">
-                            Enviar mensaje a <strong>{selectedPatient?.pt_firstname} {selectedPatient?.pt_lastname}</strong> ({selectedPatient?.pt_phone})
-                          </Text>
-                          <Textarea
-                            placeholder="Escribe tu mensaje aquí..."
-                            value={message}
-                            onChange={(e) => setMessage(e.target.value)}
-                          />
+                            <Box bg={useColorModeValue('gray.100', 'gray.700')} p={3} borderRadius="md">
+                                <Text fontSize="md" mb={1}>
+                                    <Icon as={FaUserCircle} mr={2} color="teal.400" />
+                                    <strong>{selectedPatient?.pt_firstname} {selectedPatient?.pt_lastname}</strong>
+                                </Text>
+                                <Text fontSize="sm" color="gray.500">
+                                    <Icon as={FaWhatsapp} mr={1} color="whatsapp.500" />
+                                    {selectedPatient?.pt_phone}
+                                </Text>
+                            </Box>
+                            <Textarea
+                                placeholder="Escribe tu mensaje aquí..."
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                                size="md"
+                                minH="120px"
+                                borderColor="teal.300"
+                                focusBorderColor="teal.500"
+                                bg={useColorModeValue('white', 'gray.800')}
+                            />
                         </VStack>
-                      </ModalBody>
-                      <ModalFooter>
+                    </ModalBody>
+                    <ModalFooter>
                         <Button variant="ghost" mr={3} onClick={() => setIsFormOpen(false)}>
-                          Cancelar
+                            Cancelar
                         </Button>
                         <Button
-                          colorScheme="green"
-                          onClick={() => {
-                            handleSendMessage();
-                            setIsFormOpen(false);
-                          }}
-                          isDisabled={!message.trim()}
+                            colorScheme="whatsapp"
+                            leftIcon={<FaWhatsapp />}
+                            onClick={() => {
+                                handleSendMessage();
+                                setIsFormOpen(false);
+                            }}
+                            isDisabled={!message.trim()}
+                            fontWeight="bold"
                         >
-                          Enviar
+                            Enviar
                         </Button>
                     </ModalFooter>
-                    </ModalContent>
+                </ModalContent>
             </Modal>
         </Box>
     );

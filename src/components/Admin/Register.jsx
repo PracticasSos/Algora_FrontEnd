@@ -32,119 +32,119 @@ const Register = () => {
   const toast = useToast();
   const navigate = useNavigate();
 
- const availableRoutes = [
-{ path: "/register", label: "Registrar Usuarios" },
-{ path: "/inventory", label: "Inventario" },
-{ path: "/register-patient", label: "Registrar Paciente" },
-{ path: "/branch", label: "Registrar Sucursal" },
-{ path: "/labs", label: "Registrar Laboratorio" },
-{ path: "/cash-closure", label: "Cierre de Caja" },
-{ path: "/sales", label: "Registrar Venta" },
-{ path: "/register-lens", label: "Registrar Lunas" },
-{ path: "/patient-records", label: "Historial del Paciente" },
-{ path: "/measures-final", label: "Medidas Finales" },
-{ path: "/order-laboratory-list", label: "Órdenes a Laboratorio" },
-{ path: "/history-measure-list", label: "Historial de Medidas" },
-{ path: "/egresos", label: "Egresos" },
-{ path: "/balances-patient", label: "Saldos del Paciente" },
-{ path: "/retreats-patients", label: "Abonos del Paciente" },
-{ path: "/balance", label: "Balance General" },
-{ path: "/list-lens", label: "Listar Lunas" },
-{ path: "/list-balance", label: "Listar Balances" },
-{ path: "/list-sales", label: "Historial de Ventas" },
-{ path: "/history-clinic", label: "Historial Clínico" },
-];
+  const availableRoutes = [
+    { path: "/register", label: "Registrar Usuarios" },
+    { path: "/inventory", label: "Inventario" },
+    { path: "/register-patient", label: "Registrar Paciente" },
+    { path: "/branch", label: "Registrar Sucursal" },
+    { path: "/labs", label: "Registrar Laboratorio" },
+    { path: "/cash-closure", label: "Cierre de Caja" },
+    { path: "/sales", label: "Registrar Venta" },
+    { path: "/register-lens", label: "Registrar Lunas" },
+    { path: "/patient-records", label: "Historial del Paciente" },
+    { path: "/measures-final", label: "Medidas Finales" },
+    { path: "/order-laboratory-list", label: "Órdenes a Laboratorio" },
+    { path: "/history-measure-list", label: "Historial de Medidas" },
+    { path: "/egresos", label: "Egresos" },
+    { path: "/balances-patient", label: "Saldos del Paciente" },
+    { path: "/retreats-patients", label: "Abonos del Paciente" },
+    { path: "/balance", label: "Balance General" },
+    { path: "/list-lens", label: "Listar Lunas" },
+    { path: "/list-balance", label: "Listar Balances" },
+    { path: "/list-sales", label: "Historial de Ventas" },
+    { path: "/history-clinic", label: "Historial Clínico" },
+  ];
 
 
-// Load roles and branches with filtering
-useEffect(() => {
-const loadData = async () => {
-try {
-const [rolesResponse, branchsResponse] = await Promise.all([
-supabase.from('role').select('*'),
-supabase.from('branchs').select('*')
-]);
+  // Load roles and branches with filtering
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [rolesResponse, branchsResponse] = await Promise.all([
+          supabase.from('role').select('*'),
+          supabase.from('branchs').select('*')
+        ]);
 
 
-if (rolesResponse.data) {
-// Mostrar solo roles permitidos de forma dinámica
-const allowedRoles = ["Admin", "Optometra", "Vendedor"];
-setRoles(rolesResponse.data.filter(r => allowedRoles.includes(r.role_name)));
-}
-if (branchsResponse.data) setBranchs(branchsResponse.data);
+        if (rolesResponse.data) {
+          // Mostrar solo roles permitidos de forma dinámica
+          const allowedRoles = ["Admin", "Optometra", "Vendedor"];
+          setRoles(rolesResponse.data.filter(r => allowedRoles.includes(r.role_name)));
+        }
+        if (branchsResponse.data) setBranchs(branchsResponse.data);
 
 
-if (rolesResponse.error) console.error('Error loading roles:', rolesResponse.error);
-if (branchsResponse.error) console.error('Error loading branches:', branchsResponse.error);
-} catch (error) {
-console.error('Error loading data:', error);
-}
-};
+        if (rolesResponse.error) console.error('Error loading roles:', rolesResponse.error);
+        if (branchsResponse.error) console.error('Error loading branches:', branchsResponse.error);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      }
+    };
 
 
-loadData();
-}, []);
+    loadData();
+  }, []);
 
 
-useEffect(() => {
-if (!formData.role_id) return;
-let newRoutes = [];
-switch (parseInt(formData.role_id)) {
-case 1: case 4:
-newRoutes = availableRoutes;
-break;
-case 2:
-newRoutes = availableRoutes.filter(r => ['/measures-final', '/history-clinic', '/register-patient', '/history-measure-list'].includes(r.path));
-break;
-case 3:
-newRoutes = availableRoutes.filter(r => ['/register-patient', '/sales', '/history-clinic', '/balance', '/measures-final', '/patient-records', '/order-laboratory-list', '/history-measure-list', '/balances-patient'].includes(r.path));
-break;
-default:
-newRoutes = [];
-}
-setSelectRoutes(newRoutes.map(r => r.path));
-}, [formData.role_id]);
+  useEffect(() => {
+    if (!formData.role_id) return;
+    let newRoutes = [];
+    switch (parseInt(formData.role_id)) {
+      case 1: case 4:
+        newRoutes = availableRoutes;
+        break;
+      case 2:
+        newRoutes = availableRoutes.filter(r => ['/measures-final', '/history-clinic', '/register-patient', '/history-measure-list'].includes(r.path));
+        break;
+      case 3:
+        newRoutes = availableRoutes.filter(r => ['/register-patient', '/sales', '/history-clinic', '/balance', '/measures-final', '/patient-records', '/order-laboratory-list', '/history-measure-list', '/balances-patient'].includes(r.path));
+        break;
+      default:
+        newRoutes = [];
+    }
+    setSelectRoutes(newRoutes.map(r => r.path));
+  }, [formData.role_id]);
 
 
-const handleChange = e => {
-const { name, value } = e.target;
-setFormData(f => ({ ...f, [name]: value }));
-};
+  const handleChange = e => {
+    const { name, value } = e.target;
+    setFormData(f => ({ ...f, [name]: value }));
+  };
 
 
-const handleRouteToggle = path => {
-setSelectRoutes(prev => prev.includes(path) ? prev.filter(p => p !== path) : [...prev, path]);
-};
+  const handleRouteToggle = path => {
+    setSelectRoutes(prev => prev.includes(path) ? prev.filter(p => p !== path) : [...prev, path]);
+  };
 
 
-const renderInputField = (label, name, type) => (
-<FormControl id={name} isRequired>
-<FormLabel>{label}</FormLabel>
-<Input type={type} name={name} value={formData[name]} onChange={handleChange} />
-</FormControl>
-);
+  const renderInputField = (label, name, type) => (
+    <FormControl id={name} isRequired>
+      <FormLabel>{label}</FormLabel>
+      <Input type={type} name={name} value={formData[name]} onChange={handleChange} />
+    </FormControl>
+  );
 
 
-const renderSelectField = (label, name, options) => (
-<FormControl id={name} isRequired>
-<FormLabel>{label}</FormLabel>
-<Select name={name} value={formData[name]} onChange={handleChange}>
-<option value="">Seleccione {label.toLowerCase()}</option>
-{options.map(o => (
-<option key={o.id} value={o.id}>{o.name || o.role_name}</option>
-))}
-</Select>
-</FormControl>
-);
+  const renderSelectField = (label, name, options) => (
+    <FormControl id={name} isRequired>
+      <FormLabel>{label}</FormLabel>
+      <Select name={name} value={formData[name]} onChange={handleChange}>
+        <option value="">Seleccione {label.toLowerCase()}</option>
+        {options.map(o => (
+          <option key={o.id} value={o.id}>{o.name || o.role_name}</option>
+        ))}
+      </Select>
+    </FormControl>
+  );
 
   const handleCreate = async () => {
     setLoading(true);
-    
+
     try {
       // Validar campos requeridos
       const requiredFields = ['email', 'password', 'firstname', 'lastname', 'username', 'ci', 'phone_number', 'age', 'birthdate'];
       const emptyFields = requiredFields.filter(field => !formData[field]);
-      
+
       if (emptyFields.length > 0) {
         toast({
           title: 'Error',
@@ -171,7 +171,7 @@ const renderSelectField = (label, name, options) => (
         const ext = selloFile.name.split(".").pop();
         const fileName = `sello-${formData.ci}-${Date.now()}.${ext}`;
         const { error: uploadError } = await supabase.storage.from("sello").upload(fileName, selloFile);
-        
+
         if (uploadError) {
           toast({
             title: "Error subiendo sello",
@@ -180,7 +180,7 @@ const renderSelectField = (label, name, options) => (
           });
           return;
         }
-        
+
         const { data: urlData } = supabase.storage.from("sello").getPublicUrl(fileName);
         selloUrl = urlData?.publicUrl;
       }
@@ -234,7 +234,7 @@ const renderSelectField = (label, name, options) => (
       if (data.user && selectRoutes.length > 0) {
         // Obtener el tenant_id del usuario actual para los permisos
         const tenantId = sessionData.session.user.user_metadata?.tenant_id;
-        
+
         const perms = selectRoutes.map(route => ({
           user_id: data.user.id,
           route,
@@ -337,60 +337,107 @@ const renderSelectField = (label, name, options) => (
   );
 
   return (
-    <Box display="flex" flexDirection="column" alignItems="center" minH="100vh" p={6}>
+    <Box
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      minH="100vh"
+      p={[2, 4, 8]}
+      bg={useColorModeValue("gray.50", "gray.900")}
+    >
       <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-      <Card w="100%" maxW="900px" boxShadow="lg" borderRadius="xl" bg={useColorModeValue('white', 'gray.800')}>
-        <CardBody as="form" onSubmit={e => { e.preventDefault(); handleCreate(); }}>
+      <Card
+        w="100%"
+        maxW="900px"
+        boxShadow="2xl"
+        borderRadius="2xl"
+        bg={useColorModeValue("white", "gray.800")}
+        mt={6}
+        px={[2, 6, 10]}
+        py={[4, 8]}
+        transition="box-shadow 0.2s"
+      >
+        <CardBody
+          as="form"
+          onSubmit={e => {
+            e.preventDefault();
+            handleCreate();
+          }}
+        >
           <Box w="100%" maxW="800px" mb={4}>
-            <Heading mb={4} textAlign="left" size="md" fontWeight="700" color={useColorModeValue('teal.600', 'teal.300')} pb={2}>
+            <Heading
+              mb={2}
+              textAlign="left"
+              size="lg"
+              fontWeight="bold"
+              color={useColorModeValue("teal.600", "teal.300")}
+              pb={2}
+              letterSpacing="tight"
+            >
               Registrar Usuario
             </Heading>
+            <Text color={useColorModeValue("gray.600", "gray.300")} fontSize="md" mb={2}>
+              Completa los datos para crear un nuevo usuario en el sistema.
+            </Text>
           </Box>
-          <SimpleGrid columns={[1, 2]} spacing={4}>
-            {renderInputField('Correo', 'email', 'email')}
-            {renderInputField('Contraseña', 'password', 'password')}
-            {renderInputField('Nombre', 'firstname', 'text')}
-            {renderInputField('Apellido', 'lastname', 'text')}
-            {renderInputField('Username', 'username', 'text')}
-            {renderInputField('Edad', 'age', 'number')}
-            {renderSelectField('Rol', 'role_id', roles)}
-            {renderInputField('Fecha de Nacimiento', 'birthdate', 'date')}
-            {renderInputField('Fecha de Ingreso', 'check_in_date', 'date')}
-            {renderInputField('Celular', 'phone_number', 'text')}
-            {renderInputField('C.I.', 'ci', 'text')}
-            {renderSelectField('Sucursal', 'branch_id', branchs)}
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+            {renderInputField("Correo", "email", "email")}
+            {renderInputField("Contraseña", "password", "password")}
+            {renderInputField("Nombre", "firstname", "text")}
+            {renderInputField("Apellido", "lastname", "text")}
+            {renderInputField("Username", "username", "text")}
+            {renderInputField("Edad", "age", "number")}
+            {renderSelectField("Rol", "role_id", roles)}
+            {renderInputField("Fecha de Nacimiento", "birthdate", "date")}
+            {renderInputField("Fecha de Ingreso", "check_in_date", "date")}
+            {renderInputField("Celular", "phone_number", "text")}
+            {renderInputField("C.I.", "ci", "text")}
+            {renderSelectField("Sucursal", "branch_id", branchs)}
 
             <FormControl>
-              <FormLabel color={useColorModeValue("teal.700", "teal.300")} fontWeight="semibold">
+              <FormLabel
+                color={useColorModeValue("teal.700", "teal.300")}
+                fontWeight="semibold"
+              >
                 Sello Digital (imagen)
               </FormLabel>
               <Box
                 border="2px dashed"
-                borderColor={useColorModeValue("#CBD5E0", "gray.600")}
+                borderColor={useColorModeValue("teal.200", "teal.600")}
                 borderRadius="lg"
                 p={4}
                 textAlign="center"
                 position="relative"
                 bg={useColorModeValue("gray.50", "gray.700")}
                 _hover={{
-                  bg: useColorModeValue("gray.100", "gray.600"),
-                  cursor: "pointer"
+                  bg: useColorModeValue("teal.50", "teal.800"),
+                  cursor: "pointer",
+                  borderColor: useColorModeValue("teal.400", "teal.300"),
                 }}
-                onClick={() => document.getElementById('selloInput').click()}
+                onClick={() => document.getElementById("selloInput").click()}
+                transition="all 0.2s"
               >
-                <Text color={useColorModeValue("gray.600", "gray.300")} fontSize="sm">
+                <Text
+                  color={useColorModeValue("gray.600", "gray.300")}
+                  fontSize="sm"
+                  mb={2}
+                >
                   Haz clic o arrastra una imagen aquí para subir el sello
                 </Text>
                 <Input
                   id="selloInput"
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setSelloFile(e.target.files[0])}
+                  onChange={e => setSelloFile(e.target.files[0])}
                   display="none"
                 />
                 {selloFile && (
                   <Box mt={4}>
-                    <Text fontSize="sm" color={useColorModeValue("gray.700", "gray.200")} fontWeight="medium">
+                    <Text
+                      fontSize="sm"
+                      color={useColorModeValue("teal.700", "teal.200")}
+                      fontWeight="medium"
+                    >
                       Archivo seleccionado: {selloFile.name}
                     </Text>
                   </Box>
@@ -398,19 +445,37 @@ const renderSelectField = (label, name, options) => (
               </Box>
             </FormControl>
           </SimpleGrid>
-          <Box display="flex" justifyContent="space-between" mt={8}>
-            <Button 
-              type="submit" 
+          <Box
+            display="flex"
+            justifyContent="flex-end"
+            gap={4}
+            mt={10}
+            flexWrap="wrap"
+          >
+            <Button
+              type="submit"
               colorScheme="teal"
               isLoading={loading}
               loadingText="Creando Usuario..."
+              size="lg"
+              px={8}
+              borderRadius="xl"
+              fontWeight="bold"
+              boxShadow="md"
+              _hover={{ bg: "teal.500" }}
             >
               Crear Usuario
             </Button>
-            <Button 
-              onClick={() => navigate('/Admin')} 
+            <Button
+              onClick={() => navigate("/Admin")}
               colorScheme="gray"
               isDisabled={loading}
+              size="lg"
+              px={8}
+              borderRadius="xl"
+              fontWeight="bold"
+              variant="outline"
+              _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
             >
               Cancelar
             </Button>
@@ -418,23 +483,61 @@ const renderSelectField = (label, name, options) => (
         </CardBody>
       </Card>
 
-      <Card w="100%" maxW="900px" mt={8} boxShadow="lg" borderRadius="xl" borderColor={useColorModeValue('gray.200', 'gray.600')}>
+      <Card
+        w="100%"
+        maxW="900px"
+        mt={10}
+        boxShadow="2xl"
+        borderRadius="2xl"
+        borderColor={useColorModeValue("gray.200", "gray.600")}
+        px={[2, 6, 10]}
+        py={[4, 8]}
+      >
         <CardHeader>
-          <Heading size="md" color={useColorModeValue('gray.800', 'white')}> Permisos Adicionales </Heading>
+          <Heading
+            size="md"
+            color={useColorModeValue("teal.700", "teal.200")}
+            fontWeight="bold"
+            letterSpacing="tight"
+          >
+            Permisos Adicionales
+          </Heading>
+          <Text color={useColorModeValue("gray.600", "gray.300")} fontSize="sm" mt={1}>
+            Selecciona los módulos a los que el usuario tendrá acceso.
+          </Text>
         </CardHeader>
-        <Divider borderColor={useColorModeValue('gray.200', 'gray.600')} />
+        <Divider borderColor={useColorModeValue("gray.200", "gray.600")} />
         <CardBody>
-          <SimpleGrid columns={[1, 2]} spacing={3}>
+          <SimpleGrid columns={{ base: 1, md: 2 }} spacing={3}>
             {availableRoutes.map(({ path, label }) => (
-              <FormControl key={path} display="flex" alignItems="center">
+              <FormControl
+                key={path}
+                display="flex"
+                alignItems="center"
+                py={2}
+                px={2}
+                borderRadius="md"
+                _hover={{
+                  bg: useColorModeValue("teal.50", "teal.900"),
+                  transition: "background 0.2s",
+                }}
+                transition="background 0.2s"
+              >
                 <Checkbox
                   isChecked={selectRoutes.includes(path)}
                   onChange={() => handleRouteToggle(path)}
                   colorScheme="teal"
                   isDisabled={loading}
+                  size="lg"
+                  mr={3}
+                />
+                <Text
+                  color={useColorModeValue("gray.700", "gray.200")}
+                  fontWeight="medium"
+                  fontSize="md"
                 >
-                  <Text color={useColorModeValue('gray.700', 'gray.200')}>{label}</Text>
-                </Checkbox>
+                  {label}
+                </Text>
               </FormControl>
             ))}
           </SimpleGrid>

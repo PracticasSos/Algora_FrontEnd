@@ -196,100 +196,171 @@ const Balance = () => {
   const inputBg = useColorModeValue('white', 'gray.700');
 
     return (
-        <Box p={6} maxW="1300px" mx="auto" boxShadow="md" borderRadius="lg" >
-            <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-            <Heading 
-                mb={4} 
-                textAlign="left" 
-                size="md"
-                fontWeight="700"
-                color={useColorModeValue('teal.600', 'teal.300')}
-                pb={2}
-            >
-                Gestión de Abonos
-            </Heading>
-            <Select placeholder="Seleccione una sucursal" value={selectedBranch} onChange={(e) => setSelectedBranch(e.target.value)}
-                bg={inputBg}
-                borderColor={borderColor}
-                color={textColor}
-                _hover={{
-                borderColor: useColorModeValue('gray.300', 'gray.500')
-                }}
-                _focus={{
-                borderColor: useColorModeValue('blue.500', 'blue.300'),
-                boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                }}
-                >
-                {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id}>{branch.name}</option>
-                ))}
-            </Select>
-            <Table bg={tableBg} borderRadius="md" overflow="hidden" mt={4}>
-                <Thead>
-                    <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
-                        <Th color={textColor} borderColor={borderColor}>Fecha</Th>
-                        <Th color={textColor} borderColor={borderColor}>Nombre</Th>
-                        <Th color={textColor} borderColor={borderColor}>Total</Th>
-                        <Th color={textColor} borderColor={borderColor}>Abonos</Th>
-                        <Th color={textColor} borderColor={borderColor}>Saldo</Th>
-                        <Th color={textColor} borderColor={borderColor}>Nuevo Abono</Th>
-                        <Th color={textColor} borderColor={borderColor}>Método de Pago</Th>
-                        <Th color={textColor} borderColor={borderColor}>Acción</Th>
-                    </Tr>
-                </Thead>
-                <Tbody>
-                    {sortedPatients.map((record) => (
-                        <Tr key={record.id} cursor="pointer" _hover={{ bg: tableHoverBg }}  borderColor={borderColor}>
-                            <Td color={textColor} borderColor={borderColor}>{record.date}</Td>
-                            <Td color={textColor} borderColor={borderColor}>{record.patients.pt_firstname} {record.patients.pt_lastname}</Td>
-                            <Td color={textColor} borderColor={borderColor}>{record.total}</Td>
-                            <Td color={textColor} borderColor={borderColor}>{record.balance}</Td>
-                            <Td color={textColor} borderColor={borderColor}>{record.credit}</Td>
-                            <Td color={textColor} borderColor={borderColor}>
-                                <Input
-                                    type="number"
-                                    value={newAbonos[record.id] || ""}
-                                    onChange={(e) => handleAbonoChange(record.id, e.target.value)}
-                                    placeholder="Ingrese abono"
-                                    bg={inputBg}
-                                    borderColor={borderColor}
-                                    color={textColor}
-                                    _hover={{
-                                    borderColor: useColorModeValue('gray.300', 'gray.500')
-                                    }}
-                                    _focus={{
-                                    borderColor: useColorModeValue('blue.500', 'blue.300'),
-                                    boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                                    }}
-                                />
-                            </Td>
-                            <Td>
-                                <Select value={paymentMethods[record.id] || ""} onChange={(e) => handlePaymentChange(record.id, e.target.value)}
-                                    bg={inputBg}
-                                    borderColor={borderColor}
-                                    color={textColor}
-                                    _hover={{
-                                    borderColor: useColorModeValue('gray.300', 'gray.500')
-                                    }}
-                                    _focus={{
-                                    borderColor: useColorModeValue('blue.500', 'blue.300'),
-                                    boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                                    }}
-                                    >
-                                    <option value="">Seleccione</option>
-                                    <option value="efectivo">Efectivo</option>
-                                    <option value="datafast">Datafast</option>
-                                    <option value="transferencia">Transferencia</option>
-                                </Select>
-                            </Td>
-                            <Td>
-                                <Button colorScheme="green" onClick={() => handleAbonoSubmit(record)}>Registrar</Button>
-                            </Td>
-                        </Tr>
-                    ))}
-                </Tbody>
-            </Table>
+     <Box p={{ base: 2, md: 8 }} minH="100vh" bg={useColorModeValue('gray.50', 'gray.900')}>
+       <SmartHeader moduleSpecificButton={moduleSpecificButton} />
+      <Box
+        p={{ base: 4, md: 8 }}
+        maxW="1600px"
+        mx="auto"
+        bg={useColorModeValue('gray.50', 'gray.800')}
+        minH="100vh"
+      >
+        <Heading
+          mb={6}
+          textAlign="left"
+          size="lg"
+          fontWeight="extrabold"
+          color={useColorModeValue('teal.700', 'teal.200')}
+          letterSpacing="tight"
+          pb={3}
+        >
+          Gestión de Abonos
+        </Heading>
+        <Box mb={6}>
+          <Select
+            placeholder="Seleccione una sucursal"
+            value={selectedBranch}
+            onChange={(e) => setSelectedBranch(e.target.value)}
+            bg={inputBg}
+            borderColor={borderColor}
+            color={textColor}
+            size="lg"
+            borderRadius="md"
+            shadow="sm"
+            maxW="350px"
+            _hover={{
+              borderColor: useColorModeValue('teal.300', 'teal.500'),
+              boxShadow: useColorModeValue('0 0 0 2px teal.100', '0 0 0 2px teal.700')
+            }}
+            _focus={{
+              borderColor: useColorModeValue('teal.500', 'teal.300'),
+              boxShadow: useColorModeValue('0 0 0 2px teal.200', '0 0 0 2px teal.600')
+            }}
+            transition="all 0.2s"
+          >
+            {branches.map((branch) => (
+              <option key={branch.id} value={branch.id}>{branch.name}</option>
+            ))}
+          </Select>
         </Box>
+        <Box
+          overflowX="auto"
+          borderRadius="lg"
+          boxShadow="md"
+          bg={tableBg}
+          p={2}
+        >
+          <Table variant="simple" size="md">
+            <Thead>
+              <Tr bg={useColorModeValue('teal.50', 'teal.900')}>
+                <Th color={textColor} borderColor={borderColor} fontWeight="bold">Fecha</Th>
+                <Th color={textColor} borderColor={borderColor} fontWeight="bold">Nombre</Th>
+                <Th color={textColor} borderColor={borderColor} fontWeight="bold">Total</Th>
+                <Th color={textColor} borderColor={borderColor} fontWeight="bold">Abonos</Th>
+                <Th color={textColor} borderColor={borderColor} fontWeight="bold">Saldo</Th>
+                <Th color={textColor} borderColor={borderColor} fontWeight="bold">Nuevo Abono</Th>
+                <Th color={textColor} borderColor={borderColor} fontWeight="bold">Método de Pago</Th>
+                <Th color={textColor} borderColor={borderColor} fontWeight="bold">Acción</Th>
+              </Tr>
+            </Thead>
+            <Tbody>
+              {sortedPatients.map((record) => (
+                <Tr
+                  key={record.id}
+                  _hover={{
+                    bg: useColorModeValue('teal.100', 'teal.700'),
+                    transition: 'background 0.2s'
+                  }}
+                  borderColor={borderColor}
+                >
+                  <Td color={textColor} borderColor={borderColor} fontSize="sm">{record.date}</Td>
+                  <Td color={textColor} borderColor={borderColor} fontSize="sm">
+                    <Text fontWeight="semibold">
+                      {record.patients.pt_firstname} {record.patients.pt_lastname}
+                    </Text>
+                  </Td>
+                  <Td color={textColor} borderColor={borderColor} fontSize="sm">
+                    <Text fontWeight="medium" color="teal.600">${record.total}</Text>
+                  </Td>
+                  <Td color={textColor} borderColor={borderColor} fontSize="sm">
+                    <Text color="green.500" fontWeight="bold">${record.balance}</Text>
+                  </Td>
+                  <Td color={textColor} borderColor={borderColor} fontSize="sm">
+                    <Text color="red.500" fontWeight="bold">${record.credit}</Text>
+                  </Td>
+                  <Td color={textColor} borderColor={borderColor}>
+                    <Input
+                      type="number"
+                      value={newAbonos[record.id] || ""}
+                      onChange={(e) => handleAbonoChange(record.id, e.target.value)}
+                      placeholder="Ingrese abono"
+                      bg={inputBg}
+                      borderColor={borderColor}
+                      color={textColor}
+                      size="sm"
+                      borderRadius="md"
+                      shadow="xs"
+                      _hover={{
+                        borderColor: useColorModeValue('teal.300', 'teal.500')
+                      }}
+                      _focus={{
+                        borderColor: useColorModeValue('teal.500', 'teal.300'),
+                        boxShadow: useColorModeValue('0 0 0 1px teal.300', '0 0 0 1px teal.600')
+                      }}
+                      transition="all 0.2s"
+                    />
+                  </Td>
+                  <Td>
+                    <Select
+                      value={paymentMethods[record.id] || ""}
+                      onChange={(e) => handlePaymentChange(record.id, e.target.value)}
+                      bg={inputBg}
+                      borderColor={borderColor}
+                      color={textColor}
+                      size="sm"
+                      borderRadius="md"
+                      shadow="xs"
+                      _hover={{
+                        borderColor: useColorModeValue('teal.300', 'teal.500')
+                      }}
+                      _focus={{
+                        borderColor: useColorModeValue('teal.500', 'teal.300'),
+                        boxShadow: useColorModeValue('0 0 0 1px teal.300', '0 0 0 1px teal.600')
+                      }}
+                      transition="all 0.2s"
+                    >
+                      <option value="">Seleccione</option>
+                      <option value="efectivo">Efectivo</option>
+                      <option value="datafast">Datafast</option>
+                      <option value="transferencia">Transferencia</option>
+                    </Select>
+                  </Td>
+                  <Td>
+                    <Button
+                      colorScheme="teal"
+                      variant="solid"
+                      size="sm"
+                      borderRadius="md"
+                      fontWeight="bold"
+                      px={5}
+                      shadow="sm"
+                      _hover={{
+                        bg: useColorModeValue('teal.600', 'teal.400'),
+                        transform: 'scale(1.05)'
+                      }}
+                      transition="all 0.2s"
+                      onClick={() => handleAbonoSubmit(record)}
+                    >
+                      Registrar
+                    </Button>
+                  </Td>
+                </Tr>
+              ))}
+            </Tbody>
+          </Table>
+        </Box>
+      </Box>
+      </Box>
     );
 };
 

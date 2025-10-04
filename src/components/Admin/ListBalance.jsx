@@ -151,94 +151,212 @@ const ListBalance = () => {
     const selectBg = useColorModeValue('white', 'gray.700');
 
     return (
-        <Box 
-        p={6} 
-        maxW="1300px" 
-        mx="auto" 
-        bg={bgColor}
-        color={textColor}
-        minH="100vh"
-      >
-            <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-            <Box w="100%" maxW= "1500px" mb={4}>
-                        <Heading 
-                            mb={4} 
-                            textAlign="left" 
-                            size="md"
-                            fontWeight="700"
-                            color={useColorModeValue('teal.600', 'teal.300')}
-                            pb={2}
-                        >
-                            Lista de Abonos
-                        </Heading>
-                        </Box>
-            <Input placeholder='Buscar Abono...' value={search} onChange={(e) => setSearch(e.target.value)} mb={4} w="50%" mx="auto" display="block" 
-                bg={selectBg}
-                borderColor={borderColor}
-                color={textColor}
-                _hover={{
-                    borderColor: useColorModeValue('gray.300', 'gray.500')
-                }}
-                _focus={{
-                    borderColor: useColorModeValue('blue.500', 'blue.300'),
-                    boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                }}
-            />
-            <Box width="100%" maxWidth="1500px"  overflowX="auto">
-                <Table bg={tableBg}  borderRadius="md" overflow="hidden">
+        <Box p={{ base: 2, md: 8 }} minH="100vh" bg={useColorModeValue('gray.50', 'gray.900')}>
+      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
+        <Box
+            p={{ base: 4, md: 8 }}
+            maxW="1600px"
+            mx="auto"
+            color={textColor}
+            transition="box-shadow 0.2s"
+        >
+            <Box w="100%" maxW="1500px" mb={4}>
+                <Heading
+                    mb={2}
+                    textAlign="left"
+                    size="lg"
+                    fontWeight="800"
+                    color={useColorModeValue('teal.600', 'teal.200')}
+                    pb={1}
+                    letterSpacing="tight"
+                >
+                    Lista de Abonos
+                </Heading>
+                <Text fontSize="md" color={useColorModeValue('gray.500', 'gray.400')} mb={2}>
+                    Consulta, edita o elimina los abonos registrados.
+                </Text>
+            </Box>
+            <Flex mb={6} align="center" justify="flex-start">
+                <Input
+                    placeholder="Buscar por nombre de paciente..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    w={{ base: "100%", md: "350px" }}
+                    bg={selectBg}
+                    borderColor={borderColor}
+                    color={textColor}
+                    borderRadius="md"
+                    px={6}
+                    py={2}
+                    fontSize="md"
+                    boxShadow={useColorModeValue('sm', 'dark-lg')}
+                    _placeholder={{ color: useColorModeValue('gray.400', 'gray.500') }}
+                    _hover={{
+                        borderColor: useColorModeValue('teal.300', 'teal.500'),
+                        boxShadow: useColorModeValue('0 0 0 2px #81E6D9', '0 0 0 2px #319795'),
+                    }}
+                    _focus={{
+                        borderColor: useColorModeValue('teal.500', 'teal.300'),
+                        boxShadow: useColorModeValue('0 0 0 2px #38B2AC', '0 0 0 2px #4FD1C5'),
+                    }}
+                    transition="all 0.2s"
+                />
+            </Flex>
+            <Box
+                width="100%"
+                maxWidth="1500px"
+                overflowX="auto"
+                borderRadius="lg"
+                boxShadow={useColorModeValue('md', 'dark-lg')}
+                bg={tableBg}
+            >
+                <Table variant="simple" size="md">
                     <Thead>
-                        <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
+                        <Tr bg={useColorModeValue('teal.50', 'teal.900')}>
                             {['Fecha', 'Paciente', 'Sucursal', 'Total', 'Abono', 'Saldo', 'Pago En', 'Acción'].map((header) => (
-                                <Th key={header} color={textColor} borderColor={borderColor}>{header}</Th>
+                                <Th
+                                    key={header}
+                                    color={useColorModeValue('teal.700', 'teal.200')}
+                                    borderColor={borderColor}
+                                    fontWeight="bold"
+                                    fontSize="md"
+                                    py={3}
+                                    letterSpacing="wide"
+                                >
+                                    {header}
+                                </Th>
                             ))}
                         </Tr>
                     </Thead>
                     <Tbody>
-                        {filteredBalance.map((balance) => (
+                        {filteredBalance.length === 0 ? (
                             <Tr>
-                                <Td color={textColor} borderColor={borderColor}>{balance.date}</Td>
-                                <Td color={textColor} borderColor={borderColor}>{balance.patients.pt_firstname} {balance.patients.pt_lastname}</Td>
-                                <Td color={textColor} borderColor={borderColor}>{balance.branchs?.name || 'N/A'}</Td>
-                                <Td color={textColor} borderColor={borderColor}>{balance.total}</Td>
-                                <Td color={textColor} borderColor={borderColor}>
-                                    {editingId === balance.id ? (
-                                        <Input name="balance" value={editableData.balance} onChange={handleChange} />
-                                    ) : (
-                                        balance.balance
-                                    )}
-                                </Td>
-                                <Td color={textColor} borderColor={borderColor}>{balance.credit}</Td>
-                                <Td color={textColor} borderColor={borderColor}>
-                                    {editingId === balance.id ? (
-                                        <Select name="payment_balance" value={editableData.payment_balance} onChange={handleChange}>
-                                            <option value="">Seleccione</option>
-                                            <option value="efectivo">Efectivo</option>
-                                            <option value="datafast">Datafast</option>
-                                            <option value="transferencia">Transferencia</option>
-                                        </Select>
-                                    ) : (
-                                        balance.payment_balance || 'N/A'
-                                    )}
-                                </Td>
-                                <Td textAlign="center" color={textColor} borderColor={borderColor}>
-                                    {editingId === balance.id ? (
-                                        <>
-                                            <IconButton icon={<BiCheck />} colorScheme="green" onClick={() => handleSave(balance.id)} mr={2} />
-                                            <IconButton icon={<BiX />} colorScheme="red" onClick={() => setEditingId(null)} />
-                                        </>
-                                    ) : (
-                                        <>
-                                            <IconButton icon={<BiEdit />} colorScheme="blue" onClick={() => handleEdit(balance)} mr={2} />
-                                            <IconButton icon={<BiTrash />} colorScheme="red" onClick={() => openConfirm(balance.id)} />
-                                        </>
-                                    )}
+                                <Td colSpan={8} textAlign="center" py={8} color={useColorModeValue('gray.400', 'gray.500')}>
+                                    No se encontraron abonos.
                                 </Td>
                             </Tr>
-                        ))}
+                        ) : (
+                            filteredBalance.map((balance) => (
+                                <Tr
+                                    key={balance.id}
+                                    _hover={{
+                                        bg: useColorModeValue('teal.50', 'teal.800'),
+                                        transition: 'background 0.2s',
+                                    }}
+                                >
+                                    <Td color={textColor} borderColor={borderColor} fontWeight="medium">
+                                        {balance.date}
+                                    </Td>
+                                    <Td color={textColor} borderColor={borderColor}>
+                                        <Text fontWeight="semibold">
+                                            {balance.patients.pt_firstname} {balance.patients.pt_lastname}
+                                        </Text>
+                                    </Td>
+                                    <Td color={textColor} borderColor={borderColor}>
+                                        {balance.branchs?.name || (
+                                            <Text color="gray.400" fontStyle="italic">N/A</Text>
+                                        )}
+                                    </Td>
+                                    <Td color={textColor} borderColor={borderColor}>
+                                        <Text fontWeight="bold">${balance.total}</Text>
+                                    </Td>
+                                    <Td color={textColor} borderColor={borderColor}>
+                                        {editingId === balance.id ? (
+                                            <Input
+                                                name="balance"
+                                                value={editableData.balance}
+                                                onChange={handleChange}
+                                                size="sm"
+                                                borderRadius="md"
+                                                bg={selectBg}
+                                                borderColor={borderColor}
+                                                _focus={{ borderColor: 'teal.400' }}
+                                            />
+                                        ) : (
+                                            <Text color="teal.500" fontWeight="bold">
+                                                ${balance.balance}
+                                            </Text>
+                                        )}
+                                    </Td>
+                                    <Td color={textColor} borderColor={borderColor}>
+                                        <Text fontWeight="medium">${balance.credit}</Text>
+                                    </Td>
+                                    <Td color={textColor} borderColor={borderColor}>
+                                        {editingId === balance.id ? (
+                                            <Select
+                                                name="payment_balance"
+                                                value={editableData.payment_balance}
+                                                onChange={handleChange}
+                                                size="sm"
+                                                borderRadius="md"
+                                                bg={selectBg}
+                                                borderColor={borderColor}
+                                                _focus={{ borderColor: 'teal.400' }}
+                                            >
+                                                <option value="">Seleccione</option>
+                                                <option value="efectivo">Efectivo</option>
+                                                <option value="datafast">Datafast</option>
+                                                <option value="transferencia">Transferencia</option>
+                                            </Select>
+                                        ) : (
+                                            <Text color={balance.payment_balance ? "teal.600" : "gray.400"}>
+                                                {balance.payment_balance || 'N/A'}
+                                            </Text>
+                                        )}
+                                    </Td>
+                                    <Td textAlign="center" color={textColor} borderColor={borderColor}>
+                                        {editingId === balance.id ? (
+                                            <HStack spacing={2} justify="center">
+                                                <IconButton
+                                                    icon={<BiCheck />}
+                                                    colorScheme="teal"
+                                                    aria-label="Guardar"
+                                                    onClick={() => handleSave(balance.id)}
+                                                    size="sm"
+                                                    borderRadius="full"
+                                                    boxShadow="sm"
+                                                />
+                                                <IconButton
+                                                    icon={<BiX />}
+                                                    colorScheme="gray"
+                                                    aria-label="Cancelar"
+                                                    onClick={() => setEditingId(null)}
+                                                    size="sm"
+                                                    borderRadius="full"
+                                                    boxShadow="sm"
+                                                />
+                                            </HStack>
+                                        ) : (
+                                            <HStack spacing={2} justify="center">
+                                                <IconButton
+                                                    icon={<BiEdit />}
+                                                    colorScheme="teal"
+                                                    aria-label="Editar"
+                                                    onClick={() => handleEdit(balance)}
+                                                    size="sm"
+                                                    borderRadius="full"
+                                                    variant="ghost"
+                                                    _hover={{ bg: useColorModeValue('teal.100', 'teal.700') }}
+                                                />
+                                                <IconButton
+                                                    icon={<BiTrash />}
+                                                    colorScheme="red"
+                                                    aria-label="Eliminar"
+                                                    onClick={() => openConfirm(balance.id)}
+                                                    size="sm"
+                                                    borderRadius="full"
+                                                    variant="ghost"
+                                                    _hover={{ bg: useColorModeValue('red.100', 'red.700') }}
+                                                />
+                                            </HStack>
+                                        )}
+                                    </Td>
+                                </Tr>
+                            ))
+                        )}
                     </Tbody>
                 </Table>
             </Box>
-
             <ConfirmDialog
                 isOpen={isOpen}
                 onClose={handleCancel}
@@ -246,6 +364,7 @@ const ListBalance = () => {
                 title="¿Eliminar abono?"
                 body="¿Está seguro de que desea eliminar este abono?"
             />
+        </Box>
         </Box>
     );
 };

@@ -191,17 +191,31 @@ const RetreatsPatients = () => {
     setFilteredPatients(filtered);
   };
 
-  const mensajeDefault = `Le saludamos desde Veoptics, sus lentes se encuentran listos para que pueda acercarse a retirarlos.
-  Nuestro horario de atención es:
-  Lunes a viernes desde 09:00 am hasta las 19:00 pm
-  Sábados desde las 10:00 am hasta las 16:00 pm`;
+  // Obtiene el mensaje personalizado desde la base de datos según la ruta y branch_id
+  const fetchCustomMessage = async (branchId) => {
+    try {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("content")
+        .eq("branch_id", branchId)
+        .eq("route", "/retreats-patients")
+        .single();
+      if (error || !data) return "";
+      return data.content;
+    } catch (err) {
+      return "";
+    }
+  };
 
-  const handleMessageClick = (e, patient) => {
+  // Modifica handleMessageClick para usar el mensaje de la base de datos
+  const handleMessageClick = async (e, patient) => {
     e.stopPropagation();
     setSelectedPatient(patient);
     setIsFormOpen(true);
-    setMessage(mensajeDefault);
+    const customMessage = await fetchCustomMessage(patient.branch_id);
+    setMessage(customMessage || "");
   };
+
 
   const handleSendMessage = () => {
     if (!selectedPatient || !message.trim()) return;

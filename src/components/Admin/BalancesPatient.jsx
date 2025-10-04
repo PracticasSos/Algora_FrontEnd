@@ -155,18 +155,31 @@ const BalancesPatient = () => {
         }
     };
 
-    const mensajeDefault = `Le saludamos desde Veoptics, le recordamos que tiene un saldo pendiente por cancelar.
-Para más información puede comunicarse con nosotros.
-Nuestro horario de atención es:
-Lunes a viernes desde 09:00 am hasta las 19:00 pm
-Sábados desde las 10:00 am hasta las 16:00 pm`;
+    // Obtiene el mensaje personalizado desde la base de datos según la ruta y branch_id
+    const fetchCustomMessage = async (branchId) => {
+        try {
+            const { data, error } = await supabase
+                .from("messages")
+                .select("content")
+                .eq("branch_id", branchId)
+                .eq("route", "/balances-patient")
+                .single();
+            if (error || !data) return "";
+            return data.content;
+        } catch (err) {
+            return "";
+        }
+    };
 
-    const handleMessageClick = (e, sale) => {
+    // Modifica handleMessageClick para usar el mensaje de la base de datos
+    const handleMessageClick = async (e, sale) => {
         e.stopPropagation();
         setSelectedPatient(sale.patient);
         setIsFormOpen(true);
-        setMessage(mensajeDefault);
+        const customMessage = await fetchCustomMessage(sale.branch_id);
+        setMessage(customMessage || "");
     };
+
 
     const handleSendMessage = () => {
         if (!selectedPatient || !message.trim()) return;

@@ -168,106 +168,160 @@ const PatientHistory = () => {
     );
 
   return (
-    <Box display="flex" flexDirection="column" alignItems="center" minHeight="100vh">
+    <Box
+      display="flex"
+      flexDirection="column"
+      alignItems="center"
+      minHeight="100vh"
+      bg={useColorModeValue('gray.50', 'gray.800')}
+      px={2}
+    >
       <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-      <Box w="100%" maxW= "800px" mb={4}>
-            <Heading 
-                mb={4} 
-                textAlign="left" 
-                size="md"
-                fontWeight="700"
-                color={useColorModeValue('teal.600', 'teal.300')}
-                pb={2}
-            >
-                Historial de Venta
-            </Heading>
-            </Box>
-    <Box as="form" width="100%" maxWidth="850px" padding={6} boxShadow="lg" borderRadius="md" >
-      {selectedPatient ? (
-        <>
-          <Text fontSize="lg" mb={8} ml={250}>
-            {selectedPatient.pt_firstname} {selectedPatient.pt_lastname} - {selectedPatient.pt_ci}
-          </Text>
-          <Box overflowX="auto">
-            <Table variant="simple" minWidth="800px">
+      <Box
+        w="90%"
+        mb={6}
+        bg={useColorModeValue('white', 'gray.700')}
+        boxShadow="xl"
+        borderRadius="2xl"
+        p={6}
+        mt={4}
+      >
+        <Heading
+          mb={4}
+          textAlign="left"
+          size="lg"
+          fontWeight="800"
+          color={useColorModeValue('teal.700', 'teal.200')}
+          pb={2}
+          letterSpacing="tight"
+        >
+          Historial de Venta
+        </Heading>
+        <Box
+          bg={useColorModeValue('teal.50', 'teal.900')}
+          borderRadius="lg"
+          px={6}
+          py={4}
+          mb={6}
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+        >
+          {selectedPatient ? (
+            <Text fontSize="xl" fontWeight="bold" color={useColorModeValue('teal.800', 'teal.100')}>
+              {selectedPatient.pt_firstname} {selectedPatient.pt_lastname} -{' '}
+              <Text as="span" color={useColorModeValue('teal.500', 'teal.200')}>
+                {selectedPatient.pt_ci}
+              </Text>
+            </Text>
+          ) : (
+            <Text fontSize="xl" color="red.500">
+              Error: No se seleccionó ningún paciente
+            </Text>
+          )}
+        </Box>
+        {selectedPatient && (
+          <Box overflowX="auto" borderRadius="lg" boxShadow="md" bg={useColorModeValue('white', 'gray.800')}>
+            <Table variant="striped" colorScheme="teal" minWidth="850px">
               <Thead>
                 <Tr>
-                  <Th>Fecha</Th>
-                  <Th>Armazón</Th>
-                  <Th>Lentes</Th>
-                  <Th>Total</Th>
-                  <Th>Abono</Th>
-                  <Th>Saldo</Th>
-                  <Th>Pago En</Th>
-                  {user && user.role_id === 1 && <Th>Acciones</Th>}
+                  <Th fontWeight="bold" fontSize="md">Fecha</Th>
+                  <Th fontWeight="bold" fontSize="md">Armazón</Th>
+                  <Th fontWeight="bold" fontSize="md">Lentes</Th>
+                  <Th fontWeight="bold" fontSize="md">Total</Th>
+                  <Th fontWeight="bold" fontSize="md">Abono</Th>
+                  <Th fontWeight="bold" fontSize="md">Saldo</Th>
+                  <Th fontWeight="bold" fontSize="md">Pago En</Th>
+                  <Th fontWeight="bold" fontSize="md">Reembolso</Th>
+                  {user && user.role_id === 1 && <Th fontWeight="bold" fontSize="md">Acciones</Th>}
                 </Tr>
               </Thead>
               <Tbody>
-                {sales.map(sale => (
-                  <Tr key={sale.id} onClick={() => handlePatientSelect(sale)} style={{ cursor: 'pointer' }}>
-                    <Td>{sale.date}</Td>
-                    <Td>{sale.inventario?.brand ?? "Sin marca"}</Td>
-                    <Td>{sale.lens?.lens_type ?? "No especificado"}</Td>
-                    <Td>{sale.total}</Td>
-                    <Td>{sale.credit}</Td>
-                    <Td>{sale.balance}</Td>
-                    <Td>{sale.payment_in}</Td>
-                    <Td>
-                      <RefundButton sale={sale} onRefund={handleRefundUpdate} />
+                {sales.length === 0 ? (
+                  <Tr>
+                    <Td colSpan={user && user.role_id === 1 ? 9 : 8}>
+                      <Text textAlign="center" color="gray.400" py={6}>
+                        No hay ventas registradas para este paciente.
+                      </Text>
                     </Td>
-                    {user && user.role_id === 1 && (
+                  </Tr>
+                ) : (
+                  sales.map((sale) => (
+                    <Tr
+                      key={sale.id}
+                      onClick={() => handlePatientSelect(sale)}
+                      _hover={{
+                        bg: useColorModeValue('teal.100', 'teal.900'),
+                        cursor: 'pointer',
+                        transition: 'background 0.2s',
+                      }}
+                    >
+                      <Td>{sale.date}</Td>
+                      <Td>{sale.inventario?.brand ?? <Text color="gray.400">Sin marca</Text>}</Td>
+                      <Td>{sale.lens?.lens_type ?? <Text color="gray.400">No especificado</Text>}</Td>
+                      <Td>
+                        <Text fontWeight="bold" color="teal.600">
+                          {sale.total}
+                        </Text>
+                      </Td>
+                      <Td>{sale.credit}</Td>
+                      <Td>{sale.balance}</Td>
+                      <Td>{sale.payment_in}</Td>
+                      <Td>
+                        <RefundButton sale={sale} onRefund={handleRefundUpdate} />
+                      </Td>
+                      {user && user.role_id === 1 && (
                         <Td>
                           <Button
                             size="sm"
                             colorScheme="red"
+                            variant="outline"
                             isLoading={loadingDelete}
                             onClick={(e) => {
                               e.stopPropagation();
                               confirmDelete(sale);
                             }}
+                            borderRadius="full"
                           >
                             Eliminar
                           </Button>
                         </Td>
-                                          )}
-                  </Tr>
-                ))}
-
+                      )}
+                    </Tr>
+                  ))
+                )}
               </Tbody>
             </Table>
           </Box>
-        </>
-      ) : (
-        <Text fontSize="xl" color="red.500">Error: No se seleccionó ningún paciente</Text>
-      )}
-    </Box>
-    <AlertDialog
-              isOpen={isOpen}
-              leastDestructiveRef={cancelRef}
-              onClose={() => setIsOpen(false)}
-            >
-              <AlertDialogOverlay>
-                <AlertDialogContent>
-                  <AlertDialogHeader fontSize="lg" fontWeight="bold">
-                    Confirmar eliminación
-                  </AlertDialogHeader>
-    
-                  <AlertDialogBody>
-                    {selectedPatient &&
-                      `¿Seguro que deseas eliminar la venta de ${selectedPatient.pt_firstname} ${selectedPatient.pt_lastname}?`}
-                  </AlertDialogBody>
-    
-                  <AlertDialogFooter>
-                    <Button ref={cancelRef} onClick={() => setIsOpen(false)}>
-                      Cancelar
-                    </Button>
-                    <Button colorScheme="red" onClick={handleDeleteSale} ml={3} isLoading={loadingDelete}>
-                      Eliminar
-                    </Button>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialogOverlay>
-            </AlertDialog>
+        )}
+      </Box>
+      <AlertDialog
+        isOpen={isOpen}
+        leastDestructiveRef={cancelRef}
+        onClose={() => setIsOpen(false)}
+        isCentered
+        motionPreset="slideInBottom"
+      >
+        <AlertDialogOverlay>
+          <AlertDialogContent>
+            <AlertDialogHeader fontSize="lg" fontWeight="bold" color="red.600">
+              Confirmar eliminación
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              {selectedPatient &&
+                `¿Seguro que deseas eliminar la venta de ${selectedPatient.pt_firstname} ${selectedPatient.pt_lastname}?`}
+            </AlertDialogBody>
+            <AlertDialogFooter>
+              <Button ref={cancelRef} onClick={() => setIsOpen(false)} variant="ghost">
+                Cancelar
+              </Button>
+              <Button colorScheme="red" onClick={handleDeleteSale} ml={3} isLoading={loadingDelete}>
+                Eliminar
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 };

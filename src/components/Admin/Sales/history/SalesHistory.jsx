@@ -431,38 +431,32 @@ const SalesHistory = () => {
         );
       case 2:
         return (
-          <Box p={5}>
-            <Text fontSize="xl" fontWeight="bold" mb={6} textAlign="center" color="gray.600">
-              Detalles de Venta
-            </Text>
-            <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
+          <Box  >
+            <Box >
               <DetailsHistory onFormDataChange={handleFormDataChange} onTotalsChange={handleTotalsChange} initialFormData={{...formData, ...saleData} } saleId={saleParamId || saleId} />
             </Box>
           </Box>
         );
       case 3:
         return (
-          <Box mb={[4, 6]}>
-            <Text fontSize="xl" fontWeight="bold" mb={6} textAlign="center" color="gray.600">Total</Text>
-            <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
+          <Box >
+            <Box >
               <HistoryUI frameName={formData.frameName} lensName={formData.lensName} total_p_frame={totals.total_p_frame} total_p_lens={totals.total_p_lens} initialFormData={formData} onFormDataChange={handleFormDataChange} />
             </Box>
           </Box>
         );
       case 4:
         return (
-          <Box mt={6}>
-            <Text fontSize="xl" fontWeight="bold" mb={6} textAlign="center" color="gray.600">Método de Pago</Text>
-            <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
+          <Box >
+            <Box>
               <TotalHistory saleId={saleId} formData={formData} setFormData={setFormData} />
             </Box>
           </Box>
         );
       case 5:
         return (
-          <Box mt={8}>
-            <Text fontSize="xl" fontWeight="bold" mb={6} textAlign="center" color="gray.600">Tiempo de Entrega</Text>
-            <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
+          <Box >
+            <Box height="380px" >
               <Delivery saleData={saleData} setSaleData={setSaleData} />
             </Box>
           </Box>
@@ -470,8 +464,7 @@ const SalesHistory = () => {
       case 6:
         return (
           <Box mt={8}>
-            <Text fontSize="xl" fontWeight="bold" mb={6} textAlign="center" color="gray.600">Mensaje</Text>
-            <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
+            <Box height="350px">
               <MessageSection selectedBranch={branchName} formData={formData} setFormData={setFormData} />
             </Box>
           </Box>
@@ -479,17 +472,15 @@ const SalesHistory = () => {
       case 7:
         return (
           <Box mt={8}>
-            <Text fontSize="xl" fontWeight="bold" mb={6} textAlign="center" color="gray.600">Observación</Text>
-            <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
+            <Box height="350px">
               <ObservationSection setFormData={setFormData} />
             </Box>
           </Box>
         );
       case 8:
         return (
-          <Box mt={8}>
-            <Text fontSize="xl" fontWeight="bold" mb={6} textAlign="center" color="gray.600">Términos y Condiciones</Text>
-            <Box width="100vw" position="relative" bg={cardBg} py={8} mt={8}>
+          <Box >
+            <Box >
               <TermsCondition selectedBranch={branchName} formData={formData} setFormData={setFormData} />
               <SignaturePadComponent onSave={(signatureDataUrl) => setFormData((prev) => ({ ...prev, signature: signatureDataUrl }))} />
             </Box>
@@ -501,39 +492,124 @@ const SalesHistory = () => {
   };
 
   return (
-    <Box ref={salesRef} w="full" px={4}>
-      <Box className="sales-form" display="flex" flexDirection="column" alignItems="center" minHeight="100vh" p={4}>
+    <Box ref={salesRef} w="full" px={[0, 2, 4]} bg={useColorModeValue("gray.50", "gray.900")} >
+      <Box
+        className="sales-form"
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        p={[2, 4, 8]}
+        mx="auto"
+        bg={useColorModeValue("gray.50", "gray.900")}
+      >
         <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-        
+
         {/* Heading alineado a la izquierda */}
-        <Box w="100%" maxW="800px" mb={4}>
-          <Heading textAlign="left" size="md" fontWeight="700" color={useColorModeValue('teal.600', 'teal.300')} borderBottom="2px solid" borderColor={useColorModeValue('teal.200', 'teal.700')} pb={2}>
+        <Box w="90%" mb={4}>
+          <Heading
+            textAlign="left"
+            size="lg"
+            fontWeight="extrabold"
+            color={useColorModeValue("teal.700", "teal.200")}
+            borderBottom="3px solid"
+            borderColor={useColorModeValue("teal.300", "teal.600")}
+            pb={2}
+            letterSpacing="wide"
+          >
             Contrato de Servicio
           </Heading>
         </Box>
 
         {/* Indicador de pasos */}
-        <Box mb={6} display="flex" justifyContent="center" flexWrap="wrap" gap={2}>
-          {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
-            <Button key={step} size="sm" colorScheme={currentStep === step ? "teal" : "gray"} variant={currentStep === step ? "solid" : "outline"} onClick={() => goToStep(step)}>
-              {step}
-            </Button>
-          ))}
+        <Box mb={8} w="100%" maxW="700px">
+          <Grid
+            templateColumns={`repeat(${totalSteps}, 1fr)`}
+            gap={2}
+            alignItems="center"
+            justifyContent="center"
+          >
+            {Array.from({ length: totalSteps }, (_, i) => i + 1).map((step) => (
+              <Button
+                key={step}
+                size="sm"
+                colorScheme={currentStep === step ? "teal" : "gray"}
+                variant={currentStep === step ? "solid" : "outline"}
+                onClick={() => goToStep(step)}
+                borderRadius="full"
+                fontWeight="bold"
+                boxShadow={currentStep === step ? "md" : "none"}
+                transition="all 0.2s"
+                _hover={{
+                  transform: "scale(1.08)",
+                  boxShadow: "lg",
+                }}
+              >
+                {step}
+              </Button>
+            ))}
+          </Grid>
+          <Box mt={2} textAlign="center">
+            <Text fontSize="sm" color="white">
+              Paso {currentStep} de {totalSteps}
+            </Text>
+          </Box>
         </Box>
+
         {/* Contenido del paso actual */}
-        {renderStepContent()}
+        <Box w="100%"   transition="all 0.3s">
+          {renderStepContent()}
+        </Box>
 
         {/* Botones de navegación */}
-        <Box mt={6} display="flex" justifyContent="space-between" width="100%" maxWidth="400px" gap={4}>
-          <Button onClick={prevStep} isDisabled={currentStep === 1} colorScheme="gray">Anterior</Button>
+        <Box
+          mt={8}
+          display="flex"
+          justifyContent="space-between"
+          width="100%"
+          maxWidth="400px"
+          gap={4}
+        >
+          <Button
+            onClick={prevStep}
+            isDisabled={currentStep === 1}
+            colorScheme="gray"
+            variant="outline"
+            leftIcon={<span style={{ fontWeight: "bold" }}>←</span>}
+            _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}
+          >
+            Anterior
+          </Button>
           {currentStep === totalSteps ? (
-            <Button colorScheme="teal" onClick={handleSubmit}>Actualizar Venta</Button>
+            <Button
+              colorScheme="teal"
+              onClick={handleSubmit}
+              fontWeight="bold"
+              px={8}
+              boxShadow="md"
+              _hover={{ bg: "teal.600" }}
+            >
+              Actualizar Venta
+            </Button>
           ) : (
-            <Button onClick={nextStep} colorScheme="teal">Siguiente</Button>
+            <Button
+              onClick={nextStep}
+              colorScheme="teal"
+              fontWeight="bold"
+              px={8}
+              rightIcon={<span style={{ fontWeight: "bold" }}>→</span>}
+              boxShadow="md"
+              _hover={{ bg: "teal.600" }}
+            >
+              Siguiente
+            </Button>
           )}
         </Box>
 
-        {saleId && <Pdf formData={pdfData} targetRef={salesRef} />}
+        {saleId && (
+          <Box mt={10} w="100%" >
+            <Pdf formData={pdfData} targetRef={salesRef} />
+          </Box>
+        )}
       </Box>
     </Box>
   );

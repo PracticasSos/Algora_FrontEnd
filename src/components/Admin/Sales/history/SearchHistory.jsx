@@ -1,9 +1,19 @@
 import { useEffect, useState } from "react";
-import { SimpleGrid, FormControl, FormLabel, Input, Box, Select } from "@chakra-ui/react";
+import {
+    SimpleGrid,
+    FormControl,
+    FormLabel,
+    Input,
+    Box,
+    VStack,
+    Text,
+    Divider,
+    useColorModeValue,
+    useColorMode,
+} from "@chakra-ui/react";
 import { supabase } from "../../../../api/supabase";
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
-
 
 const SearchHistory = ({ onFormDataChange, initialFormData = {} }) => {
     const [branches, setBranches] = useState([]);
@@ -85,14 +95,14 @@ const SearchHistory = ({ onFormDataChange, initialFormData = {} }) => {
                         date: formData.date,
                     })
                     .eq("id", formData.sale_id);
-        
+
                 if (saleError) {
                     console.error("Error updating sale:", saleError);
                 } else {
                     console.log("Venta actualizada correctamente");
                 }
             }
-        
+
             if (formData.patient_id && formData.pt_phone !== initialFormData.pt_phone) {
                 const { error: patientError } = await supabase
                     .from("patients")
@@ -100,7 +110,7 @@ const SearchHistory = ({ onFormDataChange, initialFormData = {} }) => {
                         pt_phone: formData.pt_phone, 
                     })
                     .eq("id", formData.patient_id);
-        
+
                 if (patientError) {
                     console.error("Error updating patient phone:", patientError);
                 } else {
@@ -113,41 +123,102 @@ const SearchHistory = ({ onFormDataChange, initialFormData = {} }) => {
     };
 
     const handlePhoneChange = (value) => {
-    setFormData((prev) => ({
-        ...prev,
-        pt_phone: value.replace(/[^0-9]/g, ''),
-    }));
+        setFormData((prev) => ({
+            ...prev,
+            pt_phone: value.replace(/[^0-9]/g, ''),
+        }));
     };
 
+    // UI colors
+    const bgColor = useColorModeValue("white", "gray.900");
+    const textColor = useColorModeValue("gray.800", "white");
+    const borderColor = useColorModeValue("gray.200", "gray.700");
+    const { colorMode } = useColorMode();
+
     return (
-        <SimpleGrid columns={[1, 4]} spacing={4}>
-            <FormControl>
-                <FormLabel>Nombre del Paciente</FormLabel>
-                <Input value={formData.patient_name || "No disponible"} isReadOnly height="40px" borderRadius="full"  />
-            </FormControl>
-            <FormControl>
-                <FormLabel>Teléfono</FormLabel>
-                <PhoneInput
-                    type="text"
-                    name="pt_phone"
-                    height="40px"
-                    borderRadius="full"
-                    value={formData.pt_phone || ""}
-                    onInput={(e) => (e.target.value = e.target.value.replace(/[^0-9]/g, ""))}
-                    onChange={handlePhoneChange}
-                    enableSearch={true}
-                    inputStyle={{
-                        width: '100%',
-                        height: '40px',
-                        borderRadius: '20px',
-                        border: '1px solid #CBD5E0'
-                    }}
-                    dropdownStyle={{
-                        zIndex: 1000
-                    }}
-                />
-            </FormControl>
-        </SimpleGrid>
+        <Box
+            borderRadius="xl"
+            p={[4, 6]}
+            width="90%"
+            mx={"auto"}
+            mt={2}
+            transition="box-shadow 0.2s"
+        >
+            <SimpleGrid columns={[1, 2]} spacing={8}>
+                <VStack align="stretch" spacing={4}>
+                    <FormControl>
+                        <FormLabel fontWeight="bold" fontSize="lg" color={textColor}>
+                            Nombre del Paciente
+                        </FormLabel>
+                        <Input
+                            value={formData.patient_name || "No disponible"}
+                            isReadOnly
+                            height="48px"
+                            borderRadius="xl"
+                            bg={bgColor}
+                            borderColor={borderColor}
+                            color={textColor}
+                            fontSize="md"
+                        />
+                    </FormControl>
+                </VStack>
+                <VStack align="stretch" spacing={4}>
+                    <FormControl>
+                        <FormLabel fontWeight="bold" fontSize="lg" color={textColor}>
+                            Teléfono
+                        </FormLabel>
+                        <PhoneInput
+                            type="text"
+                            name="pt_phone"
+                            height="48px"
+                            borderRadius="xl"
+                            value={formData.pt_phone || ""}
+                            onInput={(e) => (e.target.value = e.target.value.replace(/[^0-9]/g, ""))}
+                            onChange={handlePhoneChange}
+                            enableSearch={true}
+                            inputStyle={{
+                                width: "100%",
+                                height: "48px",
+                                borderRadius: "24px",
+                                border: `1px solid ${colorMode === "dark" ? "#4A5568" : "#CBD5E0"}`,
+                                backgroundColor: colorMode === "dark" ? "#1A202C" : "white",
+                                color: colorMode === "dark" ? "white" : "#1A202C",
+                                fontSize: "16px",
+                                paddingLeft: "56px",
+                                boxShadow: "sm",
+                                transition: "border 0.2s",
+                            }}
+                            buttonStyle={{
+                                backgroundColor: colorMode === "dark" ? "#1A202C" : "white",
+                                border: `1px solid ${colorMode === "dark" ? "#4A5568" : "#CBD5E0"}`,
+                                borderRadius: "24px 0 0 24px",
+                            }}
+                            dropdownStyle={{
+                                backgroundColor: colorMode === "dark" ? "#2D3748" : "white",
+                                color: colorMode === "dark" ? "white" : "black",
+                                zIndex: 1000,
+                                borderRadius: "md",
+                                boxShadow: "md",
+                            }}
+                            searchStyle={{
+                                backgroundColor: colorMode === "dark" ? "#4A5568" : "#F7FAFC",
+                                color: colorMode === "dark" ? "white" : "black",
+                            }}
+                        />
+                    </FormControl>
+                </VStack>
+            </SimpleGrid>
+            <Divider mt={8} />
+            <Text
+                mt={4}
+                fontSize="sm"
+                color="gray.500"
+                textAlign="center"
+                letterSpacing="wide"
+            >
+                Consulta la información del paciente y edita el teléfono si es necesario.
+            </Text>
+        </Box>
     );
 };
 

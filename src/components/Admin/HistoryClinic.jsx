@@ -130,97 +130,158 @@ const HistoryClinic = () => {
       const selectBg = useColorModeValue('white', 'gray.700');
 
     return (
-        <Box display="flex" flexDirection="column" alignItems="center" minHeight="100vh">
-    
-          <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-<Box w="100%" maxW= "800px" mb={4}>
-            <Heading 
-                mb={4} 
-                textAlign="left" 
-                size="md"
-                fontWeight="700"
-                color={useColorModeValue('teal.600', 'teal.300')}
-                pb={2}
-            >
-                Historial del Paciente
-            </Heading>
-            </Box>
-        <Box as="form" width="100%" maxWidth="850px" padding={6} boxShadow="lg" borderRadius="md" >
-          <Input 
-            placeholder="Buscar por nombre, apellido o cédula" 
-            value={search} 
-            onChange={handleSearchChange} 
-            mb={4} 
-            maxWidth="800px"
-            bg={selectBg}
-            borderColor={borderColor}
-            color={textColor}
-            _hover={{
-              borderColor: useColorModeValue('gray.300', 'gray.500')
-            }}
-            _focus={{
-              borderColor: useColorModeValue('blue.500', 'blue.300'),
-              boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-            }}
-          />
-          <Select 
-            placeholder="Seleccione una sucursal" 
-            value={selectedBranch} 
-            onChange={(e) => setSelectedBranch(e.target.value)}
-            bg={selectBg}
-            borderColor={borderColor}
-            color={textColor}
-            _hover={{
-              borderColor: useColorModeValue('gray.300', 'gray.500')
-            }}
-            _focus={{
-              borderColor: useColorModeValue('blue.500', 'blue.300'),
-              boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-            }}
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        minHeight="100vh"
+        bg={useColorModeValue('gray.50', 'gray.800')}
+        py={8}
+      >
+        <SmartHeader moduleSpecificButton={moduleSpecificButton} />
+        <Box
+          w="90%"
+          mt={6}
+          mb={6}
+          px={4}
+        >
+          <Heading
+            mb={2}
+            textAlign="left"
+            size="lg"
+            fontWeight="bold"
+            color={useColorModeValue('teal.700', 'teal.200')}
+            letterSpacing="tight"
           >
-            {branches.map((branch) => (
-              <option key={branch.id} value={branch.id}>{branch.name}</option>
-            ))}
-          </Select>
-
-          <Box overflowX="auto" width="100%" maxWidth="900px">
-              <Table variant="simple" minWidth="800px">
-                <Thead>
+            Historial del Paciente
+          </Heading>
+          <Box
+            h="2px"
+            w="60px"
+            bgGradient="linear(to-r, teal.400, teal.600)"
+            borderRadius="full"
+            mb={4}
+          />
+        </Box>
+        <Box
+          as="form"
+          width="90%"
+          p={8}
+          boxShadow={useColorModeValue('xl', 'dark-lg')}
+          borderRadius="2xl"
+          bg={useColorModeValue('white', 'gray.700')}
+          mb={8}
+          transition="box-shadow 0.2s"
+        >
+          <Box
+            display="flex"
+            flexDirection={{ base: "column", md: "row" }}
+            gap={4}
+            mb={6}
+          >
+            <Input
+              placeholder="Buscar por nombre, apellido o cédula"
+              value={search}
+              onChange={handleSearchChange}
+              bg={selectBg}
+              borderColor={borderColor}
+              color={textColor}
+              _placeholder={{ color: useColorModeValue('gray.400', 'gray.500') }}
+              _hover={{
+                borderColor: useColorModeValue('teal.300', 'teal.500')
+              }}
+              _focus={{
+                borderColor: useColorModeValue('teal.500', 'teal.300'),
+                boxShadow: useColorModeValue('0 0 0 2px teal.200', '0 0 0 2px teal.600')
+              }}
+              transition="all 0.2s"
+            />
+            <Select
+              placeholder="Seleccione una sucursal"
+              value={selectedBranch}
+              onChange={(e) => setSelectedBranch(e.target.value)}
+              bg={selectBg}
+              borderColor={borderColor}
+              color={textColor}
+              _hover={{
+                borderColor: useColorModeValue('teal.300', 'teal.500')
+              }}
+              _focus={{
+                borderColor: useColorModeValue('teal.500', 'teal.300'),
+                boxShadow: useColorModeValue('0 0 0 2px teal.200', '0 0 0 2px teal.600')
+              }}
+              transition="all 0.2s"
+            >
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>{branch.name}</option>
+              ))}
+            </Select>
+          </Box>
+          <Box
+            overflowX="auto"
+            width="100%"
+            borderRadius="lg"
+            boxShadow={useColorModeValue('md', 'dark-lg')}
+            bg={useColorModeValue('gray.50', 'gray.800')}
+            p={2}
+          >
+            <Table variant="striped" colorScheme="teal" minWidth="800px">
+              <Thead>
+                <Tr>
+                  <Th>Nombre</Th>
+                  <Th>Apellido</Th>
+                  <Th>Cédula</Th>
+                  <Th>Acciones</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {filteredPatients.length === 0 ? (
                   <Tr>
-                    <Th>Nombre</Th>
-                    <Th>Apellido</Th>
-                    <Th>Cédula</Th>
+                    <Td colSpan={4} textAlign="center" py={8} color="gray.500">
+                      No se encontraron pacientes.
+                    </Td>
                   </Tr>
-                </Thead>
-                <Tbody>
-                  {filteredPatients.map(patient => (
-                    <Tr key={`${patient.id}-${patient.branchs_id}`} onClick={() => handlePatientSelect(patient)} style={{ cursor: 'pointer' }}>
-                      <Td>{patient.pt_firstname}</Td>
+                ) : (
+                  filteredPatients.map(patient => (
+                    <Tr
+                      key={`${patient.id}-${patient.branchs_id}`}
+                      onClick={() => handlePatientSelect(patient)}
+                      _hover={{ bg: useColorModeValue('teal.50', 'teal.900'), cursor: 'pointer' }}
+                      transition="background 0.2s"
+                    >
+                      <Td fontWeight="medium">{patient.pt_firstname}</Td>
                       <Td>{patient.pt_lastname}</Td>
                       <Td>{patient.pt_ci}</Td>
                       <Td>
                         {patient.pdf_url && (
                           <Button
                             size="sm"
-                            colorScheme="green"
+                            colorScheme="teal"
+                            variant="outline"
                             onClick={(e) => {
                               e.stopPropagation();
                               const mensaje = `Hola ${patient.pt_firstname}, aquí está su historial clínico: ${patient.pdf_url}`;
                               const whatsappUrl = `https://wa.me/${patient.pt_phone}?text=${encodeURIComponent(mensaje)}`;
                               window.open(whatsappUrl, "_blank");
                             }}
+                            leftIcon={
+                              <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.031-.967-.273-.099-.472-.148-.67.15-.197.297-.767.967-.94 1.164-.173.198-.347.223-.644.075-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.521-.075-.148-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.007-.372-.009-.571-.009-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.099 3.2 5.077 4.363.71.306 1.263.489 1.694.626.712.227 1.36.195 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                              </svg>
+                            }
                           >
                             Enviar PDF
                           </Button>
                         )}
                       </Td>
                     </Tr>
-                  ))}
-                </Tbody>
-              </Table>
+                  ))
+                )}
+              </Tbody>
+            </Table>
           </Box>
         </Box>
-        </Box>
+      </Box>
     );
 }
 

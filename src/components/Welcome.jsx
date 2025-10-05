@@ -1,27 +1,28 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import './WelcomeScreen.css';
 
-const Welcome = ({ onFinish }) => {
+const Welcome = () => {
+  const navigate = useNavigate();
+
+  // Redirige después de la animación (1.2s)
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (typeof onFinish === "function") {
-        onFinish();
-      }
-    }, 1200);
+      navigate("/login-form");
+    }, 1500);
 
     return () => clearTimeout(timer);
-  }, [onFinish]);
+  }, [navigate]);
 
   return (
     <div className="welcome-container">
       <motion.img
-        src="/assets/algora.jpg"
+        src="/assets/svgalgo.svg"
         alt="Algora"
         initial={{ opacity: 0, y: 50, scale: 0.8 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
+        animate={{ opacity: 1, y: 0, scale: 0.6 }}
         transition={{ duration: 1, ease: "easeOut" }}
-        className="welcome-logo"
       />
     </div>
   );

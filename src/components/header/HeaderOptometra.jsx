@@ -82,7 +82,7 @@ const HeaderOptometra = ({ moduleSpecificButton = null }) => {
     'rgba(255,255,255,0.1)'
   );
 
-  const menuBg = useColorModeValue('white', 'gray.800');
+  const menuBg = useColorModeValue('white', 'gray.700');
   const menuBorder = useColorModeValue('gray.200', 'gray.600');
   const subtitleColor = useColorModeValue('gray.500', 'gray.400');
 

@@ -134,34 +134,7 @@ const Egresos = () => {
     fetchEgresos();
   };
 
-  const handleNavigate = (route = null) => {
-    const user = JSON.parse(localStorage.getItem("user"));
-    if (route) {
-      navigate(route);
-      return;
-    }
-    if (!user || !user.role_id) {
-      navigate("/login-form");
-      return;
-    }
-    switch (user.role_id) {
-      case 1:
-        navigate("/Admin");
-        break;
-      case 2:
-        navigate("/Optometra");
-        break;
-      case 3:
-        navigate("/Vendedor");
-        break;
-      case 4:
-        navigate("/SuperAdmin");
-        break;
-      default:
-        navigate("/");
-    }
-  };
-
+  
   const bgColor = useColorModeValue('gray.50', 'gray.900');
   const cardBg = useColorModeValue('white', 'gray.800');
   const textColor = useColorModeValue('gray.800', 'white');

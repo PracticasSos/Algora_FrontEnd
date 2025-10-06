@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
+import { supabase } from "../../../api/supabase";
 import termsText from "./TermsText.md?raw";
 import {
   Box,
@@ -11,6 +12,7 @@ import {
   Divider,
   Icon,
   Flex,
+  Spinner,
 } from "@chakra-ui/react";
 import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 
@@ -18,10 +20,39 @@ const baseMessage = "Acepta las condiciones de no devolución de {{BRANCH}}.";
 
 const TermsCondition = ({ selectedBranch, formData, setFormData }) => {
   const [message, setMessage] = useState(
-    baseMessage.replace("{{BRANCH}}", selectedBranch || "VEOPTICS")
+    baseMessage.replace("{{BRANCH}}", selectedBranch || "OPTICA")
   );
   const [isChecked, setIsChecked] = useState(false);
   const [showFullTerms, setShowFullTerms] = useState(false);
+  const [customTerms, setCustomTerms] = useState(null); 
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTerms = async () => {
+      if (!formData?.tenant_id) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("terms")
+        .select("terms_text")
+        .eq("tenant_id", formData.tenant_id)
+        .single();
+
+      if (data?.terms_text) {
+        setCustomTerms(data.terms_text);
+      }
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Error al obtener términos:", error.message);
+      }
+
+      setLoading(false);
+    };
+
+    fetchTerms();
+  }, [formData?.tenant_id]);
 
   const handleCheckbox = (e) => {
     const checked = e.target.checked;
@@ -29,29 +60,36 @@ const TermsCondition = ({ selectedBranch, formData, setFormData }) => {
     setFormData((prev) => ({ ...prev, termsAccepted: checked }));
   };
 
-  // Reemplaza todas las apariciones de "veoptics" (cualquier caso) por la sucursal seleccionada
-  const branchDisplay = selectedBranch || "VEOPTICS";
-  const replacedTerms = useMemo(
-    () => termsText.replace(/veoptics/gi, branchDisplay),
-    [branchDisplay]
-  );
+  useEffect(() => {
+    const updatedMessage = baseMessage.replace("{{BRANCH}}", selectedBranch || "OPTICA");
+    setMessage(updatedMessage);
+  }, [selectedBranch]);
+
+  const branchDisplay = selectedBranch || "OPTICA";
+  const replacedTerms = useMemo(() => {
+    const sourceText = customTerms || termsText; // si hay texto personalizado lo usa
+    return sourceText.replace(/veoptics/gi, branchDisplay);
+  }, [customTerms, branchDisplay]);
 
   const lines = replacedTerms.split("\n");
   const previewLines = lines.slice(0, 3).join("\n");
   const remainingLines = lines.slice(3).join("\n");
 
-  useEffect(() => {
-    const updatedMessage = baseMessage.replace("{{BRANCH}}", selectedBranch || "VEOPTICS");
-    setMessage(updatedMessage);
-  }, [selectedBranch]);
+  const boxBg = useColorModeValue("white", "gray.800");
+  const textColor = useColorModeValue("gray.900", "gray.100");
+  const borderColor = useColorModeValue("teal.300", "teal.600");
+  const termsBg = useColorModeValue("gray.50", "gray.700");
+  const termsTextColor = useColorModeValue("gray.800", "gray.200");
+  const buttonColor = useColorModeValue("teal.600", "teal.300");
+  const shadow = useColorModeValue("lg", "dark-lg");
 
-  const boxBg = useColorModeValue('white', 'gray.800');
-  const textColor = useColorModeValue('gray.900', 'gray.100');
-  const borderColor = useColorModeValue('teal.300', 'teal.600');
-  const termsBg = useColorModeValue('gray.50', 'gray.700');
-  const termsTextColor = useColorModeValue('gray.800', 'gray.200');
-  const buttonColor = useColorModeValue('teal.600', 'teal.300');
-  const shadow = useColorModeValue('lg', 'dark-lg');
+  if (loading) {
+    return (
+      <Flex justify="center" align="center" h="150px">
+        <Spinner size="lg" color="teal.400" />
+      </Flex>
+    );
+  }
 
   return (
     <Box
@@ -85,12 +123,10 @@ const TermsCondition = ({ selectedBranch, formData, setFormData }) => {
         border={`1px solid ${borderColor}`}
         boxShadow="sm"
       >
-
         <Box color={termsTextColor}>
           <ReactMarkdown>{previewLines}</ReactMarkdown>
         </Box>
 
-        {/* Expandible */}
         <Collapse in={showFullTerms} animateOpacity>
           <Box mt={2} color={termsTextColor}>
             <ReactMarkdown>{remainingLines}</ReactMarkdown>
@@ -112,8 +148,8 @@ const TermsCondition = ({ selectedBranch, formData, setFormData }) => {
             )
           }
           _hover={{
-            bg: useColorModeValue('teal.50', 'teal.900'),
-            color: useColorModeValue('teal.700', 'teal.200')
+            bg: useColorModeValue("teal.50", "teal.900"),
+            color: useColorModeValue("teal.700", "teal.200"),
           }}
           transition="background 0.2s"
         >
@@ -133,12 +169,7 @@ const TermsCondition = ({ selectedBranch, formData, setFormData }) => {
         alignItems="center"
         mb={1}
       >
-        <Text
-          fontSize="md"
-          color={textColor}
-          ml={2}
-          fontWeight="medium"
-        >
+        <Text fontSize="md" color={textColor} ml={2} fontWeight="medium">
           {message}
         </Text>
       </Checkbox>

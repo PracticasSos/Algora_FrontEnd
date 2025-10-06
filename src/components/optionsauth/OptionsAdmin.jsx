@@ -42,6 +42,7 @@ import {
   FiLogOut,
   FiMapPin,    // ← Cambio: usar FiMapPin en lugar de FiBuilding
   FiTool,
+  FiFileText,
 } from 'react-icons/fi';
 import iconocertificadovisual from "../../assets/iconocertificadovisual.png";
 import iconocierrediario from "../../assets/iconocierrediario.png";
@@ -514,6 +515,12 @@ const AdminDashBoard = () => {
                       onClick={() => navigate("/history-measure-list")}
                     >
                       Historial de Medidas
+                    </MenuItemCustom>
+                    <MenuItemCustom
+                      icon={<FiFileText />}
+                      onClick={() => navigate("/terms-manager")}
+                    >
+                      Términos y Condiciones
                     </MenuItemCustom>
                   </Box>
 

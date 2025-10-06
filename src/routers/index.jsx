@@ -49,6 +49,7 @@ import Loader from "../components/ExperienceModule/ExperienceUI/Loader.jsx";
 import MessageClients from "../components/ExperienceModule/pages/MessageClients.jsx";
 import ChangePassword from "../components/optionsauth/ChangePassword.jsx";
 import Tenants from "../components/tenants/Tenants.jsx";
+import TermsManager from "../components/Admin/Sales/TermsManager.jsx";
 
 
 const AppRouter = () => {
@@ -57,6 +58,7 @@ const AppRouter = () => {
             <Route path="/" element={<Welcome />} /> {/*Cada route sera una ruta de acceso a la pagina */}
             <Route path="/register" element={<Register/>} />{/*Ruta para registrar usuarios (solo admin accede)*/}
             <Route path="/change-password" element={<ChangePassword/>} />{/*Ruta para cambiar contraseña*/}
+            <Route path="/terms-manager" element={<TermsManager />} />{/*Ruta para gestionar términos y condiciones*/}
             <Route path="/inventory" element={<Inventario/>}></Route>
             <Route path="/login-form" element={<LoginForm/>} />
             <Route path="/admin" element={<AdminDashBoard/>} />

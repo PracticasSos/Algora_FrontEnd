@@ -85,7 +85,7 @@ const TermsCondition = ({ selectedBranch, formData, setFormData }) => {
         border={`1px solid ${borderColor}`}
         boxShadow="sm"
       >
-        {/* Resumen visible */}
+
         <Box color={termsTextColor}>
           <ReactMarkdown>{previewLines}</ReactMarkdown>
         </Box>

@@ -20,39 +20,69 @@ const baseMessage = "Acepta las condiciones de no devolución de {{BRANCH}}.";
 
 const TermsCondition = ({ selectedBranch, formData, setFormData }) => {
   const [message, setMessage] = useState(
-    baseMessage.replace("{{BRANCH}}", selectedBranch || "OPTICA")
+    baseMessage.replace("{{BRANCH}}", selectedBranch || "ÓPTICA")
   );
   const [isChecked, setIsChecked] = useState(false);
   const [showFullTerms, setShowFullTerms] = useState(false);
-  const [customTerms, setCustomTerms] = useState(null); 
+  const [customTerms, setCustomTerms] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchTerms = async () => {
-      if (!formData?.tenant_id) {
+    const fetchTenantTerms = async () => {
+      setLoading(true);
+
+      // Obtiene la sesión del usuario actual
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        console.warn("No hay usuario autenticado.");
         setLoading(false);
         return;
       }
 
-      const { data, error } = await supabase
-        .from("terms")
-        .select("terms_text")
-        .eq("tenant_id", formData.tenant_id)
+      // Busca el tenant_id en la tabla users
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("tenant_id")
+        .eq("auth_id", user.id)
         .single();
 
-      if (data?.terms_text) {
-        setCustomTerms(data.terms_text);
+      if (userError) {
+        console.error("❌ Error al obtener tenant_id:", userError.message);
+        setLoading(false);
+        return;
       }
 
-      if (error && error.code !== "PGRST116") {
-        console.error("Error al obtener términos:", error.message);
+      const tenantId = userData?.tenant_id;
+      if (!tenantId) {
+        console.warn("Usuario sin tenant_id asociado.");
+        setLoading(false);
+        return;
+      }
+
+
+      const { data: termsData, error: termsError } = await supabase
+        .from("terms")
+        .select("terms_text")
+        .eq("tenant_id", tenantId)
+        .maybeSingle();
+
+      if (termsError) {
+        console.error(" Error al obtener términos:", termsError.message);
+      } else if (termsData?.terms_text) {
+        console.log(" Términos personalizados encontrados");
+        setCustomTerms(termsData.terms_text);
+      } else {
+        console.log("ℹNo se encontraron términos personalizados. Se usa el predeterminado.");
       }
 
       setLoading(false);
     };
 
-    fetchTerms();
-  }, [formData?.tenant_id]);
+    fetchTenantTerms();
+  }, []);
 
   const handleCheckbox = (e) => {
     const checked = e.target.checked;
@@ -61,13 +91,13 @@ const TermsCondition = ({ selectedBranch, formData, setFormData }) => {
   };
 
   useEffect(() => {
-    const updatedMessage = baseMessage.replace("{{BRANCH}}", selectedBranch || "OPTICA");
+    const updatedMessage = baseMessage.replace("{{BRANCH}}", selectedBranch || "ÓPTICA");
     setMessage(updatedMessage);
   }, [selectedBranch]);
 
-  const branchDisplay = selectedBranch || "OPTICA";
+  const branchDisplay = selectedBranch || "ÓPTICA";
   const replacedTerms = useMemo(() => {
-    const sourceText = customTerms || termsText; // si hay texto personalizado lo usa
+    const sourceText = customTerms || termsText;
     return sourceText.replace(/veoptics/gi, branchDisplay);
   }, [customTerms, branchDisplay]);
 
@@ -83,14 +113,6 @@ const TermsCondition = ({ selectedBranch, formData, setFormData }) => {
   const buttonColor = useColorModeValue("teal.600", "teal.300");
   const shadow = useColorModeValue("lg", "dark-lg");
 
-  if (loading) {
-    return (
-      <Flex justify="center" align="center" h="150px">
-        <Spinner size="lg" color="teal.400" />
-      </Flex>
-    );
-  }
-
   return (
     <Box
       bg={boxBg}
@@ -101,7 +123,6 @@ const TermsCondition = ({ selectedBranch, formData, setFormData }) => {
       mb={6}
       boxShadow={shadow}
       border={`1.5px solid ${borderColor}`}
-      transition="box-shadow 0.2s"
     >
       <Flex align="center" mb={2}>
         <Icon as={FaChevronDown} color={buttonColor} boxSize={5} mr={2} />
@@ -111,51 +132,57 @@ const TermsCondition = ({ selectedBranch, formData, setFormData }) => {
       </Flex>
       <Divider mb={3} />
 
-      <Box
-        bg={termsBg}
-        p={4}
-        borderRadius="xl"
-        fontSize="md"
-        lineHeight="1.7"
-        color={termsTextColor}
-        width="100%"
-        mb={3}
-        border={`1px solid ${borderColor}`}
-        boxShadow="sm"
-      >
-        <Box color={termsTextColor}>
-          <ReactMarkdown>{previewLines}</ReactMarkdown>
-        </Box>
-
-        <Collapse in={showFullTerms} animateOpacity>
-          <Box mt={2} color={termsTextColor}>
-            <ReactMarkdown>{remainingLines}</ReactMarkdown>
-          </Box>
-        </Collapse>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          mt={2}
-          color={buttonColor}
-          onClick={() => setShowFullTerms(!showFullTerms)}
-          fontWeight="bold"
-          rightIcon={
-            showFullTerms ? (
-              <Icon as={FaChevronUp} boxSize={4} />
-            ) : (
-              <Icon as={FaChevronDown} boxSize={4} />
-            )
-          }
-          _hover={{
-            bg: useColorModeValue("teal.50", "teal.900"),
-            color: useColorModeValue("teal.700", "teal.200"),
-          }}
-          transition="background 0.2s"
+      {loading ? (
+        <Flex justify="center" py={4}>
+          <Spinner size="lg" color="teal.500" />
+        </Flex>
+      ) : (
+        <Box
+          bg={termsBg}
+          p={4}
+          borderRadius="xl"
+          fontSize="md"
+          lineHeight="1.7"
+          color={termsTextColor}
+          width="100%"
+          mb={3}
+          border={`1px solid ${borderColor}`}
+          boxShadow="sm"
         >
-          {showFullTerms ? "Leer menos" : "Leer más"}
-        </Button>
-      </Box>
+          <Box color={termsTextColor}>
+            <ReactMarkdown>{previewLines}</ReactMarkdown>
+          </Box>
+
+          <Collapse in={showFullTerms} animateOpacity>
+            <Box mt={2} color={termsTextColor}>
+              <ReactMarkdown>{remainingLines}</ReactMarkdown>
+            </Box>
+          </Collapse>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            mt={2}
+            color={buttonColor}
+            onClick={() => setShowFullTerms(!showFullTerms)}
+            fontWeight="bold"
+            rightIcon={
+              showFullTerms ? (
+                <Icon as={FaChevronUp} boxSize={4} />
+              ) : (
+                <Icon as={FaChevronDown} boxSize={4} />
+              )
+            }
+            _hover={{
+              bg: useColorModeValue("teal.50", "teal.900"),
+              color: useColorModeValue("teal.700", "teal.200"),
+            }}
+            transition="background 0.2s"
+          >
+            {showFullTerms ? "Leer menos" : "Leer más"}
+          </Button>
+        </Box>
+      )}
 
       <Divider mb={3} />
 

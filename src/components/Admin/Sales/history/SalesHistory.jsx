@@ -17,9 +17,7 @@ import TermsCondition from "../TermsCondition";
 import SmartHeader from "../../../header/SmartHeader";
 
 const SalesHistory = () => {
-  const [filteredMeasures, setFilteredMeasures] = useState([]);
   const [deliveryDays, setDeliveryDays] = useState(0);
-  const [saleRegistered, setSaleRegistered] = useState(false);
   const [saleId, setSaleId] = useState(null);
   const [branchName, setBranchName] = useState("");
   const [patientData, setPatientData] = useState(null);
@@ -30,6 +28,8 @@ const SalesHistory = () => {
   const toast = useToast();
   const { patientId, saleId: saleParamId } = useParams();
   const isEditing = Boolean(saleParamId);
+  const currentUser = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("user") || "null") : null;
+  const isAdmin = currentUser?.role_id === 1;
     // Nuevo estado para controlar las páginas
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 8; 
@@ -270,6 +270,16 @@ const SalesHistory = () => {
   };
 
   const handleSubmit = async () => {
+    if (!isAdmin) {
+      toast({
+        title: "Acceso denegado",
+        description: "Solo administradores pueden editar ventas.",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+      return;
+    }
     const signatureDataUrl = formData.signature;
 
     if (!signatureDataUrl) {
@@ -433,7 +443,7 @@ const SalesHistory = () => {
         return (
           <Box  >
             <Box >
-              <DetailsHistory onFormDataChange={handleFormDataChange} onTotalsChange={handleTotalsChange} initialFormData={{...formData, ...saleData} } saleId={saleParamId || saleId} />
+              <DetailsHistory  isEditable={isAdmin} onFormDataChange={handleFormDataChange} onTotalsChange={handleTotalsChange} initialFormData={{...formData, ...saleData} } saleId={saleParamId || saleId} />
             </Box>
           </Box>
         );
@@ -441,7 +451,7 @@ const SalesHistory = () => {
         return (
           <Box >
             <Box >
-              <HistoryUI frameName={formData.frameName} lensName={formData.lensName} total_p_frame={totals.total_p_frame} total_p_lens={totals.total_p_lens} initialFormData={formData} onFormDataChange={handleFormDataChange} />
+              <HistoryUI  isEditable={isAdmin} frameName={formData.frameName} lensName={formData.lensName} total_p_frame={totals.total_p_frame} total_p_lens={totals.total_p_lens} initialFormData={formData} onFormDataChange={handleFormDataChange} />
             </Box>
           </Box>
         );
@@ -449,7 +459,7 @@ const SalesHistory = () => {
         return (
           <Box >
             <Box>
-              <TotalHistory saleId={saleId} formData={formData} setFormData={setFormData} />
+              <TotalHistory isEditable={isAdmin} saleId={saleId} formData={formData} setFormData={setFormData} />
             </Box>
           </Box>
         );
@@ -457,7 +467,7 @@ const SalesHistory = () => {
         return (
           <Box >
             <Box height="380px" >
-              <Delivery saleData={saleData} setSaleData={setSaleData} />
+              <Delivery isEditable={isAdmin} saleData={saleData} setSaleData={setSaleData} />
             </Box>
           </Box>
         );
@@ -473,7 +483,7 @@ const SalesHistory = () => {
         return (
           <Box mt={8}>
             <Box height="350px">
-              <ObservationSection setFormData={setFormData} />
+              <ObservationSection isEditable={isAdmin} setFormData={setFormData} />
             </Box>
           </Box>
         );
@@ -586,9 +596,11 @@ const SalesHistory = () => {
               fontWeight="bold"
               px={8}
               boxShadow="md"
-              _hover={{ bg: "teal.600" }}
+              _hover={{ bg: isAdmin ? "teal.600" : undefined }}
+              isDisabled={!isAdmin}
             >
               Actualizar Venta
+              {isAdmin ? "Actualizar Venta" : "Solo visualización"}
             </Button>
           ) : (
             <Button

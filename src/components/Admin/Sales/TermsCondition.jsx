@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import termsText from "./TermsText.md?raw";
 import {
@@ -29,7 +29,14 @@ const TermsCondition = ({ selectedBranch, formData, setFormData }) => {
     setFormData((prev) => ({ ...prev, termsAccepted: checked }));
   };
 
-  const lines = termsText.split("\n");
+  // Reemplaza todas las apariciones de "veoptics" (cualquier caso) por la sucursal seleccionada
+  const branchDisplay = selectedBranch || "VEOPTICS";
+  const replacedTerms = useMemo(
+    () => termsText.replace(/veoptics/gi, branchDisplay),
+    [branchDisplay]
+  );
+
+  const lines = replacedTerms.split("\n");
   const previewLines = lines.slice(0, 3).join("\n");
   const remainingLines = lines.slice(3).join("\n");
 

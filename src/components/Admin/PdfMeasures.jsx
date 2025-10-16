@@ -233,7 +233,7 @@ const PdfMeasures = ({ formData, selectedPatient, doctorData, tenantId, doctorSe
               loadingText="Generando..."
               size="md"
             >
-              📄 Generar Certificado
+              Generar Certificado
             </Button>
             
             <Button 
@@ -243,7 +243,7 @@ const PdfMeasures = ({ formData, selectedPatient, doctorData, tenantId, doctorSe
               loadingText="Enviando..."
               size="md"
             >
-              📱 Enviar por WhatsApp
+              Enviar por WhatsApp
             </Button>
           </Flex>
         </Box>

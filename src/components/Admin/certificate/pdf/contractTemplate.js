@@ -7,397 +7,371 @@ export const certificateTemplate = `
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Certificado de Agudeza Visual</title>
     <style>
-        * { 
-            margin: 0; 
-            padding: 0; 
-            box-sizing: border-box; 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
         }
-        
-        body { 
-            font-family: 'Arial', sans-serif; 
-            font-size: 11px; 
-            line-height: 1.4; 
-            color: #333; 
+
+            body {
+                font-family: 'Helvetica', Arial, sans-serif;
+                font-size: 11.5px;
+                line-height: 1.5;
+                color: #333;
+                background: #fff;
+                margin: 0;
+                padding: 0;
+            }
+        :root {
+            --primary-color: #005A9C;
+            --secondary-color: #4A4A4A;
+            --border-color: #EAEAEA;
+            --background-light: #F8F9FA;
+        }
+        .certificate-container {
+            border: 1px solid var(--border-color);
+            padding: 25px;
+            border-radius: 8px;
             background: white;
-            padding: 20px;
-            max-width: 210mm;
             margin: 0 auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
-        
-        .header { 
-            text-align: center; 
-            margin-bottom: 25px; 
+        /* --- Header Section --- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 20px;
         }
-        
-        .logo { 
-            font-size: 32px; 
-            font-weight: bold; 
-            color: #2d5aa0; 
-            margin-bottom: 5px;
-            letter-spacing: 3px;
+        .header-left {
+            flex: 0 0 160px;
         }
-        
-        .company-name { 
-            font-size: 14px; 
-            color: #666; 
-            margin-bottom: 20px;
-            letter-spacing: 1px;
+        .header-left img {
+            max-width: 100%;
+            max-height: 75px;
+            object-fit: contain;
         }
-        
-        .document-title { 
-            font-size: 20px; 
-            font-weight: bold; 
-            text-align: center; 
-            margin: 20px 0; 
-            color: #333;
+        .header-right {
+            flex-grow: 1;
+            text-align: right;
+        }
+        .branch-details {
+            font-size: 11.5px;
+            line-height: 1.4;
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+        }
+        .branch-details .branch-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #000;
+        }
+        .branch-details p {
+            margin: 2px 0;
+        }
+        /* --- Title Centered --- */
+        .document-title {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--primary-color);
             text-transform: uppercase;
-            letter-spacing: 1.5px;
+            letter-spacing: 1px;
+            margin: 0 auto;
+            text-align: center;
+            display: block;
+            margin-bottom: 15px;
         }
-        
-        .patient-info { 
-            background: #f8f9fa; 
-            padding: 15px; 
-            margin: 15px 0; 
-            border-radius: 5px;
-            border-left: 4px solid #2d5aa0;
+        /* --- Patient Info Section --- */
+        .patient-info {
+            background: var(--background-light);
+            padding: 12px 18px;
+            margin-bottom: 25px;
+            border-radius: 6px;
+            border-left: 5px solid var(--primary-color);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            font-size: 12px;
         }
-        
-        .info-label { 
-            font-weight: bold; 
-            color: #2d5aa0;
-            margin-right: 10px;
+        .info-label {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-right: 8px;
         }
-        
-        .measurements-table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin: 20px 0; 
-            border: 1px solid #ddd;
-            font-size: 10px;
+        .main-content {
+            margin-bottom: 30px;
         }
-        
+        .measurements-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+            font-size: 11px;
+        }
         .measurements-table th, 
-        .measurements-table td { 
-            padding: 8px 6px; 
-            text-align: center; 
-            border: 1px solid #ddd;
+        .measurements-table td {
+            padding: 9px 6px;
+            text-align: center;
+            border: 1px solid var(--border-color);
         }
-        
-        .measurements-table th { 
-            background: #f1f3f4; 
-            font-weight: bold; 
+        .measurements-table th {
+            background: #F1F3F4;
+            font-weight: 600;
             color: #333;
-            font-size: 9px;
+            font-size: 10px;
+            text-transform: uppercase;
         }
-        
         .measurements-table .eye-label {
-            background: #e8f4f8;
-            font-weight: bold;
-            color: #2d5aa0;
-            font-size: 11px;
+            background: #EAF2F8;
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 12px;
         }
-        
-        .diagnosis-section { 
-            margin: 20px 0; 
-            padding: 15px;
-            background: #fafafa;
-            border-radius: 5px;
+        .diagnosis-section {
+            margin-bottom: 25px;
         }
-        
-        .diagnosis-title { 
-            font-size: 14px; 
-            font-weight: bold; 
-            color: #333;
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--secondary-color);
             margin-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
         }
-        
         .diagnosis-content {
-            background: white;
+            background: var(--background-light);
             padding: 15px;
-            border: 1px solid #e0e0e0;
-            border-radius: 3px;
-            min-height: 60px;
-            font-size: 11px;
-            line-height: 1.6;
+            border-radius: 4px;
+            min-height: 50px;
+            white-space: pre-wrap;
         }
-        
-        .vision-tests { 
-            margin: 20px 0; 
+        .vision-tests-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 25px;
         }
-        
-        .vision-test { 
-            margin-bottom: 15px;
+        .vision-test {
+            background: var(--background-light);
             padding: 15px;
-            background: #fafafa;
-            border-radius: 5px;
+            border-radius: 6px;
+            flex: 1 1 calc(50% - 10px);
         }
-        
-        .test-title { 
-            font-size: 13px; 
-            font-weight: bold; 
-            color: #2d5aa0;
+        .vision-test.full-width {
+            flex-basis: 100%;
+        }
+        .test-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--primary-color);
             margin-bottom: 8px;
         }
-        
         .test-description {
             font-size: 10px;
             color: #666;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             font-style: italic;
-            line-height: 1.4;
         }
-        
-        .test-result { 
-            display: flex; 
-            align-items: center; 
-            margin: 8px 0;
-            font-size: 11px;
+        .test-result {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
         }
-        
-        .radio-checked {
-            position: relative;
-            padding-left: 20px;
+        .radio-checked::before, .checkbox-checked::before {
+            font-family: 'Arial', sans-serif;
+            color: var(--primary-color);
+            font-size: 18px;
+            width: 20px;
+            display: inline-block;
+            text-align: left;
         }
-        
         .radio-checked::before {
             content: "●";
-            color: #2d5aa0;
-            position: absolute;
-            left: 0;
-            font-size: 14px;
+            line-height: 1;
         }
-        
-        .checkbox-checked {
-            position: relative;
-            padding-left: 20px;
-        }
-        
         .checkbox-checked::before {
             content: "✓";
             font-weight: bold;
-            color: #2d5aa0;
-            position: absolute;
-            left: 0;
-            font-size: 12px;
+            line-height: 1;
         }
-        
-        .signatures-section { 
-            margin-top: 50px; 
-            display: flex; 
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-        
-        .signature-box { 
-            width: 200px; 
-            text-align: center;
-        }
-        
-        .signature-line { 
-            border-bottom: 2px solid #333; 
-            margin-bottom: 8px; 
-            height: 60px;
-            position: relative;
-        }
-        
-        .signature-text {
-            font-size: 10px;
-            color: #666;
-        }
-        
-        .doctor-info {
-            text-align: center;
-            font-size: 11px;
-            line-height: 1.4;
-            border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 5px;
-            background: #f8f9fa;
-        }
-        
-        .doctor-name {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 3px;
-            font-size: 12px;
-        }
-        
-        .doctor-details {
-            color: #666;
-            margin-bottom: 2px;
-        }
-        
-        .footer { 
-            margin-top: 30px; 
-            text-align: center; 
-            font-size: 10px; 
-            color: #888;
-            border-top: 1px solid #eee;
-            padding-top: 15px;
-        }
-        
-        .contact-info {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 8px;
-            flex-wrap: wrap;
-        }
-        
         .color-issues {
             margin-top: 12px;
-            padding: 12px;
-            background: #fff3cd;
-            border: 1px solid #ffeaa7;
-            border-radius: 3px;
+            padding: 10px;
+            background: #FFF9E6;
+            border-left: 3px solid #FFC107;
             font-size: 10px;
-            line-height: 1.4;
             display: {{showColorIssues}};
+        }
+        .footer-section {
+            border-top: 2px solid var(--border-color);
+            padding-top: 30px;
+            margin-top: 30px;
+        }
+        .signatures-grid {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            gap: 40px;
+            margin-bottom: 40px;
+            min-height: 120px;
+        }
+        .signature-box {
+            text-align: center;
+            width: 45%;
+        }
+        .signature-line {
+            border-bottom: 1.5px solid #999;
+            height: 70px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .signature-line img {
+            max-width: 100%;
+            max-height: 60px;
+            object-fit: contain;
+        }
+        .signature-text {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+        .doctor-seal {
+            width: 130px;
+            height: 90px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto;
+        }
+        .doctor-seal img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .footer-text {
+            text-align: center;
+            font-size: 10px;
+            color: #999;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
-    <div class="header" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-        <div style="width: 100%; display: flex; justify-content: center;">
-            {{certificateLogo}}
-        </div>
-        <div class="document-title">Certificado de Agudeza Visual</div>
-    </div>
-
-    <!-- Patient Information -->
-    <div class="patient-info">
-        <div>
-            <span class="info-label">Paciente:</span>
-            <span>{{patientName}}</span>
-        </div>
-        <div>
-            <span class="info-label">Fecha:</span>
-            <span>{{currentDate}}</span>
-        </div>
-    </div>
-
-    <!-- Measurements Table -->
-    <table class="measurements-table">
-        <thead>
-            <tr>
-                <th>Rx FINAL</th>
-                <th>ESFERA</th>
-                <th>CILINDRO</th>
-                <th>EJE</th>
-                <th>PRISMA</th>
-                <th>ADD</th>
-                <th>AV VL</th>
-                <th>AV VP</th>
-                <th>DNP</th>
-                <th>ALT</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td class="eye-label">OD</td>
-                <td>{{sphereRight}}</td>
-                <td>{{cylinderRight}}</td>
-                <td>{{axisRight}}</td>
-                <td>{{prismRight}}</td>
-                <td>{{addRight}}</td>
-                <td>{{avVlRight}}</td>
-                <td>{{avVpRight}}</td>
-                <td>{{dnpRight}}</td>
-                <td>{{altRight}}</td>
-            </tr>
-            <tr>
-                <td class="eye-label">OI</td>
-                <td>{{sphereLeft}}</td>
-                <td>{{cylinderLeft}}</td>
-                <td>{{axisLeft}}</td>
-                <td>{{prismLeft}}</td>
-                <td>{{addLeft}}</td>
-                <td>{{avVlLeft}}</td>
-                <td>{{avVpLeft}}</td>
-                <td>{{dnpLeft}}</td>
-                <td>{{altLeft}}</td>
-            </tr>
-        </tbody>
-    </table>
-
-    <!-- Diagnosis -->
-    <div class="diagnosis-section">
-        <div class="diagnosis-title">Su diagnóstico es:</div>
-        <div class="diagnosis-content">
-            {{diagnosis}}
-        </div>
-    </div>
-
-    <!-- Vision Tests -->
-    <div class="vision-tests">
-        <!-- Near Vision -->
-        <div class="vision-test">
-            <div class="test-title">Visión cercana</div>
-            <div class="test-description">
-                Capacidad de leer como mínimo, las letras de la escala 1 de la carta normalizada Jaeger...
+    <div class="certificate-container">
+        <header class="header">
+            <div class="header-left">
+                {{certificateLogo}}
             </div>
-            <div class="test-result">
-                <span class="{{nearVisionApproved}}">Aprobado</span>
-                <span style="margin-left: 40px;" class="{{nearVisionNotApproved}}">No Aprobado</span>
+            <div class="header-right">
+                {{branchInfo}}
             </div>
-            <div class="test-result">
-                <span class="{{needsLensesNear}}">Precisa lentes</span>
+        </header>
+        <h1 class="document-title">Certificado de Agudeza Visual</h1>
+        <section class="patient-info">
+            <div>
+                <span class="info-label">Paciente:</span>
+                <span>{{patientName}}</span>
             </div>
-        </div>
-
-        <!-- Far Vision -->
-        <div class="vision-test">
-            <div class="test-title">Visión lejana</div>
-            <div class="test-result">
-                <span class="{{farVision2020}}">Mayor o igual a 20/20 en la escala SNELLEN</span>
+            <div>
+                <span class="info-label">Fecha de Emisión:</span>
+                <span>{{currentDate}}</span>
             </div>
-            <div class="test-result">
-                <span class="{{farVisionLess2020}}">Menor a 20/20</span>
+        </section>
+        <main class="main-content">
+            <table class="measurements-table">
+                <thead>
+                    <tr>
+                        <th>Rx FINAL</th>
+                        <th>ESFERA</th>
+                        <th>CILINDRO</th>
+                        <th>EJE</th>
+                        <th>PRISMA</th>
+                        <th>ADD</th>
+                        <th>AV VL</th>
+                        <th>AV VP</th>
+                        <th>DNP</th>
+                        <th>ALT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="eye-label">OD</td>
+                        <td>{{sphereRight}}</td>
+                        <td>{{cylinderRight}}</td>
+                        <td>{{axisRight}}</td>
+                        <td>{{prismRight}}</td>
+                        <td>{{addRight}}</td>
+                        <td>{{avVlRight}}</td>
+                        <td>{{avVpRight}}</td>
+                        <td>{{dnpRight}}</td>
+                        <td>{{altRight}}</td>
+                    </tr>
+                    <tr>
+                        <td class="eye-label">OI</td>
+                        <td>{{sphereLeft}}</td>
+                        <td>{{cylinderLeft}}</td>
+                        <td>{{axisLeft}}</td>
+                        <td>{{prismLeft}}</td>
+                        <td>{{addLeft}}</td>
+                        <td>{{avVlLeft}}</td>
+                        <td>{{avVpLeft}}</td>
+                        <td>{{dnpLeft}}</td>
+                        <td>{{altLeft}}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="diagnosis-section">
+                <h2 class="section-title">Diagnóstico Profesional</h2>
+                <div class="diagnosis-content">{{diagnosis}}</div>
             </div>
-            <div class="test-result">
-                <span class="{{needsLensesFar}}">Precisa lentes</span>
+            <h2 class="section-title">Pruebas de Capacidad Visual</h2>
+            <div class="vision-tests-grid">
+                <div class="vision-test">
+                    <h3 class="test-title">Visión Cercana</h3>
+                    <p class="test-description">Capacidad de leer la escala 1 de la carta Jaeger.</p>
+                    <div class="test-result"><span class="{{nearVisionApproved}}">Aprobado</span></div>
+                    <div class="test-result"><span class="{{nearVisionNotApproved}}">No Aprobado</span></div>
+                    <div class="test-result"><span class="{{needsLensesNear}}">Precisa lentes correctores</span></div>
+                </div>
+                <div class="vision-test">
+                    <h3 class="test-title">Visión Lejana</h3>
+                    <p class="test-description">Agudeza visual según la escala de SNELLEN.</p>
+                    <div class="test-result"><span class="{{farVision2020}}">Agudeza 20/20 o superior</span></div>
+                    <div class="test-result"><span class="{{farVisionLess2020}}">Agudeza menor a 20/20</span></div>
+                    <div class="test-result"><span class="{{needsLensesFar}}">Precisa lentes correctores</span></div>
+                </div>
+                <div class="vision-test full-width">
+                    <h3 class="test-title">Percepción de Colores</h3>
+                    <div class="test-result">
+                        <span class="{{colorPerception}}">Demuestra capacidad para distinguir y diferenciar colores.</span>
+                    </div>
+                    <div class="color-issues">
+                        <strong>Presenta dificultad para distinguir los siguientes colores:</strong><br>
+                        {{colorIssues}}
+                    </div>
+                </div>
             </div>
-        </div>
-
-        <!-- Color Perception -->
-        <div class="vision-test">
-            <div class="test-title">Percepción de colores</div>
-            <div class="test-result">
-                <span class="{{colorPerception}}">
-                    Ha demostrado capacidad para distinguir y diferenciar los colores.
-                </span>
+        </main>
+        <footer class="footer-section">
+            <div class="signatures-grid">
+                <div class="signature-box patient">
+                    <div class="signature-line">
+                        {{patientSignature}}
+                    </div>
+                    <div class="signature-text" style="font-weight: 400;">Firma</div>
+                </div>
+                <div class="signature-box professional">
+                    <div class="doctor-seal">
+                        {{doctorSeal}}
+                    </div>
+                </div>
             </div>
-            
-            <div class="color-issues">
-                <strong>Tiene problemas para distinguir o diferenciar los siguientes colores:</strong><br>
-                {{colorIssues}}
-            </div>
-        </div>
-    </div>
-
-    <!-- Signatures -->
-    <div class="signatures-section">
-        <div class="signature-box">
-            <div class="signature-line">{{patientSignature}}</div>
-            <div class="signature-text">Firma</div>
-        </div>
-        
-        <div style="width: 100%; display: flex; justify-content: center; align-items: center;">
-            <div class="doctor-info" style="margin: 0 auto;">
-                {{doctorSeal}}
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <div class="footer" style="display: flex; justify-content: center; align-items: center;">
-        <div style="width: 100%; text-align: center;">
-            {{footerInfo}}
-        </div>
+           
+        </footer>
     </div>
 </body>
 </html>

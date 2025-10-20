@@ -379,7 +379,18 @@ const SalesHistory = () => {
     ...saleData,
     ...formData,
     sale_id: saleId,
+    sale_id: saleParamId || saleId,
   };
+
+  const handleGeneratePdf = async () => {
+    const saleIdToUse = formData?.sale_id || props?.saleParamId || null;
+    if (!saleIdToUse) {
+      console.error("No se encontró el ID de la venta para actualizar la URL del PDF");
+      // mostrar toast o feedback al usuario en vez de seguir
+      return;
+    }
+  };
+
 
   const handleSaveSignature = (signatureDataUrl) => {
     setFormData((prev) => ({
@@ -397,37 +408,8 @@ const SalesHistory = () => {
   }));
   };
 
-  const handleNavigate = (route = null) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (route) {
-      navigate(route);
-      return;
-    }
-    if (!user || !user.role_id) {
-      navigate('/Login');
-      return;
-    }
-    switch (user.role_id) {
-      case 1:
-        navigate('/Admin');
-        break;
-      case 2:
-        navigate('/Optometra');
-        break;
-      case 3:
-        navigate('/Vendedor');
-        break;
-      default:
-        navigate('/');
-    }
-  };
 
   const moduleSpecificButton = null;
-
-  const cardBg = useColorModeValue(
-      'rgba(207, 202, 202, 0.5)', // Light: tarjetas blancas
-      'rgba(48, 44, 44, 0.2)' // Dark: tu fondo actual
-  );
 
   // Función para renderizar contenido por paso
   const renderStepContent = () => {
@@ -618,6 +600,11 @@ const SalesHistory = () => {
         </Box>
 
         {saleId && (
+          <Box mt={10} w="100%" >
+            <Pdf formData={pdfData} targetRef={salesRef} />
+          </Box>
+        )}
+        {(saleParamId || saleId) && (
           <Box mt={10} w="100%" >
             <Pdf formData={pdfData} targetRef={salesRef} />
           </Box>

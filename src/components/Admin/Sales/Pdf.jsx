@@ -90,18 +90,34 @@ const Pdf = ({ formData, onPdfUploaded }) => {
     }
   };
 
+  // ...existing code...
   const handleGeneratePdf = async () => {
     setGenerating(true);
     try {
       console.log("Datos recibidos en PDF:", formData);
-      // Verificar términos aceptados
+
+      // comprobar términos (no bloquear; solo avisar si faltan)
       if (!formData?.termsAccepted) {
-        throw new Error('Debe aceptar los términos y condiciones antes de generar el PDF');
+        toast({
+          title: "Aviso",
+          description: "No se confirmaron los términos; se generará el PDF de todas formas.",
+          status: "warning",
+          duration: 4000,
+          isClosable: true,
+        });
       }
 
-      // Verificar que existe el ID de la venta
-      if (!formData?.id) {
-        throw new Error('No se encontró el ID de la venta para actualizar la URL del PDF');
+      // aceptar id desde varias propiedades posibles
+      const saleIdToUse = formData?.id || formData?.sale_id || formData?.saleId || null;
+      if (!saleIdToUse) {
+        console.warn("No se encontró el ID de la venta — se generará el PDF pero no se actualizará la URL en la BD.");
+        toast({
+          title: "Generando sin ID",
+          description: "No se encontró el ID de la venta; el PDF se generará pero no se guardará la URL en la venta.",
+          status: "info",
+          duration: 4000,
+          isClosable: true,
+        });
       }
 
       // Obtener todos los datos necesarios
@@ -114,11 +130,33 @@ const Pdf = ({ formData, onPdfUploaded }) => {
       // Guardar teléfono del paciente
       setPatientPhone(patientData?.pt_phone || formData?.pt_phone || "");
 
-      // Generar, subir PDF y actualizar URL en BD
+      // Generar y subir PDF
       const result = await generateContractPDF(formData, measureData, patientData, branchData);
 
       setPdfUrl(result.pdfUrl);
       setPdfGenerated(true);
+
+      // Si tenemos saleId, actualizar la fila en la BD con la URL del PDF
+      if (saleIdToUse && result?.pdfUrl) {
+        try {
+          const { error: updateError } = await supabase
+            .from("sales")
+            .update({ pdf_url: result.pdfUrl })
+            .eq("id", saleIdToUse);
+          if (updateError) {
+            console.error("Error actualizando URL del PDF en sales:", updateError);
+            toast({
+              title: "Advertencia",
+              description: "PDF generado pero no se pudo guardar la URL en la venta.",
+              status: "warning",
+              duration: 4000,
+              isClosable: true,
+            });
+          }
+        } catch (dbErr) {
+          console.error("Error en la actualización de BD:", dbErr);
+        }
+      }
 
       // Llamar callback si existe
       if (onPdfUploaded) {
@@ -127,7 +165,7 @@ const Pdf = ({ formData, onPdfUploaded }) => {
 
       toast({
         title: "¡PDF generado exitosamente!",
-        description: "El contrato fue generado, subido y guardado en la base de datos.",
+        description: "El contrato fue generado, subido y guardado (si se pudo) en la base de datos.",
         status: "success",
         duration: 4000,
         isClosable: true,
@@ -146,6 +184,7 @@ const Pdf = ({ formData, onPdfUploaded }) => {
       setGenerating(false);
     }
   };
+// ...existing code...
 
     const handleSendWhatsApp = () => {
     if (!pdfUrl || !patientPhone) {

@@ -1,389 +1,608 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../../../api/supabase';
-import { Divider, Text, Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Input, FormControl, FormLabel, Select, Spinner, Grid, useColorModeValue,Flex,Icon} from "@chakra-ui/react";
-import { useNavigate } from 'react-router-dom';
-import SmartHeader from '../../header/SmartHeader';
-import { FaClinicMedical, FaFilter } from "react-icons/fa";
+import { useState, useEffect } from "react";
+import { supabase } from "../../../api/supabase";
+import {
+  Divider,
+  Text,
+  Box,
+  Button,
+  Heading,
+  Table,
+  Thead,
+  Tbody,
+  Tr,
+  Th,
+  Td,
+  Input,
+  FormControl,
+  FormLabel,
+  Select,
+  Spinner,
+  Flex,
+  Icon,
+  Tag,
+  SimpleGrid,
+  useColorModeValue,
+  // --- 1. Imports NUEVOS ---
+  useToast,
+  IconButton,
+  HStack,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+} from "@chakra-ui/react";
+import { useNavigate } from "react-router-dom";
+import SmartHeader from "../../header/SmartHeader";
+import {
+  FaClinicMedical,
+  FaFilter,
+  FaPlus,
+  FaEye, // <-- NUEVO
+  FaTrash, // <-- NUEVO
+} from "react-icons/fa";
+
+// --- Diccionarios para traducir el ESTADO ---
+const STATUS_MAP = {
+  enviado: "Enviado",
+  recibido_lab: "Recibido por Laboratorio",
+  en_proceso: "En Proceso",
+  despachado: "Despachado",
+  recibido_optica: "Recibido en Óptica",
+  entregado_paciente: "Entregado al Paciente",
+  //con_garantia: "En Garantía",
+  cancelado: "Cancelado",
+};
+
+const STATUS_COLOR_MAP = {
+  enviado: "gray",
+  recibido_lab: "blue",
+  en_proceso: "cyan",
+  despachado: "orange",
+  recibido_optica: "purple",
+  entregado_paciente: "green",
+  //con_garantia: "yellow",
+  cancelado: "red",
+};
+
+// --- Array de estados para los <Select> ---
+const STATUS_OPTIONS = Object.entries(STATUS_MAP).map(([key, value]) => ({
+  key,
+  value,
+}));
 
 const OrderLaboratoryList = () => {
-  const [patients, setPatients] = useState([]);
-  const [filteredPatients, setFilteredPatients] = useState([]);
+  // --- Estados para el historial y filtros ---
+  const [orders, setOrders] = useState([]);
+  const [labs, setLabs] = useState([]);
   const [branches, setBranches] = useState([]);
-  const [selectedBranch, setSelectedBranch] = useState(""); 
-  const [formData, setFormData] = useState({
+
+  const [filterLab, setFilterLab] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterBranch, setFilterBranch] = useState("");
+  const [filterDates, setFilterDates] = useState({
     since: "",
     till: "",
   });
+
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+  // --- 2. Estados NUEVOS para el modal y acciones ---
+  const toast = useToast();
+  const { isOpen, onOpen, onClose } = useDisclosure(); // Para el modal
+  const [selectedOrder, setSelectedOrder] = useState(null); // Orden a eliminar
+  const [isDeleting, setIsDeleting] = useState(false); // Spinner del modal
+
+  // Cargar los filtros (laboratorios y sucursales) al inicio
   useEffect(() => {
-    fetchBranches();
+    fetchFilterData();
   }, []);
 
+  // Cargar las órdenes cuando se monta el componente
   useEffect(() => {
-    if (selectedBranch) {
-      fetchTodayPatients();
-    }
-  }, [selectedBranch]);
+    fetchOrders();
+  }, []);
 
-  const fetchBranches = async () => {
+  // Función para cargar los Select de los filtros
+  const fetchFilterData = async () => {
     try {
-      const { data, error } = await supabase.from("branchs").select("id, name");
-      if (error) throw error;
-      setBranches(data);
+      const [labsRes, branchesRes] = await Promise.all([
+        supabase.from("labs").select("id, name"),
+        supabase.from("branchs").select("id, name"),
+      ]);
+
+      if (labsRes.error) throw labsRes.error;
+      if (branchesRes.error) throw branchesRes.error;
+
+      setLabs(labsRes.data);
+      setBranches(branchesRes.data);
     } catch (error) {
-      console.error("Error fetching branches:", error);
+      console.error("Error fetching filter data:", error);
     }
   };
 
-  const fetchTodayPatients = async () => {
-    if (!selectedBranch) return;
+  // --- 3. Función de traer ÓRDENES (MODIFICADA) ---
+  const fetchOrders = async () => {
     setLoading(true);
     try {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
-      const todayString = `${year}-${month}-${day}`;
-      const { data, error } = await supabase
-        .from('sales')
-        .select(`
-          branchs_id,
-          patient_id,
-          date,
-          patients (
-            id,
-            pt_firstname,
-            pt_lastname,
-            pt_ci
-          ),
-          is_refund
-        `)
-        .gte('date', `${todayString}T00:00:00`)
-        .lte('date', `${todayString}T23:59:59`)
-        .eq('branchs_id', selectedBranch)
-        .eq("is_refund", false);
+      // Empezamos la consulta en 'lab_orders'
+      let query = supabase.from("lab_orders").select(`
+        id,
+        created_at,
+        status,
+        pdf_url, 
+        patient_id,
+        lab_id,
+        sale_id,
+        patients ( pt_firstname, pt_lastname ),
+        labs ( name ),
+        sales ( branchs_id ) 
+      `);
+
+      // Aplicar filtros dinámicamente
+      if (filterLab) {
+        query = query.eq("lab_id", filterLab);
+      }
+      if (filterStatus) {
+        query = query.eq("status", filterStatus);
+      }
+      if (filterBranch) {
+        query = query.eq("sales.branchs_id", filterBranch);
+      }
+      if (filterDates.since) {
+        query = query.gte("created_at", `${filterDates.since}T00:00:00`);
+      }
+      if (filterDates.till) {
+        query = query.lte("created_at", `${filterDates.till}T23:59:59`);
+      }
+
+      query = query.order("created_at", { ascending: false });
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
-      const formattedData = data.map(sale => ({
-        patient_id: sale.patient_id,
-        pt_firstname: sale.patients.pt_firstname,
-        pt_lastname: sale.patients.pt_lastname,
-        pt_ci: sale.patients.pt_ci,
-        date: sale.date
-      }));
+      const filteredData = data.filter(order => {
+        if (filterBranch) {
+          return order.sales && order.sales.branchs_id == filterBranch;
+        }
+        return true;
+      });
 
-      setPatients(formattedData);
-      setFilteredPatients(formattedData);
+      setOrders(filteredData);
     } catch (error) {
-      console.error('Error fetching patients:', error);
+      console.error("Error fetching orders:", error);
+      toast({
+        title: "Error al cargar órdenes",
+        description: error.message,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchFilteredPatients = async () => {
-    if (!formData.since || !formData.till || !selectedBranch) return;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('sales')
-        .select(`
-          branchs_id,
-          patient_id,
-          date,
-          patients (
-            id,
-            pt_firstname,
-            pt_lastname,
-            pt_ci
-          )
-        `)
-        .gte('date', `${formData.since}T00:00:00`)
-        .lte('date', `${formData.till}T23:59:59`)
-        .eq('branchs_id', selectedBranch);
-
-      if (error) throw error;
-
-      const formattedData = data.map(sale => ({
-        patient_id: sale.patient_id,
-        pt_firstname: sale.patients.pt_firstname,
-        pt_lastname: sale.patients.pt_lastname,
-        pt_ci: sale.patients.pt_ci,
-        date: sale.date
-      }));
-
-      setPatients(formattedData);
-      setFilteredPatients(formattedData);
-    } catch (error) {
-      console.error('Error fetching filtered patients:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePatientSelect = (patient) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    
-    if (!user) {
-        console.error('Usuario no encontrado en localStorage');
-        alert("Error: usuario no autenticado.");
-        return;
-    }
-
-    if (!patient?.patient_id) {
-        console.error("ID del paciente no válido");
-        return;
-    }
-
-    // Asegurar consistencia de estado
-    localStorage.setItem('user', JSON.stringify(user));
-
-    navigate(`/order-laboratory-list/laboratory-order/${patient.patient_id}`, {
-        state: { patientData: patient, user }
-    });
-};
-
-
-  const handleChange = (e) => {
+  // Manejador para los filtros de fecha
+  const handleDateChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFilterDates((prev) => ({
       ...prev,
       [name]: value,
     }));
   };
 
-  const handleNavigate = (route = null) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (route) {
-        navigate(route);
-        return;
-    }
-    if (!user || !user.role_id) {
-        navigate('/LoginForm');
-        return;
-    }
-    switch (user.role_id) {
-        case 1:
-            navigate('/Admin');
-            break;
-        case 2:
-            navigate('/Optometra');
-            break;
-        case 3:
-            navigate('/Vendedor');
-            break;
-        case 4:
-            navigate('/SuperAdmin');
-            break;
-        default:
-            navigate('/');
+  // Navegación a la página de CREAR ORDEN
+  const handleCreateOrder = () => {
+    navigate("/laboratorio/crear-orden");
+  };
+
+  // (Opcional) Manejar clic en una fila para ver detalles
+  const handleRowClick = (orderId) => {
+    console.log("Ver detalles de la orden:", orderId);
+    // navigate(`/laboratorio/orden/${orderId}`);
+  };
+
+  // --- 4. Funciones NUEVAS para acciones ---
+
+  /**
+   * Actualiza el estado de una orden en la base de datos
+   */
+  const handleStatusChange = async (orderId, newStatus, e) => {
+    e.stopPropagation(); // Evita que se active el handleRowClick
+
+    try {
+      const { data, error } = await supabase
+        .from("lab_orders")
+        .update({ status: newStatus })
+        .eq("id", orderId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Actualizar la lista localmente (más rápido que un fetch)
+      setOrders((prevOrders) =>
+        prevOrders.map((order) =>
+          order.id === orderId ? { ...order, status: data.status } : order
+        )
+      );
+
+      toast({
+        title: "Estado actualizado",
+        description: `La orden #${orderId} ahora está: ${STATUS_MAP[newStatus]}`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast({
+        title: "Error al actualizar",
+        description: error.message,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
     }
   };
 
-  const moduleSpecificButton = null;
+  /**
+   * Abre el modal de confirmación para eliminar
+   */
+  const handleOpenDeleteModal = (order, e) => {
+    e.stopPropagation(); // Evita que se active el handleRowClick
+    setSelectedOrder(order);
+    onOpen();
+  };
 
-  const bgColor = useColorModeValue('white', 'gray.900');
-  const textColor = useColorModeValue('gray.800', 'white');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
-  const tableBg = useColorModeValue('white', 'gray.800');
-  const tableHoverBg = useColorModeValue('teal.50', 'teal.900');
-  const inputBg = useColorModeValue('gray.50', 'gray.800');
-  const selectBg = useColorModeValue('gray.50', 'gray.800');
-  const headerBg = useColorModeValue('teal.600', 'teal.400');
-  const headerText = useColorModeValue('white', 'gray.900');
+  /**
+   * Elimina la orden de la base de datos
+   */
+  const handleDeleteOrder = async () => {
+    if (!selectedOrder) return;
+
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("lab_orders")
+        .delete()
+        .eq("id", selectedOrder.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Orden eliminada",
+        description: `La orden #${selectedOrder.id} ha sido eliminada.`,
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+
+      onClose();
+      fetchOrders(); // Recargar la lista
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      toast({
+        title: "Error al eliminar",
+        description: error.message,
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsDeleting(false);
+      setSelectedOrder(null);
+    }
+  };
+
+  /**
+   * Abre el PDF en una nueva pestaña
+   */
+  const handleViewPdf = (pdfUrl, e) => {
+    e.stopPropagation(); // Evita que se active el handleRowClick
+    if (pdfUrl) {
+      window.open(pdfUrl, "_blank", "noopener,noreferrer");
+    } else {
+      toast({
+        title: "PDF no disponible",
+        description: "Esta orden no tiene un PDF adjunto.",
+        status: "warning",
+        duration: 3000,
+        isClosable: true,
+      });
+    }
+  };
+
+  // Estilos de Chakra
+  const bgColor = useColorModeValue("white", "gray.900");
+  const textColor = useColorModeValue("gray.800", "white");
+  const borderColor = useColorModeValue("gray.200", "gray.700");
+  const tableBg = useColorModeValue("white", "gray.800");
+  const tableHoverBg = useColorModeValue("teal.50", "teal.900");
+  const inputBg = useColorModeValue("gray.50", "gray.800");
+  const selectBg = useColorModeValue("gray.50", "gray.800");
+  const headerBg = useColorModeValue("teal.600", "teal.400");
+  const headerText = useColorModeValue("white", "gray.900");
 
   return (
-    <Box p={{ base: 2, md: 8 }} minH="100vh" bg={useColorModeValue('gray.50', 'gray.900')}>
-      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-    <Box
-      p={{ base: 2, md: 8 }}
-      maxW="1300px"
-      mx="auto"
-      bg={bgColor}
-      color={textColor}
-      borderRadius="xl"
-      boxShadow="lg"
-    >
-      <Flex align="center" mb={6} gap={3}>
-        <Icon as={FaClinicMedical} boxSize={8} color={headerBg} />
-        <Heading
-          size="md"
-          fontWeight="bold"
-          color={headerBg}
-          letterSpacing="tight"
-        >
-          Lista Pendiente de Órdenes de Laboratorio
-        </Heading>
-      </Flex>
-      <Divider mb={6} />
-
-      <Flex
-        direction={{ base: "column", md: "row" }}
-        gap={6}
-        mb={8}
-        align="center"
-        justify="space-between"
-        bg={useColorModeValue('gray.50', 'gray.800')}
-        p={4}
-        borderRadius="lg"
-        boxShadow="md"
+    <Box p={{ base: 2, md: 8 }} minH="100vh" bg={useColorModeValue("gray.50", "gray.900")}>
+      <SmartHeader moduleSpecificButton={null} />
+      <Box
+        p={{ base: 2, md: 8 }}
+        maxW="1300px"
+        mx="auto"
+        bg={bgColor}
+        color={textColor}
+        borderRadius="xl"
+        boxShadow="lg"
       >
-        <FormControl maxW="300px">
-          <FormLabel color={textColor} fontWeight="bold">
-            Sucursal
-          </FormLabel>
-          <Select
-            placeholder="Selecciona una sucursal"
-            value={selectedBranch}
-            onChange={(e) => setSelectedBranch(e.target.value)}
-            bg={selectBg}
-            borderColor={borderColor}
-            color={textColor}
-            fontWeight="medium"
-            size="md"
-            borderRadius="md"
-            _hover={{ borderColor: useColorModeValue('teal.400', 'teal.300') }}
-            _focus={{
-              borderColor: useColorModeValue('teal.600', 'teal.300'),
-              boxShadow: useColorModeValue('0 0 0 1px teal.600', '0 0 0 1px teal.300')
-            }}
-          >
-            {branches.map(branch => (
-              <option
-                key={branch.id}
-                value={branch.id}
-                style={{
-                  backgroundColor: useColorModeValue('white', '#2D3748'),
-                  color: useColorModeValue('black', 'white')
-                }}
-              >
-                {branch.name}
-              </option>
-            ))}
-          </Select>
-        </FormControl>
-
-        <Flex gap={4} align="flex-end">
-          <FormControl>
-            <FormLabel color={textColor} fontWeight="bold">
-              Desde
-            </FormLabel>
-            <Input
-              type="date"
-              name="since"
-              value={formData.since}
-              onChange={handleChange}
-              bg={inputBg}
-              borderColor={borderColor}
-              color={textColor}
+        {/* --- Título y Botón de Crear --- */}
+        <Flex justify="space-between" align="center" mb={6}>
+          <Flex align="center" gap={3}>
+            <Icon as={FaClinicMedical} boxSize={8} color={headerBg} />
+            <Heading
               size="md"
-              borderRadius="md"
-              _hover={{ borderColor: useColorModeValue('teal.400', 'teal.300') }}
-              _focus={{
-                borderColor: useColorModeValue('teal.600', 'teal.300'),
-                boxShadow: useColorModeValue('0 0 0 1px teal.600', '0 0 0 1px teal.300')
-              }}
-            />
-          </FormControl>
-          <FormControl>
-            <FormLabel color={textColor} fontWeight="bold">
-              Hasta
-            </FormLabel>
-            <Input
-              type="date"
-              name="till"
-              value={formData.till}
-              onChange={handleChange}
-              bg={inputBg}
-              borderColor={borderColor}
-              color={textColor}
-              size="md"
-              borderRadius="md"
-              _hover={{ borderColor: useColorModeValue('teal.400', 'teal.300') }}
-              _focus={{
-                borderColor: useColorModeValue('teal.600', 'teal.300'),
-                boxShadow: useColorModeValue('0 0 0 1px teal.600', '0 0 0 1px teal.300')
-              }}
-            />
-          </FormControl>
+              fontWeight="bold"
+              color={headerBg}
+              letterSpacing="tight"
+            >
+              Órdenes de Laboratorio
+            </Heading>
+          </Flex>
           <Button
-            leftIcon={<FaFilter />}
+            leftIcon={<FaPlus />}
             colorScheme="teal"
-            size="md"
-            borderRadius="md"
-            mt={{ base: 0, md: 6 }}
-            onClick={fetchFilteredPatients}
-            isDisabled={!selectedBranch}
-            fontWeight="bold"
-            px={6}
+            onClick={handleCreateOrder}
           >
-            Filtrar
+            Crear Orden
           </Button>
         </Flex>
-      </Flex>
+        <Divider mb={6} />
 
-      {loading ? (
-        <Flex justify="center" align="center" minH="200px">
-          <Spinner size="md" color={headerBg} thickness="5px" speed="0.7s" />
-        </Flex>
-      ) : (
+        {/* --- Filtros (Sin cambios) --- */}
         <Box
-          w="full"
-          mx="auto"
-          bg={tableBg}
+          bg={useColorModeValue("gray.50", "gray.800")}
+          p={4}
           borderRadius="lg"
           boxShadow="md"
-          overflow="hidden"
+          mb={8}
         >
-          <Table variant="simple">
-            <Thead>
-              <Tr bg={headerBg}>
-                <Th color={headerText} borderColor={borderColor} fontWeight="bold" fontSize="sm">Nombre</Th>
-                <Th color={headerText} borderColor={borderColor} fontWeight="bold" fontSize="sm">Apellido</Th>
-                <Th color={headerText} borderColor={borderColor} fontWeight="bold" fontSize="sm">Cédula</Th>
-                <Th color={headerText} borderColor={borderColor} fontWeight="bold" fontSize="sm">Fecha</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {filteredPatients.length === 0 ? (
-                <Tr>
-                  <Td colSpan={4} textAlign="center" py={8} color="gray.500">
-                    <Text fontSize="lg">No hay pacientes en el rango seleccionado.</Text>
-                  </Td>
+          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6}>
+            <FormControl>
+              <FormLabel color={textColor} fontWeight="bold">Sucursal</FormLabel>
+              <Select
+                placeholder="Todas las sucursales"
+                value={filterBranch}
+                onChange={(e) => setFilterBranch(e.target.value)}
+                bg={selectBg}
+                borderColor={borderColor}
+              >
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl>
+              <FormLabel color={textColor} fontWeight="bold">Laboratorio</FormLabel>
+              <Select
+                placeholder="Todos los laboratorios"
+                value={filterLab}
+                onChange={(e) => setFilterLab(e.target.value)}
+                bg={selectBg}
+                borderColor={borderColor}
+              >
+                {labs.map((lab) => (
+                  <option key={lab.id} value={lab.id}>
+                    {lab.name}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl>
+              <FormLabel color={textColor} fontWeight="bold">Estado</FormLabel>
+              <Select
+                placeholder="Todos los estados"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                bg={selectBg}
+                borderColor={borderColor}
+              >
+                {STATUS_OPTIONS.map((status) => (
+                  <option key={status.key} value={status.key}>
+                    {status.value}
+                  </option>
+                ))}
+              </Select>
+            </FormControl>
+
+            <FormControl>
+              <FormLabel color={textColor} fontWeight="bold">Desde</FormLabel>
+              <Input
+                type="date"
+                name="since"
+                value={filterDates.since}
+                onChange={handleDateChange}
+                bg={inputBg}
+                borderColor={borderColor}
+              />
+            </FormControl>
+
+            <FormControl>
+              <FormLabel color={textColor} fontWeight="bold">Hasta</FormLabel>
+              <Input
+                type="date"
+                name="till"
+                value={filterDates.till}
+                onChange={handleDateChange}
+                bg={inputBg}
+                borderColor={borderColor}
+              />
+            </FormControl>
+
+            <Button
+              leftIcon={<FaFilter />}
+              colorScheme="teal"
+              size="md"
+              onClick={fetchOrders}
+              alignSelf="flex-end"
+              fontWeight="bold"
+            >
+              Filtrar
+            </Button>
+          </SimpleGrid>
+        </Box>
+
+        {/* --- 5. Tabla de Órdenes (MODIFICADA) --- */}
+        {loading ? (
+          <Flex justify="center" align="center" minH="200px">
+            <Spinner size="md" color={headerBg} thickness="5px" speed="0.7s" />
+          </Flex>
+        ) : (
+          <Box
+            w="full"
+            mx="auto"
+            bg={tableBg}
+            borderRadius="lg"
+            boxShadow="md"
+            overflowX="auto"
+          >
+            <Table variant="simple">
+              <Thead>
+                <Tr bg={headerBg}>
+                  <Th color={headerText} borderColor={borderColor}>Orden #</Th>
+                  <Th color={headerText} borderColor={borderColor}>Fecha Creación</Th>
+                  <Th color={headerText} borderColor={borderColor}>Paciente</Th>
+                  <Th color={headerText} borderColor={borderColor}>Laboratorio</Th>
+                  <Th color={headerText} borderColor={borderColor}>Estado</Th>
+                  <Th color={headerText} borderColor={borderColor}>Acciones</Th>
                 </Tr>
-              ) : (
-                filteredPatients.map((patient) => (
-                  <Tr
-                    key={patient.patient_id}
-                    onClick={() => handlePatientSelect(patient)}
-                    cursor="pointer"
-                    _hover={{ bg: tableHoverBg, transition: "background 0.2s" }}
-                    borderColor={borderColor}
-                  >
-                    <Td color={textColor} borderColor={borderColor} fontWeight="medium">{patient.pt_firstname}</Td>
-                    <Td color={textColor} borderColor={borderColor} fontWeight="medium">{patient.pt_lastname}</Td>
-                    <Td color={textColor} borderColor={borderColor}>{patient.pt_ci}</Td>
-                    <Td color={textColor} borderColor={borderColor}>
-                      {new Date(patient.date + 'T00:00:00').toLocaleDateString('es-ES', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit'
-                      })}
+              </Thead>
+              <Tbody>
+                {orders.length === 0 ? (
+                  <Tr>
+                    <Td colSpan={6} textAlign="center" py={8} color="gray.500">
+                      <Text fontSize="lg">No se encontraron órdenes con esos filtros.</Text>
                     </Td>
                   </Tr>
-                ))
-              )}
-            </Tbody>
-          </Table>
-        </Box>
-      )}
-    </Box>
+                ) : (
+                  orders.map((order) => (
+                    <Tr
+                      key={order.id}
+                      onClick={() => handleRowClick(order.id)}
+                      cursor="pointer"
+                      _hover={{ bg: tableHoverBg, transition: "background 0.2s" }}
+                      borderColor={borderColor}
+                    >
+                      <Td color={textColor} borderColor={borderColor} fontWeight="bold">
+                        {order.id}
+                      </Td>
+                      <Td color={textColor} borderColor={borderColor}>
+                        {new Date(order.created_at).toLocaleDateString("es-ES", {
+                          year: "numeric",
+                          month: "2-digit",
+                          day: "2-digit",
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })}
+                      </Td>
+                      <Td color={textColor} borderColor={borderColor}>
+                        {order.patients?.pt_firstname} {order.patients?.pt_lastname}
+                      </Td>
+                      <Td color={textColor} borderColor={borderColor}>
+                        {order.labs?.name || 'N/A'}
+                      </Td>
+                      <Td color={textColor} borderColor={borderColor}>
+                        {/* --- Select de Estado (NUEVO) --- */}
+                        <Select
+                          size="sm"
+                          value={order.status}
+                          minW="160px"
+                          bg={selectBg}
+                          borderColor={borderColor}
+                          // @ts-ignore
+                          d colorScheme={STATUS_COLOR_MAP[order.status] || 'gray'}
+                          onClick={(e) => e.stopPropagation()} // Evita click en fila
+                          onChange={(e) => handleStatusChange(order.id, e.target.value, e)}
+                        >
+                          {STATUS_OPTIONS.map((status) => (
+                            <option key={status.key} value={status.key}>
+                              {status.value}
+                            </option>
+                          ))}
+                        </Select>
+                      </Td>
+                      <Td color={textColor} borderColor={borderColor}>
+                        {/* --- Botones de Acción (NUEVO) --- */}
+                        <HStack spacing={2}>
+                          <IconButton
+                            aria-label="Ver PDF"
+                            icon={<FaEye />}
+                            colorScheme="blue"
+                            size="sm"
+                            isDisabled={!order.pdf_url} // Se deshabilita si no hay URL
+                            onClick={(e) => handleViewPdf(order.pdf_url, e)}
+                          />
+                          <IconButton
+                            aria-label="Eliminar Orden"
+                            icon={<FaTrash />}
+                            colorScheme="red"
+                            size="sm"
+                            onClick={(e) => handleOpenDeleteModal(order, e)}
+                          />
+                        </HStack>
+                      </Td>
+                    </Tr>
+                  ))
+                )}
+              </Tbody>
+            </Table>
+          </Box>
+        )}
+      </Box>
 
+      {/* --- 6. Modal de Confirmación (NUEVO) --- */}
+      <Modal isOpen={isOpen} onClose={onClose} isCentered>
+        <ModalOverlay />
+        <ModalContent bg={bgColor} color={textColor}>
+          <ModalHeader>Confirmar Eliminación</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Text>
+              ¿Estás seguro de que deseas eliminar la orden{" "}
+              <Text as="b" color="red.400">#{selectedOrder?.id}</Text>?
+            </Text>
+            <Text mt={2} fontSize="sm" color="gray.500">
+              Esta acción no se puede deshacer.
+            </Text>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button variant="ghost" mr={3} onClick={onClose} fontWeight="medium">
+              Cancelar
+            </Button>
+            <Button
+              colorScheme="red"
+              onClick={handleDeleteOrder}
+              isLoading={isDeleting}
+              loadingText="Eliminando..."
+            >
+              Eliminar
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
-  );  
+  );
 };
 
 export default OrderLaboratoryList;

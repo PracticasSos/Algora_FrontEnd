@@ -90,7 +90,6 @@ const Pdf = ({ formData, onPdfUploaded }) => {
     }
   };
 
-  // ...existing code...
   const handleGeneratePdf = async () => {
     setGenerating(true);
     try {
@@ -184,8 +183,6 @@ const Pdf = ({ formData, onPdfUploaded }) => {
       setGenerating(false);
     }
   };
-// ...existing code...
-
     const handleSendWhatsApp = () => {
     if (!pdfUrl || !patientPhone) {
       toast({

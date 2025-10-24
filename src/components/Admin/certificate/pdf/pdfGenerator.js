@@ -147,14 +147,12 @@ export const generateCertificatePDF = async (formData, patientData, doctorData, 
             console.warn('Error subiendo PDF a Supabase:', uploadError.message);
         }
 
-        let pdfUrl = null;
-        if (uploadData) {
-            const { data: publicUrlData } = supabase.storage
-                .from('certificates')
-                .getPublicUrl(fileName);
-            pdfUrl = publicUrlData?.publicUrl;
-        }
-
+        const { data: publicUrlData } = supabase.storage
+            .from('measures')
+            .getPublicUrl(fileName);
+        console.log('[generateCertificatePDF] publicUrlData:', publicUrlData);
+        pdfUrl = publicUrlData?.publicUrl || null;
+            
         // Descargar automáticamente
         const link = document.createElement('a');
         link.href = URL.createObjectURL(pdfBlob);

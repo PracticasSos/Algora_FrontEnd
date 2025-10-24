@@ -147,11 +147,27 @@ export const generateCertificatePDF = async (formData, patientData, doctorData, 
             console.warn('Error subiendo PDF a Supabase:', uploadError.message);
         }
 
+        let pdfUrl = null;
+        if (uploadData) {
+            // Usar el mismo bucket donde subimos ('measures') para obtener la URL pública
+            const { data: publicUrlData } = supabase.storage
+                .from('measures')
+                .getPublicUrl(fileName);
+            console.log('[generateCertificatePDF] publicUrlData:', publicUrlData);
+            pdfUrl = publicUrlData?.publicUrl || null;
+
+            if (!pdfUrl) {
+                console.warn('[generateCertificatePDF] No se obtuvo publicUrl tras subida. uploadData:', uploadData);
+            }
+        }
+        
         const { data: publicUrlData } = supabase.storage
             .from('measures')
             .getPublicUrl(fileName);
         console.log('[generateCertificatePDF] publicUrlData:', publicUrlData);
         pdfUrl = publicUrlData?.publicUrl || null;
+
+        
             
         // Descargar automáticamente
         const link = document.createElement('a');

@@ -1,53 +1,84 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../api/supabase";
-import { 
-  Box, Button, FormControl, Input, SimpleGrid, Heading, 
-  Table, Thead, Tbody, Tr, Th, Td, Textarea, RadioGroup, 
-  Radio, Stack, Checkbox, Text, FormLabel, useColorModeValue, 
+import {
+  Box, Button, FormControl, Input, SimpleGrid, Heading,
+  Table, Thead, Tbody, Tr, Th, Td, Textarea, RadioGroup,
+  Radio, Stack, Checkbox, Text, FormLabel, useColorModeValue,
   HStack, useToast, Divider, Alert, AlertIcon, Icon, Badge
 } from "@chakra-ui/react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaEye } from 'react-icons/fa';
 import SmartHeader from "../header/SmartHeader";
 
+// NUEVO: Definimos una clave única para sessionStorage
+const STORAGE_KEY = 'measuresFinalFormData';
+
+// NUEVO: Estado inicial por defecto (formulario vacío)
+const defaultInitialState = {
+  patient_id: "",
+  sphere_right: "",
+  cylinder_right: "",
+  axis_right: "",
+  prism_right: "",
+  add_right: "",
+  av_vl_right: "",
+  av_vp_right: "",
+  dnp_right: "",
+  alt_right: "",
+  sphere_left: "",
+  cylinder_left: "",
+  axis_left: "",
+  prism_left: "",
+  add_left: "",
+  av_vl_left: "",
+  av_vp_left: "",
+  dnp_left: "",
+  alt_left: "",
+  diagnosis: "",
+  near_vision: "",
+  needs_lenses_near: false,
+  far_vision: "",
+  needs_lenses_far: false,
+  color_perception: false,
+  color_issues: "",
+  created_at: ""
+};
+
+// NUEVO: Función para obtener el estado inicial
+// Intenta cargar desde sessionStorage, si falla o no existe, usa el estado por defecto.
+const getInitialFormData = () => {
+  const savedData = sessionStorage.getItem(STORAGE_KEY);
+  if (savedData) {
+    try {
+      // Si hay datos guardados, los parseamos y los retornamos
+      return JSON.parse(savedData);
+    } catch (e) {
+      console.error("Error al parsear datos de sessionStorage", e);
+      // Si hay un error (ej. JSON corrupto), limpiamos y usamos el estado por defecto
+      sessionStorage.removeItem(STORAGE_KEY);
+      return defaultInitialState;
+    }
+  }
+  // Si no hay nada guardado, usamos el estado por defecto
+  return defaultInitialState;
+};
+
 const MeasuresFinal = () => {
   const navigate = useNavigate();
   const toast = useToast();
 
-  const [formData, setFormData] = useState({
-    patient_id: "",
-    sphere_right: "",
-    cylinder_right: "",
-    axis_right: "",
-    prism_right: "",
-    add_right: "",
-    av_vl_right: "",
-    av_vp_right: "",
-    dnp_right: "",          
-    alt_right: "",
-    sphere_left: "",
-    cylinder_left: "",
-    axis_left: "",
-    prism_left: "",
-    add_left: "",
-    av_vl_left: "",
-    av_vp_left: "",
-    dnp_left: "",
-    alt_left: "",
-    diagnosis: "",
-    near_vision: "",
-    needs_lenses_near: false,
-    far_vision: "",
-    needs_lenses_far: false,
-    color_perception: false,
-    color_issues: "",
-    created_at: ""
-  });
+  // MODIFICADO: Usamos la función getInitialFormData para inicializar el estado
+  const [formData, setFormData] = useState(getInitialFormData);
 
   const [patients, setPatients] = useState([]);
   const [filteredPatients, setFilteredPatients] = useState([]);
   const [searchTermPatients, setSearchTermPatients] = useState("");
-  const [showColorIssuesInput, setShowColorIssuesInput] = useState(false);
+
+  // MODIFICADO: Inicializamos este estado basado en los datos cargados
+  const [showColorIssuesInput, setShowColorIssuesInput] = useState(
+    () => !!getInitialFormData().color_issues // true si color_issues tiene texto
+  );
+
   const [error, setError] = useState(null);
   const { id } = useParams();
 
@@ -64,22 +95,48 @@ const MeasuresFinal = () => {
     { label: "ALT", key: "alt" },
   ];
 
+  // NUEVO: useEffect para guardar en sessionStorage CADA VEZ que formData cambie
+  useEffect(() => {
+    // No guardamos si el formulario está en su estado inicial (ej. después de guardar)
+    // Opcional: puedes quitar esta condición si quieres guardar incluso el estado vacío.
+    if (JSON.stringify(formData) !== JSON.stringify(defaultInitialState)) {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
+    }
+  }, [formData]); // La dependencia es formData
+
   useEffect(() => {
     if (id && patients.length > 0) {
-      const found = patients.find(p => String(p.id) === String(id));
-      if (found) {
-        setFormData(f => ({ ...f, patient_id: found.id }));
-        setSearchTermPatients(`${found.pt_firstname} ${found.pt_lastname}`);
-        setFilteredPatients([]);
+      // Verificamos si ya hay un patient_id cargado del storage
+      // para no sobrescribirlo si el usuario ya había seleccionado uno
+      const currentPatientId = formData.patient_id;
+      if (!currentPatientId) {
+        const found = patients.find(p => String(p.id) === String(id));
+        if (found) {
+          setFormData(f => ({ ...f, patient_id: found.id }));
+          setSearchTermPatients(`${found.pt_firstname} ${found.pt_lastname}`);
+          setFilteredPatients([]);
+        }
       }
     }
-  }, [id, patients]); 
+  }, [id, patients, formData.patient_id]); // Agregamos formData.patient_id a las dependencias
 
   useEffect(() => {
     fetchData('patients', data => {
       setPatients(data);
       setFilteredPatients(data);
 
+      // Comprobamos si el formulario ya tiene un patient_id (cargado de sessionStorage)
+      const currentPatientId = getInitialFormData().patient_id;
+      if (currentPatientId) {
+        const found = data.find(p => String(p.id) === String(currentPatientId));
+        if (found) {
+          setSearchTermPatients(`${found.pt_firstname} ${found.pt_lastname}`);
+          setFilteredPatients([]);
+        }
+        return; // Salimos para no procesar lógicas de 'selectedPatient'
+      }
+
+      // Tu lógica existente de localStorage (si vienes de otra página)
       const stored = localStorage.getItem('selectedPatient');
       if (stored) {
         const selected = JSON.parse(stored);
@@ -96,7 +153,7 @@ const MeasuresFinal = () => {
         localStorage.removeItem('selectedPatient');
       }
     });
-  }, []);
+  }, []); // Este efecto corre solo una vez al montar
 
   const fetchData = async (table, setter) => {
     try {
@@ -121,6 +178,8 @@ const MeasuresFinal = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // --- (El resto de tus manejadores handleSearchPatients, handlePatientSelect, etc. quedan igual) ---
+
   const handleSearchPatients = (e) => {
     const searchTerm = e.target.value.toLowerCase();
     setSearchTermPatients(searchTerm);
@@ -142,6 +201,7 @@ const MeasuresFinal = () => {
     setFilteredPatients([]);
   };
 
+
   const handleSubmit = async () => {
     if (!formData.patient_id) {
       toast({
@@ -156,7 +216,7 @@ const MeasuresFinal = () => {
 
     const newFormData = {
       ...formData,
-      created_at: new Date().toISOString(), 
+      created_at: new Date().toISOString(),
     };
 
     try {
@@ -170,35 +230,17 @@ const MeasuresFinal = () => {
         duration: 5000,
         isClosable: true,
       });
-      setFormData({
-        patient_id: "",
-        sphere_right: "",
-        cylinder_right: "",
-        axis_right: "",
-        prism_right: "",
-        add_right: "",
-        av_vl_right: "",
-        av_vp_right: "",
-        dnp_right: "",
-        alt_right: "",
-        sphere_left: "",
-        cylinder_left: "",
-        axis_left: "",
-        prism_left: "",
-        add_left: "",
-        av_vl_left: "",
-        av_vp_left: "",
-        dnp_left: "",
-        alt_left: "",
-        diagnosis: "",
-        near_vision: "",
-        needs_lenses_near: false,
-        far_vision: "",
-        needs_lenses_far: false,
-        color_perception: false,
-        color_issues: "",
-        created_at: ""
-      });
+
+      // NUEVO: Limpiamos el sessionStorage después de guardar exitosamente
+      sessionStorage.removeItem(STORAGE_KEY);
+
+      // MODIFICADO: Reseteamos el formulario al estado inicial por defecto
+      setFormData(defaultInitialState);
+
+      // Reseteamos también el buscador de pacientes y el input de color
+      setSearchTermPatients("");
+      setShowColorIssuesInput(false);
+
     } catch (error) {
       console.error("Error al registrar medidas:", error.message);
       toast({
@@ -210,6 +252,8 @@ const MeasuresFinal = () => {
       });
     }
   };
+
+  // --- (Tu función handleNavigate queda igual) ---
 
   const handleNavigate = (route = null) => {
     const user = JSON.parse(localStorage.getItem('user'));
@@ -241,6 +285,7 @@ const MeasuresFinal = () => {
 
   const moduleSpecificButton = null;
 
+
   return (
     <Box
       display="flex"
@@ -250,6 +295,7 @@ const MeasuresFinal = () => {
       bg={useColorModeValue("gray.50", "gray.900")}
       p={[2, 4, 8]}
     >
+      
       {error && (
         <Alert status="error" mb={4} borderRadius="md">
           <AlertIcon />
@@ -260,7 +306,7 @@ const MeasuresFinal = () => {
       <Box w="80%" pt={5} mb={4}>
         <Heading
           mb={2}
-          textAlign="left"
+          textAlign="center"
           size="lg"
           fontWeight="800"
           color={useColorModeValue('teal.700', 'teal.300')}
@@ -303,7 +349,7 @@ const MeasuresFinal = () => {
                 maxHeight="180px"
                 overflowY="auto"
                 bg={useColorModeValue("white", "gray.700")}
-                boxShadow="md"
+                M boxShadow="md"
               >
                 {filteredPatients.map((patient) => (
                   <Box
@@ -326,13 +372,13 @@ const MeasuresFinal = () => {
         </SimpleGrid>
 
         <Box display={{ base: "none", lg: "block" }} overflowX="auto" mb={6}>
-          <Table variant="striped" colorScheme="teal" size="md"  borderRadius="xl">
+          <Table variant="striped" colorScheme="teal" size="md" borderRadius="xl">
             <Thead bg={useColorModeValue("teal.100", "teal.900")}>
               <Tr>
                 <Th>Rx Final</Th>
                 <Th>Esfera</Th>
                 <Th>Cilindro</Th>
-                <Th>Eje</Th>
+                nbsp;             <Th>Eje</Th>
                 <Th>Prisma</Th>
                 <Th>ADD</Th>
                 <Th>AV VL</Th>
@@ -380,7 +426,7 @@ const MeasuresFinal = () => {
                       borderColor="teal.200"
                       bg={useColorModeValue("white", "gray.800")}
                       _focus={{ borderColor: "teal.400" }}
-                    />
+                      t />
                   </FormControl>
                 ))}
               </SimpleGrid>
@@ -391,7 +437,7 @@ const MeasuresFinal = () => {
         <Box
           p={[4, 6]}
           maxWidth="800px"
-          mx="auto"
+          s mx="auto"
           border="1px solid"
           borderColor={useColorModeValue("teal.100", "teal.700")}
           borderRadius="xl"

@@ -245,7 +245,7 @@ const BalancesPatient = () => {
                         pb={2}
                         letterSpacing="tight"
                     >
-                        Gestión de Abonos
+                        Saldos Pendientes
                     </Heading>
                 </Flex>
                 <Divider mb={2} />

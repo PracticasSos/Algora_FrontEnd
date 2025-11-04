@@ -174,22 +174,7 @@ const HistoryClinic = () => {
           gap={4}
           mb={6}
         >
-          <Input
-            placeholder="Buscar por nombre, apellido o cédula"
-            value={search}
-            onChange={handleSearchChange}
-            bg={selectBg}
-            borderColor={borderColor}
-            color={textColor}
-            _placeholder={{ color: useColorModeValue('gray.400', 'gray.500') }}
-            _hover={{ borderColor: useColorModeValue('teal.300', 'teal.500') }}
-            _focus={{
-              borderColor: useColorModeValue('teal.500', 'teal.300'),
-              boxShadow: useColorModeValue('0 0 0 2px teal.200', '0 0 0 2px teal.600')
-            }}
-            transition="all 0.2s"
-          />
-          <Select
+                    <Select
             placeholder="Seleccione una sucursal"
             value={selectedBranch}
             onChange={(e) => setSelectedBranch(e.target.value)}
@@ -207,6 +192,22 @@ const HistoryClinic = () => {
               <option key={branch.id} value={branch.id}>{branch.name}</option>
             ))}
           </Select>
+          <Input
+            placeholder="Buscar por nombre, apellido o cédula"
+            value={search}
+            onChange={handleSearchChange}
+            bg={selectBg}
+            borderColor={borderColor}
+            color={textColor}
+            _placeholder={{ color: useColorModeValue('gray.400', 'gray.500') }}
+            _hover={{ borderColor: useColorModeValue('teal.300', 'teal.500') }}
+            _focus={{
+              borderColor: useColorModeValue('teal.500', 'teal.300'),
+              boxShadow: useColorModeValue('0 0 0 2px teal.200', '0 0 0 2px teal.600')
+            }}
+            transition="all 0.2s"
+          />
+
         </Box>
         <Box
           overflowX="auto"

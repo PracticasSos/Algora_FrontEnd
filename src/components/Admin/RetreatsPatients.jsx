@@ -256,7 +256,7 @@ const RetreatsPatients = () => {
       
       <Card w="100%" maxW="1500px" shadow="lg" borderRadius="xl">
         <CardHeader borderBottom="1px solid" borderColor={borderColor}>
-          <Heading size="md" fontWeight="700" color={useColorModeValue('teal.600', 'teal.300')}>
+          <Heading size="lg" fontWeight="700" color={useColorModeValue('teal.600', 'teal.300')}>
             Retiros
           </Heading>
         </CardHeader>

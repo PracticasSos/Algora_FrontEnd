@@ -18,12 +18,19 @@ import {
   Divider,
   VStack,
   Flex,
+  FormErrorMessage,
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import { FaEye } from 'react-icons/fa';
 import SmartHeader from '../header/SmartHeader';
+
+// --- NUEVO --- Función para obtener la fecha de hoy en formato YYYY-MM-DD
+const getTodayDate = () => {
+  const today = new Date();
+  return today.toISOString().split('T')[0];
+};
 
 const RegisterPatientForm = () => {
   const navigate = useNavigate();
@@ -43,14 +50,17 @@ const RegisterPatientForm = () => {
     pt_consultation_reason: '',
     pt_recommendations: '',
     sexo: '',
-    date: ''
+    date: getTodayDate(), // --- MODIFICADO ---
+    branch_id: '',
   });
 
   const [users, setUsers] = useState([]);
-  const [pt_phone, setPt_Phone] = useState('');
+  const [branches, setBranches] = useState([]);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     fetchUsers();
+    fetchBranches();
   }, []);
 
   const fetchUsers = async () => {
@@ -64,18 +74,53 @@ const RegisterPatientForm = () => {
     }
   };
 
+  const fetchBranches = async () => {
+    try {
+      const { data, error } = await supabase.from('branchs').select('id, name');
+      if (error) throw error;
+      setBranches(data);
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.pt_firstname.trim()) newErrors.pt_firstname = 'El nombre es obligatorio.';
+    if (!formData.pt_lastname.trim()) newErrors.pt_lastname = 'El apellido es obligatorio.';
+    if (!formData.pt_occupation.trim()) newErrors.pt_occupation = 'La ocupación es obligatoria.';
+    if (!formData.pt_address.trim()) newErrors.pt_address = 'La dirección es obligatoria.';
+    if (!formData.pt_phone.trim()) newErrors.pt_phone = 'El teléfono es obligatorio.';
+    if (!formData.pt_age) newErrors.pt_age = 'La edad es obligatoria.';
+    if (!formData.pt_city.trim()) newErrors.pt_city = 'La ciudad es obligatoria.';
+    if (!formData.date) newErrors.date = 'La fecha es obligatoria.';
+    if (!formData.user_id) newErrors.user_id = 'El responsable es obligatorio.';
+    if (!formData.branch_id) newErrors.branch_id = 'La sucursal es obligatoria.';
+
+    if (formData.pt_email && !/\S+@\S+\.\S+/.test(formData.pt_email)) {
+      newErrors.pt_email = 'El formato del correo no es válido.';
+    }
+
+    return newErrors;
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    if (errors[name]) {
+      setErrors({ ...errors, [name]: null });
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const newErrors = validateForm();
+    setErrors(newErrors);
 
-    if (!formData.user_id || !formData.pt_firstname?.trim() || !formData.pt_lastname?.trim()) {
+    if (Object.keys(newErrors).length > 0) {
       toast({
-        title: "Campos incompletos",
-        description: "Por favor, completa todos los campos obligatorios.",
+        title: "Campos incompletos o inválidos",
+        description: "Por favor, revisa los campos marcados en rojo.",
         status: "warning",
         duration: 3000,
         isClosable: true,
@@ -138,8 +183,10 @@ const RegisterPatientForm = () => {
       pt_consultation_reason: '',
       pt_recommendations: '',
       sexo: '',
-      date: ''
+      date: getTodayDate(), // --- MODIFICADO ---
+      branch_id: '',
     });
+    setErrors({});
   };
 
   const handleNavigate = (route = null) => {
@@ -245,28 +292,37 @@ const RegisterPatientForm = () => {
         <Divider mb={6} />
         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={8}>
           <VStack spacing={5} align="stretch">
-            {renderInputField('Fecha', 'date', 'date', true)}
-            {renderInputField('Nombre', 'pt_firstname', 'text', true)}
-            {renderInputField('Apellido', 'pt_lastname', 'text', true)}
-            {renderInputField('Ocupación', 'pt_occupation', 'text')}
-            {renderInputField('Dirección', 'pt_address', 'text')}
+            {renderInputField('Fecha', 'date', 'date', true, errors.date)}
+            {renderInputField('Nombre', 'pt_firstname', 'text', true, errors.pt_firstname)}
+            {renderInputField('Apellido', 'pt_lastname', 'text', true, errors.pt_lastname)}
+            {renderInputField('Ocupación', 'pt_occupation', 'text', true, errors.pt_occupation)}
+            {renderInputField('Dirección', 'pt_address', 'text', true, errors.pt_address)}
 
-            <FormControl>
+            {/* --- INICIO DE MODIFICACIÓN TELÉFONO --- */}
+            <FormControl isRequired isInvalid={!!errors.pt_phone}>
               <FormLabel>Teléfono</FormLabel>
               <PhoneInput
+                country={'ec'} // --- MODIFICADO ---
                 value={formData.pt_phone}
-                onChange={(value) =>
+                onChange={(value) => {
                   setFormData((prevData) => ({
                     ...prevData,
                     pt_phone: value
-                  }))
-                }
-                enableSearch={true}
+                  }));
+                  if (errors.pt_phone) {
+                    setErrors({ ...errors, pt_phone: null });
+                  }
+                }}
+                containerStyle={{ width: '100%' }} // --- MODIFICADO ---
+                inputProps={{
+                  required: true,
+                  name: 'phone'
+                }}
                 inputStyle={{
                   width: '100%',
-                  height: '44px',
-                  borderRadius: '12px',
-                  border: `1px solid ${colorMode === 'dark' ? '#4A5568' : '#CBD5E0'}`,
+                  height: '40px', // --- MODIFICADO ---
+                  borderRadius: '8px', // --- MODIFICADO ---
+                  border: `1px solid ${errors.pt_phone ? '#E53E3E' : (colorMode === 'dark' ? '#4A5568' : '#CBD5E0')}`,
                   backgroundColor: colorMode === 'dark' ? '#2D3748' : 'white',
                   color: colorMode === 'dark' ? 'white' : '#1A202C',
                   fontSize: '15px',
@@ -274,22 +330,21 @@ const RegisterPatientForm = () => {
                 }}
                 buttonStyle={{
                   backgroundColor: colorMode === 'dark' ? '#2D3748' : 'white',
-                  border: `1px solid ${colorMode === 'dark' ? '#4A5568' : '#CBD5E0'}`,
-                  borderRadius: '12px 0 0 12px'
-                }}
-                searchStyle={{
-                  backgroundColor: colorMode === 'dark' ? '#4A5568' : '#F7FAFC',
-                  color: colorMode === 'dark' ? 'white' : 'black'
+                  border: `1px solid ${errors.pt_phone ? '#E53E3E' : (colorMode === 'dark' ? '#4A5568' : '#CBD5E0')}`,
+                  borderRadius: '8px 0 0 8px' // --- MODIFICADO ---
                 }}
                 dropdownStyle={{
-                  zIndex: 1000
+                  zIndex: 9999 // --- MODIFICADO ---
                 }}
               />
+              <FormErrorMessage>{errors.pt_phone}</FormErrorMessage>
             </FormControl>
+            {/* --- FIN DE MODIFICACIÓN TELÉFONO --- */}
 
-            {renderInputField('Edad', 'pt_age', 'number')}
-            {renderInputField('C.I.', 'pt_ci', 'text')}
-            <FormControl>
+            {renderInputField('Edad', 'pt_age', 'number', true, errors.pt_age)}
+            {renderInputField('C.I.', 'pt_ci', 'text', false, errors.pt_ci)}
+            
+            <FormControl isInvalid={!!errors.sexo}>
               <FormLabel>Sexo</FormLabel>
               <Select
                 name="sexo"
@@ -297,19 +352,29 @@ const RegisterPatientForm = () => {
                 value={formData.sexo}
                 placeholder="Seleccione"
                 borderRadius="12px"
+                size="lg" // --- MODIFICADO --- Añadido size para consistencia
+                bg={useColorModeValue('gray.100', 'gray.700')} // --- MODIFICADO --- Añadido bg
+                _focus={{ // --- MODIFICADO --- Añadido focus
+                  borderColor: 'teal.400',
+                  boxShadow: '0 0 0 1px teal.400',
+                  bg: useColorModeValue('white', 'gray.800')
+                }}
               >
                 <option value="Femenino">Femenino</option>
                 <option value="Masculino">Masculino</option>
               </Select>
+              <FormErrorMessage>{errors.sexo}</FormErrorMessage>
             </FormControl>
           </VStack>
 
           <VStack spacing={5} align="stretch">
-            {renderInputField('Ciudad', 'pt_city', 'text')}
-            {renderInputField('Correo', 'pt_email', 'email')}
-            {renderSelectField('Responsable', 'user_id', users)}
-            {renderTextareaField('Razón de Consulta', 'pt_consultation_reason')}
-            {renderTextareaField('Recomendaciones', 'pt_recommendations')}
+            {renderInputField('Ciudad', 'pt_city', 'text', true, errors.pt_city)}
+            {renderInputField('Correo', 'pt_email', 'email', false, errors.pt_email)}
+            {renderSelectField('Responsable', 'user_id', users, 'username', true, errors.user_id)}
+            {renderSelectField('Sucursal', 'branch_id', branches, 'name', true, errors.branch_id)}
+            {renderTextareaField('Razón de Consulta', 'pt_consultation_reason', errors.pt_consultation_reason)}
+            {renderTextareaField('Recomendaciones', 'pt_recommendations', errors.pt_recommendations)}
+            
             <Flex justify="flex-end" mt={2}>
               <Button type="submit" colorScheme="teal" size="lg" borderRadius="12px" px={8}>
                 Guardar
@@ -336,9 +401,9 @@ const RegisterPatientForm = () => {
     </Box>
   );
 
-  function renderInputField(label, name, type, isRequired = false) {
+  function renderInputField(label, name, type, isRequired = false, error = null) {
     return (
-      <FormControl id={name} isRequired={isRequired}>
+      <FormControl id={name} isRequired={isRequired} isInvalid={!!error}> 
         <FormLabel fontWeight="bold">{label}</FormLabel>
         <Input
           type={type}
@@ -348,19 +413,21 @@ const RegisterPatientForm = () => {
           borderRadius="12px"
           size="lg"
           bg={useColorModeValue('gray.100', 'gray.700')}
+          min={type === 'number' ? 0 : undefined}
           _focus={{
             borderColor: 'teal.400',
             boxShadow: '0 0 0 1px teal.400',
             bg: useColorModeValue('white', 'gray.800')
           }}
         />
+        <FormErrorMessage>{error}</FormErrorMessage>
       </FormControl>
     );
   }
 
-  function renderTextareaField(label, name) {
+  function renderTextareaField(label, name, error = null) {
     return (
-      <FormControl id={name}>
+      <FormControl id={name} isInvalid={!!error}>
         <FormLabel fontWeight="bold">{label}</FormLabel>
         <Textarea
           name={name}
@@ -376,13 +443,14 @@ const RegisterPatientForm = () => {
           }}
           minH="80px"
         />
+        <FormErrorMessage>{error}</FormErrorMessage>
       </FormControl>
     );
   }
 
-  function renderSelectField(label, name, options) {
+  function renderSelectField(label, name, options, optionLabelKey = 'username', isRequired = false, error = null) {
     return (
-      <FormControl id={name} isRequired>
+      <FormControl id={name} isRequired={isRequired} isInvalid={!!error}>
         <FormLabel fontWeight="bold">{label}</FormLabel>
         <Select
           name={name}
@@ -400,10 +468,11 @@ const RegisterPatientForm = () => {
           <option value="">Seleccione {label.toLowerCase()}</option>
           {options.map(option => (
             <option key={option.id} value={option.id}>
-              {option.username}
+              {option[optionLabelKey]} 
             </option>
           ))}
         </Select>
+        <FormErrorMessage>{error}</FormErrorMessage>
       </FormControl>
     );
   }

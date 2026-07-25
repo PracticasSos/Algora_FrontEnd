@@ -4,6 +4,7 @@ import { Container, useColorModeValue } from "@chakra-ui/react";
 import AppRouter from "./routers";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "./api/supabase";
+import AdminShell from "./components/layout/AdminShell";
 
 function App() {
   const [isChecking, setIsChecking] = useState(true);
@@ -44,7 +45,9 @@ function App() {
       minH="100vh"
       fontFamily="'Satoshi', sans-serif"
     >
-      <AppRouter />
+      <AdminShell>
+        <AppRouter />
+      </AdminShell>
     </Container>
   );
 }

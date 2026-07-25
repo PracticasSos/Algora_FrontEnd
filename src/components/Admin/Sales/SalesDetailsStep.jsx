@@ -1,21 +1,21 @@
-import { Box, Grid, Text, useColorModeValue, Divider, Flex } from "@chakra-ui/react";
 import SalesDetails from "./SalesDetails";
 
-const SalesDetailsStep = ({ formData, setFormData, onTotalsChange }) => {
-
-  return (
-    <Flex justify="center" align="center" >
-      <Box>
-        <Grid gap={6}>
-          <SalesDetails
-            formData={formData}
-            setFormData={setFormData}
-            onTotalsChange={onTotalsChange}
-          />
-        </Grid>
-      </Box>
-    </Flex>
-  );
-};
+const SalesDetailsStep = ({
+  formData,
+  setFormData,
+  onTotalsChange,
+  accessories,
+  setAccessories,
+  onOpenAddMore,
+}) => (
+  <SalesDetails
+    formData={formData}
+    setFormData={setFormData}
+    onTotalsChange={onTotalsChange}
+    accessories={accessories}
+    setAccessories={setAccessories}
+    onOpenAddMore={onOpenAddMore}
+  />
+);
 
 export default SalesDetailsStep;

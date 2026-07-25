@@ -20,8 +20,10 @@ const SmartHeader = ({ moduleSpecificButton = null }) => {
   switch (user.role_id) {
     case 1: // Admin
     case 4: // SuperAdmin
-      return <HeaderAdmin moduleSpecificButton={moduleSpecificButton} />;
-    
+      // El nav de Admin ahora vive en AdminShell (sidebar + topbar globales),
+      // así que aquí ya no se renderiza nada para evitar duplicarlo.
+      return null;
+
     case 2: // Optometra
       return <HeaderOptometra moduleSpecificButton={moduleSpecificButton} />;
     
@@ -29,7 +31,7 @@ const SmartHeader = ({ moduleSpecificButton = null }) => {
       return <HeaderVendedor moduleSpecificButton={moduleSpecificButton} />;
     
     default:
-      return <HeaderAdmin moduleSpecificButton={moduleSpecificButton} />;
+      return null;
   }
 };
 

@@ -148,14 +148,7 @@ const SearchPatient = ({ onFormDataChange, initialFormData = {} }) => {
     const { colorMode } = useColorMode();
 
     return (
-        <Box
-            bg={bgColor}
-            borderRadius="xl"
-            p={[4, 6]}
-            width="100%"
-            mt={6}
-            transition="box-shadow 0.2s"
-        >
+        <Box width="100%">
             <SimpleGrid columns={[1, 2]} spacing={8}>
                 <VStack align="stretch" spacing={4}>
                     <FormControl id="patient-search">

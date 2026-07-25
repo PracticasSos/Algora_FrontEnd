@@ -1,169 +1,177 @@
 import {
-  FormControl,
-  FormLabel,
-  Input,
   Box,
   Text,
   useColorModeValue,
   useToast,
-  VStack,
-  Icon,
   Flex,
-  Divider,
+  Input,
+  Spinner,
 } from "@chakra-ui/react";
-import { CalendarIcon, TimeIcon } from "@chakra-ui/icons";
+import { Clock } from "lucide-react";
 import { useEffect, useState } from "react";
+import { supabase } from "../../../api/supabase";
 
+const basePresets = [
+  { label: "Hoy", days: 0 },
+  { label: "Mañana", days: 1 },
+  { label: "En 3 días", days: 3 },
+  { label: "En 8 días", days: 8 },
+];
+
+/**
+ * Selector rápido de entrega: chips para lo más común (hoy, mañana, 3 u 8
+ * días) + opción "Personalizado". Respeta la hora de corte configurada por
+ * el Admin (DeliverySettings.jsx): pasada esa hora, "Hoy" deja de ofrecerse.
+ */
 const Delivery = ({ saleData, setSaleData }) => {
-  const [deliveryDays, setDeliveryDays] = useState(null);
-  const [selectedDateText, setSelectedDateText] = useState("");
-  const [miniDateTime, setMinDateTime] = useState("");
+  const [selectedPreset, setSelectedPreset] = useState(null);
+  const [showCustom, setShowCustom] = useState(false);
+  const [cutoffHour, setCutoffHour] = useState(null);
+  const [loadingSettings, setLoadingSettings] = useState(true);
   const toast = useToast();
 
   useEffect(() => {
-    const now = new Date();
-    const localNow = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-    const formatted = localNow.toISOString().slice(0, 16);
-    setMinDateTime(formatted);
+    const loadSettings = async () => {
+      const { data, error } = await supabase
+        .from("delivery_settings")
+        .select("cutoff_hour")
+        .maybeSingle();
+      if (!error && data) setCutoffHour(data.cutoff_hour);
+      setLoadingSettings(false);
+    };
+    loadSettings();
   }, []);
 
-  const handleDateChange = (e) => {
-    if (!e.target.value) {
-      setDeliveryDays(null);
-      setSelectedDateText("");
-      setSaleData((prev) => ({
-        ...prev,
-        delivery_time: null,
-        delivery_datetime: null,
-      }));
-      return;
-    }
-    const selectedDateTime = new Date(e.target.value);
-    const now = new Date();
-    if (selectedDateTime < now) {
+  const isPastCutoff = cutoffHour !== null && new Date().getHours() >= cutoffHour;
+  const presets = basePresets.filter((p) => !(p.days === 0 && isPastCutoff));
+
+  const activeBg = useColorModeValue("#E6FBF6", "rgba(0,168,142,0.15)");
+  const activeColor = "#00A88E";
+  const borderColor = useColorModeValue("gray.200", "gray.600");
+  const textColor = useColorModeValue("gray.800", "white");
+  const subtitleColor = useColorModeValue("gray.500", "gray.400");
+  const selectBg = useColorModeValue("white", "gray.700");
+
+  const applyDate = (date, presetLabel) => {
+    const diffInMs = date.getTime() - new Date().getTime();
+    const diffInDays = Math.max(0, Math.ceil(diffInMs / (1000 * 60 * 60 * 24)));
+    setSaleData((prev) => ({
+      ...prev,
+      delivery_time: `${diffInDays} día${diffInDays !== 1 ? "s" : ""}`,
+      delivery_datetime: date.toISOString(),
+    }));
+    setSelectedPreset(presetLabel);
+  };
+
+  const handlePresetClick = (preset) => {
+    const date = new Date();
+    date.setDate(date.getDate() + preset.days);
+    date.setHours(17, 0, 0, 0); // 5pm por defecto, se puede ajustar en "Personalizado"
+    if (date < new Date()) date.setDate(date.getDate() + 1);
+    setShowCustom(false);
+    applyDate(date, preset.label);
+  };
+
+  const handleCustomChange = (e) => {
+    if (!e.target.value) return;
+    const date = new Date(e.target.value);
+    if (date < new Date()) {
       toast({
         title: "Fecha inválida",
         description: "No se puede seleccionar una fecha anterior a la actual.",
         status: "error",
         duration: 4000,
-        isClosable: true,
-        position: "top",
       });
-      e.target.value = "";
-      setDeliveryDays(null);
-      setSelectedDateText("");
-      setSaleData((prev) => ({
-        ...prev,
-        delivery_time: null,
-        delivery_datetime: null,
-      }));
       return;
     }
-    const diffInMs = selectedDateTime.getTime() - now.getTime();
-    const diffInHours = diffInMs / (1000 * 60 * 60);
-    const diffInDays = Math.ceil(diffInHours / 24);
-    setDeliveryDays(diffInDays);
-    const formatted = selectedDateTime.toLocaleString("es-ES", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    setSelectedDateText(formatted);
-    setSaleData((prev) => ({
-      ...prev,
-      delivery_time: `${diffInDays} día${diffInDays !== 1 ? "s" : ""}`,
-      delivery_datetime: selectedDateTime.toISOString(),
-      delivery_formatted: formatted,
-    }));
+    applyDate(date, "custom");
   };
 
-  // Colores adaptativos
-  const boxBg = useColorModeValue("white", "gray.800");
-  const boxShadow = useColorModeValue("0 4px 24px rgba(0,0,0,0.08)", "0 4px 24px rgba(0,0,0,0.32)");
-  const boxColor = useColorModeValue("gray.700", "white");
-  const textColor = useColorModeValue("gray.800", "white");
-  const secondaryTextColor = useColorModeValue("gray.600", "gray.300");
-  const labelColor = useColorModeValue("teal.600", "teal.300");
-  const borderColor = useColorModeValue("teal.200", "teal.600");
-  const selectBg = useColorModeValue("gray.50", "gray.700");
+  const minDateTime = (() => {
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  })();
+
+  const deliveryText = saleData.delivery_datetime
+    ? new Date(saleData.delivery_datetime).toLocaleString("es-EC", {
+        weekday: "long",
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
 
   return (
-    <Box
-      bg={boxBg}
-      p={{ base: 6, md: 8 }}
-      borderRadius="2xl"
-      color={boxColor}
-      mx="auto"
-      maxW="480px"
-      textAlign="center"
-      boxShadow={boxShadow}
-      border="1px solid"
-      borderColor={borderColor}
-      transition="box-shadow 0.2s"
-    >
-      <VStack spacing={6} align="stretch">
-        <Flex align="center" justify="center" mb={2}>
-          <Icon as={CalendarIcon} boxSize={7} color="teal.400" mr={2} />
-          <Text fontSize="2xl" fontWeight="bold" color={labelColor}>
-            Programar entrega
-          </Text>
-        </Flex>
-        <Divider borderColor={borderColor} />
-        <FormControl w="100%">
-          <FormLabel fontSize="md" color={labelColor} fontWeight="semibold" mb={2}>
-            Selecciona fecha y hora
-          </FormLabel>
-          <Input
-            type="datetime-local"
-            name="delivery_date"
-            min={miniDateTime}
-            onChange={handleDateChange}
-            value={saleData.delivery_datetime ? saleData.delivery_datetime.slice(0, 16) : ""}
-            focusBorderColor="teal.500"
-            borderRadius="lg"
-            height="48px"
-            pl={4}
-            pr={4}
-            bg={selectBg}
-            borderColor={borderColor}
-            color={textColor}
-            fontSize="md"
-            fontWeight="medium"
-            _hover={{
-              borderColor: useColorModeValue("teal.300", "teal.500"),
-              boxShadow: useColorModeValue("0 0 0 2px teal.100", "0 0 0 2px teal.700"),
-            }}
-            _focus={{
-              borderColor: useColorModeValue("teal.500", "teal.300"),
-              boxShadow: useColorModeValue("0 0 0 2px teal.200", "0 0 0 2px teal.600"),
-            }}
-            transition="all 0.2s"
-          />
-        </FormControl>
-        <Box mt={2}>
-          {deliveryDays !== null ? (
-            <VStack spacing={2}>
-              <Flex align="center" justify="center">
-                <Icon as={TimeIcon} boxSize={5} color="teal.400" mr={2} />
-                <Text fontSize="lg" fontWeight="semibold" color={textColor}>
-                  Entrega en {deliveryDays} día{deliveryDays !== 1 ? "s" : ""}
-                </Text>
-              </Flex>
-              <Text fontSize="sm" color={secondaryTextColor} mt={1}>
-                <b>Fecha seleccionada:</b> {selectedDateText}
-              </Text>
-            </VStack>
-          ) : (
-            <Text fontSize="sm" color={secondaryTextColor}>
-              Selecciona una fecha y hora para ver el tiempo estimado de entrega.
-            </Text>
-          )}
+    <Box w="100%">
+      {isPastCutoff && (
+        <Text fontSize="xs" color="orange.400" mb={2}>
+          Ya pasó la hora de corte ({cutoffHour % 12 === 0 ? 12 : cutoffHour % 12}:00 {cutoffHour < 12 ? "AM" : "PM"}) — "Hoy" ya no está disponible.
+        </Text>
+      )}
+      <Flex wrap="wrap" gap={2} mb={3}>
+        {presets.map((preset) => (
+          <Box
+            key={preset.label}
+            as="button"
+            type="button"
+            px={4}
+            py={2}
+            borderRadius="full"
+            border={selectedPreset === preset.label ? `2px solid ${activeColor}` : `1px solid ${borderColor}`}
+            bg={selectedPreset === preset.label ? activeBg : selectBg}
+            color={selectedPreset === preset.label ? activeColor : textColor}
+            fontSize="sm"
+            fontWeight="semibold"
+            onClick={() => handlePresetClick(preset)}
+            _hover={{ borderColor: activeColor }}
+            transition="all 0.15s ease"
+          >
+            {preset.label}
+          </Box>
+        ))}
+        <Box
+          as="button"
+          type="button"
+          px={4}
+          py={2}
+          borderRadius="full"
+          border={selectedPreset === "custom" ? `2px solid ${activeColor}` : `1px solid ${borderColor}`}
+          bg={selectedPreset === "custom" ? activeBg : selectBg}
+          color={selectedPreset === "custom" ? activeColor : textColor}
+          fontSize="sm"
+          fontWeight="semibold"
+          onClick={() => setShowCustom((v) => !v)}
+          _hover={{ borderColor: activeColor }}
+          transition="all 0.15s ease"
+        >
+          Personalizado
         </Box>
-      </VStack>
+      </Flex>
+
+      {showCustom && (
+        <Input
+          type="datetime-local"
+          min={minDateTime}
+          onChange={handleCustomChange}
+          value={saleData.delivery_datetime ? saleData.delivery_datetime.slice(0, 16) : ""}
+          borderRadius="lg"
+          height="42px"
+          bg={selectBg}
+          borderColor={borderColor}
+          color={textColor}
+          mb={2}
+        />
+      )}
+
+      {deliveryText ? (
+        <Flex align="center" gap={2} color={activeColor}>
+          <Clock size={16} />
+          <Text fontSize="sm" fontWeight="medium">Entrega: {deliveryText}</Text>
+        </Flex>
+      ) : (
+        <Text fontSize="xs" color={subtitleColor}>Elige cuándo se entrega.</Text>
+      )}
     </Box>
   );
 };

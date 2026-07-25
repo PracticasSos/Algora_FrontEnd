@@ -51,6 +51,7 @@ import MessageClients from "../components/ExperienceModule/pages/MessageClients.
 import ChangePassword from "../components/optionsauth/ChangePassword.jsx";
 import Tenants from "../components/tenants/Tenants.jsx";
 import TermsManager from "../components/Admin/Sales/TermsManager.jsx";
+import DeliverySettings from "../components/Admin/DeliverySettings.jsx";
 
 const AppRouter = () => {
     return (
@@ -59,6 +60,7 @@ const AppRouter = () => {
             <Route path="/register" element={<Register />} />
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/terms-manager" element={<TermsManager />} />
+            <Route path="/delivery-settings" element={<DeliverySettings />} />
             <Route path="/inventory" element={<Inventario />}></Route>
             <Route path="/login-form" element={<LoginForm />} />
             <Route path="/admin" element={<AdminDashBoard />} />

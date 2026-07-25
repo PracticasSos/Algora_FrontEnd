@@ -1,202 +1,126 @@
 import {
   Box,
+  Flex,
+  SimpleGrid,
   FormControl,
   FormLabel,
   Input,
-  SimpleGrid,
-  Img,
   Text,
   useColorModeValue,
-  Heading,
-  Divider,
-  Tooltip,
 } from "@chakra-ui/react";
 import React from "react";
+import { Banknote, CreditCard, ArrowRightLeft } from "lucide-react";
 
 const paymentMethods = [
-  { src: "/assets/iconometodoefectivo.png", alt: "Efectivo", value: "efectivo" },
-  { src: "/assets/iconometodotargeta.png", alt: "Tarjeta", value: "datafast" },
-  { src: "/assets/iconometododatafast.png", alt: "Transferencia", value: "transferencia" },
+  { icon: Banknote, label: "Efectivo", value: "efectivo" },
+  { icon: CreditCard, label: "Tarjeta", value: "datafast" },
+  { icon: ArrowRightLeft, label: "Transferencia", value: "transferencia" },
 ];
 
+/**
+ * Selector de método de pago + abono. El total ya se ve en el resumen de la
+ * venta (panel lateral), así que aquí no se repite un campo "Total" más.
+ */
 const Total = ({ formData, setFormData }) => {
   const totalFrame = formData.total_p_frame > 0 ? formData.total_p_frame : formData.p_frame || 0;
   const totalLens = formData.total_p_lens > 0 ? formData.total_p_lens : formData.p_lens || 0;
   const total = Number(totalFrame) + Number(totalLens);
-  const balance = formData.balance === '' ? 0 : parseFloat(formData.balance);
+  const balance = formData.balance === "" ? 0 : parseFloat(formData.balance);
   const credit = isNaN(balance) ? total : total - balance;
 
   React.useEffect(() => {
-    setFormData({
-      ...formData,
-      total,
-      credit,
-    });
+    setFormData({ ...formData, total, credit });
     // eslint-disable-next-line
   }, [total, credit]);
 
-  const handleCreditChange = (e) => {
+  const handleBalanceChange = (e) => {
     const value = e.target.value;
-    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setFormData({
-        ...formData,
-        balance: value,
-      });
+    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+      setFormData({ ...formData, balance: value });
     }
   };
 
-  const handleImageSelect = (method) => {
-    setFormData({
-      ...formData,
-      payment_in: method,
-    });
-  };
-
+  const handleSelect = (method) => setFormData({ ...formData, payment_in: method });
   const isSelected = (method) => formData.payment_in === method;
 
-  const textColor = useColorModeValue('gray.800', 'white');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const selectBg = useColorModeValue('white', 'gray.700');
-  const cardBg = useColorModeValue('white', 'gray.800');
-  const shadow = useColorModeValue('lg', 'dark-lg');
+  const textColor = useColorModeValue("gray.800", "white");
+  const borderColor = useColorModeValue("gray.200", "gray.600");
+  const selectBg = useColorModeValue("white", "gray.700");
+  const activeBg = useColorModeValue("#E6FBF6", "rgba(0,168,142,0.15)");
+  const activeColor = "#00A88E";
 
   return (
-    <Box w="100vw" display="flex" justifyContent="center" alignItems="center" >
-      <Box
-        w="90%"
-        maxW="800px"
-        px={[2, 4, 6]}
-        py={4}
-      >
-        <Heading size="lg" textAlign="center" mb={2} color={useColorModeValue('blue.700', 'blue.300')}>
-          Pago de Venta
-        </Heading>
-        <Text textAlign="center" fontSize="md" color={useColorModeValue('gray.600', 'gray.400')} mb={6}>
-          Selecciona el método de pago y revisa el resumen.
+    <Box w="100%">
+      <Text fontSize="xs" fontWeight="semibold" mb={2} color={useColorModeValue("gray.600", "gray.400")}>
+        Método de pago
+      </Text>
+      <SimpleGrid columns={3} spacing={3} mb={5}>
+        {paymentMethods.map(({ icon: IconCmp, label, value }) => {
+          const selected = isSelected(value);
+          return (
+            <Flex
+              key={value}
+              direction="column"
+              align="center"
+              justify="center"
+              gap={2}
+              py={4}
+              borderRadius="14px"
+              cursor="pointer"
+              border={selected ? `2px solid ${activeColor}` : `1px solid ${borderColor}`}
+              bg={selected ? activeBg : selectBg}
+              transition="all 0.15s ease"
+              _hover={{ borderColor: activeColor }}
+              onClick={() => handleSelect(value)}
+            >
+              <IconCmp size={22} color={selected ? activeColor : undefined} />
+              <Text fontSize="sm" fontWeight="semibold" color={selected ? activeColor : textColor}>
+                {label}
+              </Text>
+            </Flex>
+          );
+        })}
+      </SimpleGrid>
+
+      {!formData.payment_in && (
+        <Text color="orange.400" fontSize="xs" mb={4}>
+          Selecciona un método de pago.
         </Text>
-        <Divider mb={6} />
+      )}
 
-        <SimpleGrid columns={3} spacing={4} mb={6} p={4}>
-          {paymentMethods.map(({ src, alt, value }) => (
-            <Tooltip label={alt} key={value} hasArrow>
-              <Box
-                border={isSelected(value) ? "3px solid #3182CE" : `2px solid ${borderColor}`}
-                borderRadius="xl"
-                overflow="hidden"
-                cursor="pointer"
-                bg={isSelected(value) ? useColorModeValue('blue.50', 'blue.900') : selectBg}
-                boxShadow={isSelected(value) ? "md" : "sm"}
-                onClick={() => handleImageSelect(value)}
-                transition="all 0.2s"
-                p={2}
-                _hover={{
-                  boxShadow: "xl",
-                  borderColor: "#3182CE",
-                  bg: useColorModeValue('blue.50', 'blue.900'),
-                }}
-                display="flex"
-                flexDirection="column"
-                alignItems="center"
-              >
-                <Img
-                  src={src}
-                  alt={alt}
-                  boxSize={["70px", "90px", "100px"]}
-                  objectFit="contain"
-                  mb={2}
-                  filter={isSelected(value) ? "none" : "grayscale(60%)"}
-                  transition="filter 0.2s"
-                />
-                <Text fontWeight="bold" fontSize="sm" color={isSelected(value) ? "blue.600" : textColor}>
-                  {alt}
-                </Text>
-              </Box>
-            </Tooltip>
-          ))}
-        </SimpleGrid>
-
-        {!formData.payment_in && (
-          <Box color="red.500" fontSize="sm" mb={4} textAlign="center">
-            Debes seleccionar un método de pago.
-          </Box>
-        )}
-
-        <Box w="90%" mx="auto">
-          <SimpleGrid columns={1} spacing={5}>
-            <FormControl>
-              <FormLabel fontWeight="bold" color={useColorModeValue('gray.700', 'gray.300')}>Total</FormLabel>
-              <Input
-                type="number"
-                name="total"
-                placeholder="$150"
-                height="50px"
-                borderRadius="xl"
-                fontWeight="bold"
-                fontSize="lg"
-                value={Number(total).toFixed(2)}
-                isReadOnly
-                bg={useColorModeValue('gray.100', 'gray.700')}
-                borderColor={borderColor}
-                color={textColor}
-                textAlign="right"
-                _hover={{ borderColor: useColorModeValue('gray.300', 'gray.500') }}
-                _focus={{
-                  borderColor: useColorModeValue('blue.500', 'blue.300'),
-                  boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                }}
-              />
-            </FormControl>
-
-            <FormControl>
-              <FormLabel fontWeight="bold" color={useColorModeValue('gray.700', 'gray.300')}>Abono</FormLabel>
-              <Input
-                type="number"
-                name="balance"
-                height="50px"
-                borderRadius="xl"
-                fontWeight="bold"
-                fontSize="lg"
-                value={formData.balance === 0 || formData.balance === '0' ? '' : formData.balance ?? ''}
-                onChange={handleCreditChange}
-                placeholder="Abono $"
-                bg={selectBg}
-                borderColor={borderColor}
-                color={textColor}
-                textAlign="right"
-                _hover={{ borderColor: useColorModeValue('gray.300', 'gray.500') }}
-                _focus={{
-                  borderColor: useColorModeValue('blue.500', 'blue.300'),
-                  boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                }}
-              />
-            </FormControl>
-
-            <FormControl>
-              <FormLabel fontWeight="bold" color={useColorModeValue('gray.700', 'gray.300')}>Saldo</FormLabel>
-              <Input
-                type="number"
-                name="credit"
-                placeholder="$20"
-                borderRadius="xl"
-                height="50px"
-                fontWeight="bold"
-                fontSize="lg"
-                value={Number(credit).toFixed(2)}
-                isReadOnly
-                bg={useColorModeValue('gray.100', 'gray.700')}
-                borderColor={borderColor}
-                color={textColor}
-                textAlign="right"
-                _hover={{ borderColor: useColorModeValue('gray.300', 'gray.500') }}
-                _focus={{
-                  borderColor: useColorModeValue('blue.500', 'blue.300'),
-                  boxShadow: useColorModeValue('0 0 0 1px blue.500', '0 0 0 1px blue.300')
-                }}
-              />
-            </FormControl>
-          </SimpleGrid>
-        </Box>
-      </Box>
+      <SimpleGrid columns={2} spacing={4}>
+        <FormControl>
+          <FormLabel fontSize="xs" fontWeight="semibold">Abono</FormLabel>
+          <Input
+            type="number"
+            name="balance"
+            height="44px"
+            borderRadius="lg"
+            fontWeight="semibold"
+            value={formData.balance === 0 || formData.balance === "0" ? "" : formData.balance ?? ""}
+            onChange={handleBalanceChange}
+            placeholder="$0.00"
+            bg={selectBg}
+            borderColor={borderColor}
+            color={textColor}
+          />
+        </FormControl>
+        <FormControl>
+          <FormLabel fontSize="xs" fontWeight="semibold">Saldo pendiente</FormLabel>
+          <Input
+            type="number"
+            name="credit"
+            height="44px"
+            borderRadius="lg"
+            fontWeight="semibold"
+            value={Number(credit).toFixed(2)}
+            isReadOnly
+            bg={useColorModeValue("gray.100", "gray.700")}
+            borderColor={borderColor}
+            color={textColor}
+          />
+        </FormControl>
+      </SimpleGrid>
     </Box>
   );
 };

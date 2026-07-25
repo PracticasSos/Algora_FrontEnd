@@ -1,10 +1,8 @@
-import { Box, Grid, Flex } from "@chakra-ui/react";
-import MessageSection from "./MenssageSection";
 import { useEffect } from "react";
+import MessageSection from "./MenssageSection";
 import { supabase } from "../../../api/supabase";
 
 const MessageStep = ({ selectedBranch, formData, setFormData }) => {
-
   useEffect(() => {
     const fetchMessage = async () => {
       if (!selectedBranch) return;
@@ -26,17 +24,7 @@ const MessageStep = ({ selectedBranch, formData, setFormData }) => {
   }, [selectedBranch]);
 
   return (
-    <Flex justify="center" align="center" >
-      <Box mt={8}>
-        <Grid gap={6}>
-          <MessageSection
-            selectedBranch={selectedBranch}
-            formData={formData}
-            setFormData={setFormData}
-          />
-        </Grid>
-      </Box>
-    </Flex>
+    <MessageSection selectedBranch={selectedBranch} formData={formData} setFormData={setFormData} />
   );
 };
 

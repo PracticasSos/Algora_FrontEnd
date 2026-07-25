@@ -5,28 +5,37 @@ import {
   VStack,
   SimpleGrid,
   Flex,
-  Img,
   FormControl,
   FormLabel,
   Input,
   useColorModeValue,
   Text,
-  Divider,
   Icon,
+  Button,
+  Badge,
+  Wrap,
+  WrapItem,
+  Tag,
+  TagLabel,
+  TagCloseButton,
 } from "@chakra-ui/react";
-import { SearchIcon } from "@chakra-ui/icons";
+import { SearchIcon, SmallAddIcon } from "@chakra-ui/icons";
+import { Glasses, Eye, Percent } from "lucide-react";
+import DiscountModal from "./DiscountModal";
 
 const SalesDetails = ({
   formData = {},
   setFormData = () => {},
   onTotalsChange = () => {},
+  accessories = [],
+  setAccessories = () => {},
+  onOpenAddMore = () => {},
 }) => {
   const [searchFrame, setSearchFrame] = useState("");
   const [searchLens, setSearchLens] = useState("");
-  const [frames, setFrames] = useState([]);
-  const [lenses, setLenses] = useState([]);
   const [frameSuggestions, setFrameSuggestions] = useState([]);
   const [lensSuggestions, setLensSuggestions] = useState([]);
+  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
 
   const [calculatedData, setCalculatedData] = useState({
     p_frame: 0,
@@ -44,17 +53,10 @@ const SalesDetails = ({
     discount_lens: "",
   });
 
-  // Estado local para los inputs editables de totales
-  const [totalInput, setTotalInput] = useState({
-    total_p_frame: "",
-    total_p_lens: "",
-  });
-
   const formatMoney = (amount) => {
     if (amount === null || amount === undefined || amount === "") return 0;
     return parseFloat(parseFloat(amount).toFixed(2));
   };
-
 
   useEffect(() => {
     if (formData.brand && formData.brand !== searchFrame) {
@@ -65,20 +67,6 @@ const SalesDetails = ({
     }
   }, [formData.brand, formData.lens_type_name]);
 
-  useEffect(() => {
-    fetchData("lens", setLenses);
-    fetchData("inventario", setFrames);
-  }, []);
-
-  const fetchData = async (table, setData) => {
-    const { data, error } = await supabase.from(table).select("*");
-    if (error) {
-      console.error(`Error fetching ${table}:`, error);
-    } else {
-      setData(data);
-    }
-  };
-
   const handleSearchFrame = async (e) => {
     const value = e.target.value;
     setSearchFrame(value);
@@ -86,6 +74,7 @@ const SalesDetails = ({
       const { data, error } = await supabase
         .from("inventario")
         .select("id, brand, price, quantity")
+        .eq("category", "armazon")
         .ilike("brand", `%${value}%`)
         .gt("quantity", 0);
       if (error) throw error;
@@ -120,11 +109,7 @@ const SalesDetails = ({
       }));
       setSearchFrame(item.brand);
       setFrameSuggestions([]);
-      if (onTotalsChange) {
-        onTotalsChange({
-          frameName: item.brand,
-        });
-      }
+      if (onTotalsChange) onTotalsChange({ frameName: item.brand });
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -134,11 +119,7 @@ const SalesDetails = ({
       }));
       setSearchLens(item.lens_type);
       setLensSuggestions([]);
-      if (onTotalsChange) {
-        onTotalsChange({
-          lensName: item.lens_type,
-        });
-      }
+      if (onTotalsChange) onTotalsChange({ lensName: item.lens_type });
     }
   };
 
@@ -172,52 +153,23 @@ const SalesDetails = ({
     const discount = parseFloat(value);
     if (!isNaN(discount) && discount > 0 && discount <= 100) {
       if (name === "discount_frame") {
-        const total_p_frame = formatMoney(
-          calculatedData.p_frame * (1 - discount / 100)
-        );
-        setCalculatedData((prev) => ({
-          ...prev,
-          discount_frame: discount,
-          total_p_frame,
-        }));
-        setFormData((prev) => ({
-          ...prev,
-          discount_frame: discount,
-          total_p_frame: total_p_frame,
-        }));
+        const total_p_frame = formatMoney(calculatedData.p_frame * (1 - discount / 100));
+        setCalculatedData((prev) => ({ ...prev, discount_frame: discount, total_p_frame }));
+        setFormData((prev) => ({ ...prev, discount_frame: discount, total_p_frame }));
       } else if (name === "discount_lens") {
-        const total_p_lens = formatMoney(
-          calculatedData.p_lens * (1 - discount / 100)
-        );
-        setCalculatedData((prev) => ({
-          ...prev,
-          discount_lens: discount,
-          total_p_lens,
-        }));
-        setFormData((prev) => ({
-          ...prev,
-          discount_lens: discount,
-          total_p_lens: total_p_lens,
-        }));
+        const total_p_lens = formatMoney(calculatedData.p_lens * (1 - discount / 100));
+        setCalculatedData((prev) => ({ ...prev, discount_lens: discount, total_p_lens }));
+        setFormData((prev) => ({ ...prev, discount_lens: discount, total_p_lens }));
       }
     } else if (value === "" || isNaN(discount) || discount === 0) {
-      // Si el usuario borra el campo o pone 0, elimina el total y el descuento
       if (name === "discount_frame") {
-        setCalculatedData((prev) => ({
-          ...prev,
-          discount_frame: 0,
-          total_p_frame: null,
-        }));
+        setCalculatedData((prev) => ({ ...prev, discount_frame: 0, total_p_frame: null }));
         setFormData((prev) => {
           const { discount_frame, total_p_frame, ...rest } = prev;
           return { ...rest, discount_frame: 0 };
         });
       } else if (name === "discount_lens") {
-        setCalculatedData((prev) => ({
-          ...prev,
-          discount_lens: 0,
-          total_p_lens: null,
-        }));
+        setCalculatedData((prev) => ({ ...prev, discount_lens: 0, total_p_lens: null }));
         setFormData((prev) => {
           const { discount_lens, total_p_lens, ...rest } = prev;
           return { ...rest, discount_lens: 0 };
@@ -229,108 +181,27 @@ const SalesDetails = ({
   useEffect(() => {
     setDiscountInput({
       discount_frame:
-        calculatedData.discount_frame !== null &&
-        calculatedData.discount_frame !== undefined
+        calculatedData.discount_frame !== null && calculatedData.discount_frame !== undefined
           ? calculatedData.discount_frame.toString()
           : "",
       discount_lens:
-        calculatedData.discount_lens !== null &&
-        calculatedData.discount_lens !== undefined
+        calculatedData.discount_lens !== null && calculatedData.discount_lens !== undefined
           ? calculatedData.discount_lens.toString()
           : "",
     });
   }, [calculatedData.discount_frame, calculatedData.discount_lens]);
 
-  // Sincroniza el estado local de los totales con los datos calculados
-  useEffect(() => {
-    setTotalInput({
-      total_p_frame:
-        calculatedData.total_p_frame !== null && calculatedData.total_p_frame !== undefined
-          ? calculatedData.total_p_frame.toString()
-          : "",
-      total_p_lens:
-        calculatedData.total_p_lens !== null && calculatedData.total_p_lens !== undefined
-          ? calculatedData.total_p_lens.toString()
-          : "",
-    });
-  }, [calculatedData.total_p_frame, calculatedData.total_p_lens]);
-
-  const handleTotalChange = (e) => {
-    const { name, value } = e.target;
-    // Permite edición libre
-    setTotalInput((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // Formatea y aplica el valor solo al perder el foco
-  const handleTotalBlur = (e) => {
-    const { name, value } = e.target;
-    if (name === "total_p_frame" || name === "total_p_lens") {
-      if (value === "") {
-        // Si el usuario borra el campo, NO modificar nada, mantener el último valor válido
-        return;
-      }
-      const totalValue = formatMoney(value);
-      if (!isNaN(totalValue)) {
-        if (name === "total_p_frame") {
-          const discount_frame =
-            calculatedData.p_frame > 0
-              ? parseFloat(
-                  (100 - (totalValue / calculatedData.p_frame) * 100).toFixed(2)
-                )
-              : calculatedData.discount_frame;
-          setCalculatedData((prev) => ({
-            ...prev,
-            total_p_frame: totalValue,
-            discount_frame: discount_frame,
-          }));
-          setFormData((prev) => ({
-            ...prev,
-            total_p_frame: totalValue,
-            discount_frame: discount_frame,
-          }));
-          setTotalInput((prev) => ({ ...prev, total_p_frame: totalValue.toFixed(2) }));
-        } else {
-          const discount_lens =
-            calculatedData.p_lens > 0
-              ? parseFloat(
-                  (100 - (totalValue / calculatedData.p_lens) * 100).toFixed(2)
-                )
-              : calculatedData.discount_lens;
-          setCalculatedData((prev) => ({
-            ...prev,
-            total_p_lens: totalValue,
-            discount_lens: discount_lens,
-          }));
-          setFormData((prev) => ({
-            ...prev,
-            total_p_lens: totalValue,
-            discount_lens: discount_lens,
-          }));
-          setTotalInput((prev) => ({ ...prev, total_p_lens: totalValue.toFixed(2) }));
-        }
-      }
-    }
-  };
-
   useEffect(() => {
     const totalFrame =
-      calculatedData.total_p_frame !== null &&
-      calculatedData.total_p_frame !== undefined
+      calculatedData.total_p_frame !== null && calculatedData.total_p_frame !== undefined
         ? formatMoney(calculatedData.total_p_frame)
         : formatMoney(calculatedData.p_frame);
-
     const totalLens =
-      calculatedData.total_p_lens !== null &&
-      calculatedData.total_p_lens !== undefined
+      calculatedData.total_p_lens !== null && calculatedData.total_p_lens !== undefined
         ? formatMoney(calculatedData.total_p_lens)
         : formatMoney(calculatedData.p_lens);
-
     const totalP = totalFrame + totalLens;
-
-    setCalculatedData((prev) => ({
-      ...prev,
-      totalP: totalP.toString(),
-    }));
+    setCalculatedData((prev) => ({ ...prev, totalP: totalP.toString() }));
   }, [
     calculatedData.total_p_frame,
     calculatedData.total_p_lens,
@@ -349,7 +220,6 @@ const SalesDetails = ({
         total_p_lens = formatMoney(calculatedData.discount_lens > 0 ? calculatedData.total_p_lens : calculatedData.p_lens);
         total = Number(total_p_frame) + Number(total_p_lens);
       } else {
-        // Si no hay descuento, manda p_frame y p_lens como total
         total_p_frame = formatMoney(calculatedData.p_frame);
         total_p_lens = formatMoney(calculatedData.p_lens);
         total = Number(total_p_frame) + Number(total_p_lens);
@@ -373,406 +243,324 @@ const SalesDetails = ({
     formData.lens_type_name,
   ]);
 
-  const bgColor = useColorModeValue("white", "gray.900");
-  const cardBg = useColorModeValue("gray.50", "gray.800");
   const textColor = useColorModeValue("gray.800", "white");
   const borderColor = useColorModeValue("gray.200", "gray.700");
   const selectBg = useColorModeValue("white", "gray.700");
   const accentColor = useColorModeValue("blue.500", "blue.300");
+  const subtitleColor = useColorModeValue("gray.500", "gray.400");
+
+  const totalDiscountApplied =
+    (calculatedData.discount_frame > 0 ? 1 : 0) + (calculatedData.discount_lens > 0 ? 1 : 0);
+
+  const accessoriesTotal = accessories.reduce((sum, a) => sum + a.unit_price * a.quantity, 0);
 
   return (
-    <Box w="100vw" bg={bgColor} >
-      <Box
-        w="90%"
-        maxW="900px"
-        mx="auto"
-        h="100%"
-        borderRadius="2xl"
-        p={[4, 8]}
-        border={`1px solid ${borderColor}`}
-      >
-        <VStack spacing={8} w="100%">
-          {/* Frame Section */}
-          <Box w="100%">
-            <Text
-              fontWeight="bold"
-              fontSize="lg"
-              mb={2}
+    <Box w="100%">
+      <VStack spacing={6} w="100%" align="stretch">
+        {/* Encabezado con acceso a Descuento y "+ Agregar" */}
+        <Flex justify="flex-end" gap={2}>
+          <Button
+            size="sm"
+            variant="outline"
+            leftIcon={<Icon as={Percent} boxSize="14px" />}
+            borderRadius="full"
+            onClick={() => setIsDiscountModalOpen(true)}
+          >
+            Descuento
+            {totalDiscountApplied > 0 && (
+              <Badge ml={2} colorScheme="green" borderRadius="full">
+                {totalDiscountApplied}
+              </Badge>
+            )}
+          </Button>
+          <Button
+            size="sm"
+            colorScheme="teal"
+            variant="outline"
+            leftIcon={<SmallAddIcon />}
+            borderRadius="full"
+            onClick={onOpenAddMore}
+          >
+            Agregar
+          </Button>
+        </Flex>
+
+        {/* Frame Section */}
+        <Box w="100%">
+          <Flex align="center" gap={2} mb={2}>
+            <Flex
+              align="center"
+              justify="center"
+              boxSize="28px"
+              borderRadius="8px"
+              bg={useColorModeValue("blue.50", "blue.900")}
               color={accentColor}
-              letterSpacing="wide"
+              flexShrink={0}
             >
+              <Icon as={Glasses} boxSize="16px" />
+            </Flex>
+            <Text fontWeight="bold" fontSize="md" color={accentColor} letterSpacing="wide">
               Armazón
             </Text>
-            <Divider mb={4} />
-            <SimpleGrid
-              templateColumns={["80px 1fr"]}
-              spacing={6}
-              alignItems="center"
-              w="100%"
-            >
-              <Flex justify="center" align="center">
-                <Img
-                  src="/assets/inventario.jpg"
-                  alt="Armazón"
-                  objectFit="cover"
+          </Flex>
+          <VStack spacing={3} w="100%" align="stretch">
+            <FormControl>
+              <FormLabel fontSize="sm" fontWeight="semibold">
+                Buscar armazón
+              </FormLabel>
+              <Flex align="center" position="relative">
+                <Input
+                  name="frame1"
+                  placeholder="Escribe para buscar..."
+                  value={searchFrame}
+                  onChange={handleSearchFrame}
+                  fontSize="md"
+                  height="44px"
                   borderRadius="xl"
-                  w={["80px", "100px"]}
-                  h={["80px", "100px"]}
-                  boxShadow="md"
-                  border={`2px solid ${accentColor}`}
+                  w="100%"
+                  bg={selectBg}
+                  borderColor={borderColor}
+                  color={textColor}
+                  pr="40px"
+                  _hover={{ borderColor: accentColor, boxShadow: "sm" }}
+                  _focus={{ borderColor: accentColor, boxShadow: "0 0 0 2px #3182ce33" }}
                 />
+                <Icon as={SearchIcon} position="absolute" right="12px" color={accentColor} />
               </Flex>
-              <VStack spacing={3} w="100%" align="stretch">
-                <FormControl>
-                  <FormLabel fontSize="sm" fontWeight="semibold">
-                    Buscar armazón
-                  </FormLabel>
-                  <Flex align="center" position="relative">
-                    <Input
-                      name="frame1"
-                      placeholder="Escribe para buscar..."
-                      value={searchFrame}
-                      onChange={handleSearchFrame}
-                      fontSize="md"
-                      height="44px"
-                      borderRadius="xl"
-                      w="100%"
-                      bg={selectBg}
-                      borderColor={borderColor}
-                      color={textColor}
-                      pr="40px"
-                      _hover={{
-                        borderColor: accentColor,
-                        boxShadow: "sm",
-                      }}
-                      _focus={{
-                        borderColor: accentColor,
-                        boxShadow: "0 0 0 2px #3182ce33",
-                      }}
-                    />
-                    <Icon
-                      as={SearchIcon}
-                      position="absolute"
-                      right="12px"
-                      color={accentColor}
-                    />
-                  </Flex>
-                  {frameSuggestions.length > 0 && (
+              {frameSuggestions.length > 0 && (
+                <Box
+                  mt={2}
+                  borderRadius="md"
+                  boxShadow="md"
+                  bg={selectBg}
+                  border={`1px solid ${borderColor}`}
+                  maxH="140px"
+                  overflowY="auto"
+                  fontSize="sm"
+                  zIndex={10}
+                  position="absolute"
+                  w="calc(100% - 4px)"
+                >
+                  {frameSuggestions.map((item, index) => (
                     <Box
-                      mt={2}
-                      borderRadius="md"
-                      boxShadow="md"
-                      bg={selectBg}
-                      border={`1px solid ${borderColor}`}
-                      maxH="140px"
-                      overflowY="auto"
-                      fontSize="sm"
-                      zIndex={10}
-                      position="absolute"
-                      w="90%"
+                      key={index}
+                      p={2}
+                      _hover={{ bg: accentColor, color: "white", cursor: "pointer" }}
+                      transition="background 0.2s"
+                      onClick={() => handleSuggestionClick(item, "frame")}
                     >
-                      {frameSuggestions.map((item, index) => (
-                        <Box
-                          key={index}
-                          p={2}
-                          _hover={{
-                            bg: accentColor,
-                            color: "white",
-                            cursor: "pointer",
-                          }}
-                          transition="background 0.2s"
-                          onClick={() => handleSuggestionClick(item, "frame", 1)}
-                        >
-                          {item.brand}
-                        </Box>
-                      ))}
+                      {item.brand}
                     </Box>
-                  )}
-                </FormControl>
-                <SimpleGrid columns={3} spacing={2} w="100%">
-                  <FormControl>
-                    <FormLabel fontSize="sm" fontWeight="semibold">
-                      Valor
-                    </FormLabel>
-                    <Input
-                      name="p_frame"
-                      type="number"
-                      height="44px"
-                      borderRadius="xl"
-                      value={formatMoney(calculatedData.p_frame)}
-                      readOnly
-                      fontSize="md"
-                      bg={selectBg}
-                      borderColor={borderColor}
-                      color={textColor}
-                      textAlign="center"
-                      _hover={{
-                        borderColor: accentColor,
-                        boxShadow: "sm",
-                      }}
-                      _focus={{
-                        borderColor: accentColor,
-                        boxShadow: "0 0 0 2px #3182ce33",
-                      }}
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel fontSize="sm" fontWeight="semibold">
-                      Desc %
-                    </FormLabel>
-                    <Input
-                      name="discount_frame"
-                      type="number"
-                      value={discountInput.discount_frame || ""}
-                      onChange={handleDiscountChange}
-                      fontSize="md"
-                      height="44px"
-                      borderRadius="xl"
-                      bg={selectBg}
-                      borderColor={borderColor}
-                      color={textColor}
-                      textAlign="center"
-                      _hover={{
-                        borderColor: accentColor,
-                        boxShadow: "sm",
-                      }}
-                      _focus={{
-                        borderColor: accentColor,
-                        boxShadow: "0 0 0 2px #3182ce33",
-                      }}
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel fontSize="sm" fontWeight="semibold">
-                      Total
-                    </FormLabel>
-                    <Input
-                      name="total_p_frame"
-                      type="number"
-                      value={totalInput.total_p_frame}
-                      onChange={handleTotalChange}
-                      onBlur={handleTotalBlur}
-                      fontSize="md"
-                      height="44px"
-                      borderRadius="xl"
-                      bg={selectBg}
-                      borderColor={borderColor}
-                      color={textColor}
-                      textAlign="center"
-                      _hover={{
-                        borderColor: accentColor,
-                        boxShadow: "sm",
-                      }}
-                      _focus={{
-                        borderColor: accentColor,
-                        boxShadow: "0 0 0 2px #3182ce33",
-                      }}
-                    />
-                  </FormControl>
-                </SimpleGrid>
-              </VStack>
+                  ))}
+                </Box>
+              )}
+            </FormControl>
+            <SimpleGrid columns={2} spacing={3} w="100%">
+              <FormControl>
+                <FormLabel fontSize="sm" fontWeight="semibold">Valor</FormLabel>
+                <Input
+                  name="p_frame"
+                  type="number"
+                  height="44px"
+                  borderRadius="xl"
+                  value={formatMoney(calculatedData.p_frame)}
+                  readOnly
+                  fontSize="md"
+                  bg={selectBg}
+                  borderColor={borderColor}
+                  color={textColor}
+                  textAlign="center"
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel fontSize="sm" fontWeight="semibold">Total</FormLabel>
+                <Input
+                  name="total_p_frame"
+                  type="text"
+                  value={`$${formatMoney(
+                    calculatedData.discount_frame > 0 ? calculatedData.total_p_frame : calculatedData.p_frame
+                  ).toFixed(2)}`}
+                  readOnly
+                  fontSize="md"
+                  height="44px"
+                  borderRadius="xl"
+                  bg={selectBg}
+                  borderColor={borderColor}
+                  color={calculatedData.discount_frame > 0 ? "green.500" : textColor}
+                  fontWeight={calculatedData.discount_frame > 0 ? "bold" : "normal"}
+                  textAlign="center"
+                />
+              </FormControl>
             </SimpleGrid>
-          </Box>
+          </VStack>
+        </Box>
 
-          {/* Lens Section */}
-          <Box w="100%">
-            <Text
-              fontWeight="bold"
-              fontSize="lg"
-              mb={2}
+        {/* Lens Section */}
+        <Box w="100%">
+          <Flex align="center" gap={2} mb={2}>
+            <Flex
+              align="center"
+              justify="center"
+              boxSize="28px"
+              borderRadius="8px"
+              bg={useColorModeValue("blue.50", "blue.900")}
               color={accentColor}
-              letterSpacing="wide"
+              flexShrink={0}
             >
+              <Icon as={Eye} boxSize="16px" />
+            </Flex>
+            <Text fontWeight="bold" fontSize="md" color={accentColor} letterSpacing="wide">
               Lunas
             </Text>
-            <Divider mb={4} />
-            <SimpleGrid
-              templateColumns={["80px 1fr"]}
-              spacing={6}
-              alignItems="center"
-              w="100%"
-            >
-              <Flex justify="center" align="center">
-                <Img
-                  src="/assets/lunas.jpg"
-                  alt="Lunas"
-                  objectFit="cover"
+          </Flex>
+          <VStack spacing={3} w="100%" align="stretch">
+            <FormControl>
+              <FormLabel fontSize="sm" fontWeight="semibold">Buscar lente</FormLabel>
+              <Flex align="center" position="relative">
+                <Input
+                  name="lens1"
+                  placeholder="Escribe para buscar..."
+                  value={searchLens}
+                  onChange={handleSearchLens}
+                  fontSize="md"
+                  height="44px"
                   borderRadius="xl"
-                  w={["80px", "100px"]}
-                  h={["80px", "100px"]}
-                  boxShadow="md"
-                  border={`2px solid ${accentColor}`}
+                  w="100%"
+                  bg={selectBg}
+                  borderColor={borderColor}
+                  color={textColor}
+                  pr="40px"
+                  _hover={{ borderColor: accentColor, boxShadow: "sm" }}
+                  _focus={{ borderColor: accentColor, boxShadow: "0 0 0 2px #3182ce33" }}
                 />
+                <Icon as={SearchIcon} position="absolute" right="12px" color={accentColor} />
               </Flex>
-              <VStack spacing={3} w="100%" align="stretch">
-                <FormControl>
-                  <FormLabel fontSize="sm" fontWeight="semibold">
-                    Buscar lente
-                  </FormLabel>
-                  <Flex align="center" position="relative">
-                    <Input
-                      name="lens1"
-                      placeholder="Escribe para buscar..."
-                      value={searchLens}
-                      onChange={handleSearchLens}
-                      fontSize="md"
-                      height="44px"
-                      borderRadius="xl"
-                      w="100%"
-                      bg={selectBg}
-                      borderColor={borderColor}
-                      color={textColor}
-                      pr="40px"
-                      _hover={{
-                        borderColor: accentColor,
-                        boxShadow: "sm",
-                      }}
-                      _focus={{
-                        borderColor: accentColor,
-                        boxShadow: "0 0 0 2px #3182ce33",
-                      }}
-                    />
-                    <Icon
-                      as={SearchIcon}
-                      position="absolute"
-                      right="12px"
-                      color={accentColor}
-                    />
-                  </Flex>
-                  {lensSuggestions.length > 0 && (
+              {lensSuggestions.length > 0 && (
+                <Box
+                  mt={2}
+                  borderRadius="md"
+                  boxShadow="md"
+                  bg={selectBg}
+                  border={`1px solid ${borderColor}`}
+                  maxH="140px"
+                  overflowY="auto"
+                  fontSize="sm"
+                  zIndex={10}
+                  position="absolute"
+                  w="100%"
+                >
+                  {lensSuggestions.map((item, index) => (
                     <Box
-                      mt={2}
-                      borderRadius="md"
-                      boxShadow="md"
-                      bg={selectBg}
-                      border={`1px solid ${borderColor}`}
-                      maxH="140px"
-                      overflowY="auto"
-                      fontSize="sm"
-                      zIndex={10}
-                      position="absolute"
-                      w="100%"
+                      key={index}
+                      p={2}
+                      _hover={{ bg: accentColor, color: "white", cursor: "pointer" }}
+                      transition="background 0.2s"
+                      onClick={() => handleSuggestionClick(item, "lens")}
                     >
-                      {lensSuggestions.map((item, index) => (
-                        <Box
-                          key={index}
-                          p={2}
-                          _hover={{
-                            bg: accentColor,
-                            color: "white",
-                            cursor: "pointer",
-                          }}
-                          transition="background 0.2s"
-                          onClick={() => handleSuggestionClick(item, "lens", 1)}
-                        >
-                          {item.lens_type}
-                        </Box>
-                      ))}
+                      {item.lens_type}
                     </Box>
-                  )}
-                </FormControl>
-                <SimpleGrid columns={3} spacing={2} w="100%">
-                  <FormControl>
-                    <FormLabel fontSize="sm" fontWeight="semibold">
-                      Valor
-                    </FormLabel>
-                    <Input
-                      name="p_lens"
-                      type="number"
-                      value={formatMoney(calculatedData.p_lens)}
-                      readOnly
-                      fontSize="md"
-                      height="44px"
-                      borderRadius="xl"
-                      bg={selectBg}
-                      borderColor={borderColor}
-                      color={textColor}
-                      textAlign="center"
-                      _hover={{
-                        borderColor: accentColor,
-                        boxShadow: "sm",
-                      }}
-                      _focus={{
-                        borderColor: accentColor,
-                        boxShadow: "0 0 0 2px #3182ce33",
-                      }}
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel fontSize="sm" fontWeight="semibold">
-                      Desc %
-                    </FormLabel>
-                    <Input
-                      name="discount_lens"
-                      type="number"
-                      value={discountInput.discount_lens || ""}
-                      onChange={handleDiscountChange}
-                      fontSize="md"
-                      height="44px"
-                      borderRadius="xl"
-                      bg={selectBg}
-                      borderColor={borderColor}
-                      color={textColor}
-                      textAlign="center"
-                      _hover={{
-                        borderColor: accentColor,
-                        boxShadow: "sm",
-                      }}
-                      _focus={{
-                        borderColor: accentColor,
-                        boxShadow: "0 0 0 2px #3182ce33",
-                      }}
-                    />
-                  </FormControl>
-                  <FormControl>
-                    <FormLabel fontSize="sm" fontWeight="semibold">
-                      Total
-                    </FormLabel>
-                    <Input
-                      name="total_p_lens"
-                      type="number"
-                      value={totalInput.total_p_lens}
-                      onChange={handleTotalChange}
-                      onBlur={handleTotalBlur}
-                      fontSize="md"
-                      height="44px"
-                      borderRadius="xl"
-                      bg={selectBg}
-                      borderColor={borderColor}
-                      color={textColor}
-                      textAlign="center"
-                      _hover={{
-                        borderColor: accentColor,
-                        boxShadow: "sm",
-                      }}
-                      _focus={{
-                        borderColor: accentColor,
-                        boxShadow: "0 0 0 2px #3182ce33",
-                      }}
-                    />
-                  </FormControl>
-                </SimpleGrid>
-              </VStack>
+                  ))}
+                </Box>
+              )}
+            </FormControl>
+            <SimpleGrid columns={2} spacing={3} w="100%">
+              <FormControl>
+                <FormLabel fontSize="sm" fontWeight="semibold">Valor</FormLabel>
+                <Input
+                  name="p_lens"
+                  type="number"
+                  value={formatMoney(calculatedData.p_lens)}
+                  readOnly
+                  fontSize="md"
+                  height="44px"
+                  borderRadius="xl"
+                  bg={selectBg}
+                  borderColor={borderColor}
+                  color={textColor}
+                  textAlign="center"
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel fontSize="sm" fontWeight="semibold">Total</FormLabel>
+                <Input
+                  name="total_p_lens"
+                  type="text"
+                  value={`$${formatMoney(
+                    calculatedData.discount_lens > 0 ? calculatedData.total_p_lens : calculatedData.p_lens
+                  ).toFixed(2)}`}
+                  readOnly
+                  fontSize="md"
+                  height="44px"
+                  borderRadius="xl"
+                  bg={selectBg}
+                  borderColor={borderColor}
+                  color={calculatedData.discount_lens > 0 ? "green.500" : textColor}
+                  fontWeight={calculatedData.discount_lens > 0 ? "bold" : "normal"}
+                  textAlign="center"
+                />
+              </FormControl>
             </SimpleGrid>
-          </Box>
+          </VStack>
+        </Box>
 
-          {/* Totals */}
-          <Box
-            w="100%"
-            mt={6}
-            p={4}
-            bg={useColorModeValue("blue.50", "blue.900")}
-            borderRadius="xl"
-            boxShadow="md"
-            border={`1px solid ${accentColor}`}
-            textAlign="center"
-          >
-            <Text fontWeight="bold" fontSize="xl" color={accentColor}>
-              Total a pagar: ${Number(calculatedData.totalP).toFixed(2)}
+        {/* Accesorios agregados (si hay) */}
+        {accessories.length > 0 && (
+          <Box>
+            <Text fontSize="xs" fontWeight="bold" textTransform="uppercase" color={subtitleColor} mb={2}>
+              Agregado a la venta
             </Text>
+            <Wrap>
+              {accessories.map((a) => (
+                <WrapItem key={`${a.source}-${a.sourceId}`}>
+                  <Tag borderRadius="full" py={2} px={3} bg={useColorModeValue("gray.100", "whiteAlpha.100")}>
+                    <TagLabel fontSize="sm">
+                      {a.name} {a.quantity > 1 ? `x${a.quantity}` : ""} · ${(a.unit_price * a.quantity).toFixed(2)}
+                    </TagLabel>
+                    <TagCloseButton
+                      onClick={() =>
+                        setAccessories((prev) =>
+                          prev.filter((x) => !(x.source === a.source && x.sourceId === a.sourceId))
+                        )
+                      }
+                    />
+                  </Tag>
+                </WrapItem>
+              ))}
+            </Wrap>
           </Box>
-        </VStack>
-      </Box>
+        )}
+
+        {/* Totals */}
+        <Box
+          w="100%"
+          mt={2}
+          p={4}
+          bg={useColorModeValue("blue.50", "blue.900")}
+          borderRadius="xl"
+          border={`1px solid ${accentColor}`}
+          textAlign="center"
+        >
+          <Text fontWeight="bold" fontSize="xl" color={accentColor}>
+            Total a pagar: ${(Number(calculatedData.totalP) + accessoriesTotal).toFixed(2)}
+          </Text>
+          {accessoriesTotal > 0 && (
+            <Text fontSize="xs" color={subtitleColor} mt={1}>
+              (incluye ${accessoriesTotal.toFixed(2)} en accesorios)
+            </Text>
+          )}
+        </Box>
+      </VStack>
+
+      <DiscountModal
+        isOpen={isDiscountModalOpen}
+        onClose={() => setIsDiscountModalOpen(false)}
+        discountFrame={discountInput.discount_frame}
+        discountLens={discountInput.discount_lens}
+        onChangeDiscountFrame={handleDiscountChange}
+        onChangeDiscountLens={handleDiscountChange}
+        frameName={formData.brand}
+        lensName={formData.lens_type_name}
+      />
     </Box>
   );
 };

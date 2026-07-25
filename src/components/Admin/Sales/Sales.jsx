@@ -1,47 +1,42 @@
 import { useState, useEffect, useRef } from "react";
 import SearchPatient from "./SearchPatient";
-import Measures from "./Measures";
 import { supabase } from "../../../api/supabase";
-import { 
-  Box, 
-  Heading, 
-  useColorModeValue, 
+import {
+  Box,
+  Flex,
+  Heading,
+  useColorModeValue,
   Container,
   VStack,
   HStack,
   Text,
-  Progress,
   Fade,
-  ScaleFade,
   useBreakpointValue,
-  Card,
-  CardBody,
+  Button,
   Badge,
-  Divider,
-  Icon
 } from "@chakra-ui/react";
-import { 
-  FiUser, 
-  FiShoppingCart, 
-  FiPercent, 
-  FiCreditCard, 
-  FiTruck, 
-  FiMessageSquare, 
-  FiFileText, 
-  FiCheckCircle 
+import {
+  FiUser,
+  FiShoppingCart,
+  FiCreditCard,
+  FiFileText,
+  FiCheckCircle,
 } from "react-icons/fi";
+import { Eye as EyeIcon } from "lucide-react";
 import Pdf from "./Pdf";
-import {useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@chakra-ui/react";
 import SmartHeader from "../../header/SmartHeader";
 import SalesDetailsStep from "./SalesDetailsStep";
 import TotalStep from "./TotalStep";
 import DeliveryStep from "./DeliveryStep";
-import MessageStep from "./MessageStep";
 import ObservationStep from "./ObservationStep";
 import TermsStep from "./TermsStep";
-import NavigationButtons from "./NavigationButtons";
-import PaymentStep from "./PaymentStep";
+import SaleSection from "./SaleSection";
+import SaleSummaryPanel from "./SaleSummaryPanel";
+import MeasuresModal from "./MeasuresModal";
+import AccessoriesModal from "./AccessoriesModal";
+import PaymentModal from "./PaymentModal";
 
 const Sales = () => {
   const [saleData, setSaleData] = useState({
@@ -49,17 +44,13 @@ const Sales = () => {
     branchs_id: "",
     date: "",
     pt_phone: "",
-    brand_id: "", 
-    lens_id: "", 
+    brand_id: "",
+    lens_id: "",
     delivery_time: "",
     delivery_datetime: "",
     p_frame: 0,
     p_lens: 0,
   });
-
-  // Estados para animaciones y transiciones
-  const [isStepChanging, setIsStepChanging] = useState(false);
-  const [stepDirection, setStepDirection] = useState('forward');
 
   useEffect(() => {
     const setContext = async () => {
@@ -82,23 +73,23 @@ const Sales = () => {
     total_p_lens: "",
   });
   const [formData, setFormData] = useState({
-  p_frame: 0,
-  p_lens: 0,
-  discount_frame: 0,
-  discount_lens: 0,
-
-  total: 0,
-  credit: 0,
-  balance: 0,
-  payment_in: "",
-  message: "",
-  termsMessage: "",
-  measure_id: "",
-  signature: "",
-  termsAccepted: false
+    p_frame: 0,
+    p_lens: 0,
+    discount_frame: 0,
+    discount_lens: 0,
+    total: 0,
+    credit: 0,
+    balance: 0,
+    payment_in: "",
+    message: "",
+    termsMessage: "",
+    measure_id: "",
+    signature: "",
+    termsAccepted: false,
   });
   const [patientMeasures, setPatientMeasures] = useState([]);
   const [filteredMeasures, setFilteredMeasures] = useState([]);
+  const [accessories, setAccessories] = useState([]);
   const [saleRegistered, setSaleRegistered] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saleId, setSaleId] = useState(null);
@@ -106,155 +97,34 @@ const Sales = () => {
   const navigate = useNavigate();
   const salesRef = useRef(null);
   const [branchName, setBranchName] = useState("");
+  const [patientName, setPatientName] = useState("");
   const { id } = useParams();
   const toast = useToast();
-  const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 8; 
 
-  // Colores y estilos responsivos
-  const bgColor = useColorModeValue('gray.50', 'gray.900');
-  const cardBg = useColorModeValue('white', 'gray.800');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const shadowColor = useColorModeValue('rgba(0,0,0,0.1)', 'rgba(0,0,0,0.3)');
-  const accentColor = useColorModeValue('teal.500', 'teal.300');
-  const textColor = useColorModeValue('gray.700', 'gray.200');
-  const mutedTextColor = useColorModeValue('gray.500', 'gray.400');
+  // Modales
+  const [isMeasuresModalOpen, setIsMeasuresModalOpen] = useState(false);
+  const [isAccessoriesModalOpen, setIsAccessoriesModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  const containerMaxW = useBreakpointValue({ base: 'full', md: '6xl' });
-  const cardPadding = useBreakpointValue({ base: 4, md: 8 });
+  // Qué secciones están expandidas (varias pueden estarlo a la vez, no es un wizard)
+  const [openSections, setOpenSections] = useState({ patient: true });
+  const toggleSection = (key) =>
+    setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
 
-  // Configuración de pasos con iconos y títulos
-  const stepConfig = [
-    { 
-      title: "Información del Paciente", 
-      icon: FiUser, 
-      description: "Datos del cliente y medidas" 
-    },
-    { 
-      title: "Detalles de Venta", 
-      icon: FiShoppingCart, 
-      description: "Selección de productos" 
-    },
-    { 
-      title: "Cálculo Total", 
-      icon: FiPercent, 
-      description: "Precios y descuentos" 
-    },
-    { 
-      title: "Método de Pago", 
-      icon: FiCreditCard, 
-      description: "Forma de pago" 
-    },
-    { 
-      title: "Entrega", 
-      icon: FiTruck, 
-      description: "Fecha y hora de entrega" 
-    },
-    { 
-      title: "Mensaje", 
-      icon: FiMessageSquare, 
-      description: "Mensaje personalizado" 
-    },
-    { 
-      title: "Observaciones", 
-      icon: FiFileText, 
-      description: "Notas adicionales" 
-    },
-    { 
-      title: "Términos y Firma", 
-      icon: FiCheckCircle, 
-      description: "Aceptación y firma digital" 
-    }
-  ];
+  const bgColor = useColorModeValue("gray.50", "gray.900");
+  const textColor = useColorModeValue("gray.800", "white");
+  const mutedTextColor = useColorModeValue("gray.500", "gray.400");
+  const accentColor = useColorModeValue("teal.600", "teal.300");
+  const containerMaxW = useBreakpointValue({ base: "full", lg: "7xl" });
 
-  const handleFormDataChange = (newFormData) => {
-    setFormData((prevFormData) => {
-      // Mantén los campos de observación si existen en el nuevo formData
-      const updated = {
-        ...prevFormData,
-        ...newFormData,
-        observation_text: newFormData.observation_text !== undefined ? newFormData.observation_text : prevFormData.observation_text,
-        observation_img: newFormData.observation_img !== undefined ? newFormData.observation_img : prevFormData.observation_img,
-      };
-      if (JSON.stringify(updated) !== JSON.stringify(prevFormData)) {
-        if ('branchs_id' in newFormData) {
-          setSaleData((prevSaleData) => ({
-            ...prevSaleData,
-            branchs_id: newFormData.branchs_id
-          }));
-        }
-        return updated; 
-      }
-      return prevFormData;
-    });
-
-    const saleDataKeys = ["brand_id", "lens_id"];
-    const saleDataUpdates = {};
-
-    saleDataKeys.forEach((key) => {
-      if (key in newFormData) {
-        saleDataUpdates[key] = newFormData[key];
-      }
-    });
-
-    if (Object.keys(saleDataUpdates).length > 0) {
-      setSaleData((prevSaleData) => {
-        const updatedSale = { ...prevSaleData, ...saleDataUpdates };
-        if (JSON.stringify(updatedSale) !== JSON.stringify(prevSaleData)) {
-          return updatedSale;
-        }
-        return prevSaleData;
-      });
-    }
-  };
-
-  // Funciones de navegación mejoradas con animaciones
-  const nextStep = () => {
-    if (currentStep < totalSteps) {
-      setIsStepChanging(true);
-      setStepDirection('forward');
-      setTimeout(() => {
-        setCurrentStep(currentStep + 1);
-        setIsStepChanging(false);
-      }, 200);
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setIsStepChanging(true);
-      setStepDirection('backward');
-      setTimeout(() => {
-        setCurrentStep(currentStep - 1);
-        setIsStepChanging(false);
-      }, 200);
-    }
-  };
-
-  const goToStep = (step) => {
-    if (step !== currentStep) {
-      setIsStepChanging(true);
-      setStepDirection(step > currentStep ? 'forward' : 'backward');
-      setTimeout(() => {
-        setCurrentStep(step);
-        setIsStepChanging(false);
-      }, 200);
-    }
-  };
-
- useEffect(() => {
+  useEffect(() => {
     if (id) {
-      setSaleData((prev) => ({
-        ...prev,
-        patient_id: id,
-      }));
-      
+      setSaleData((prev) => ({ ...prev, patient_id: id }));
       if (patientMeasures.length > 0) {
         const patientLatestMeasures = patientMeasures.filter(
           (measure) => measure.patient_id === id
         );
         setFilteredMeasures(patientLatestMeasures);
-
         if (patientLatestMeasures.length > 0) {
           const latestMeasure = patientLatestMeasures[0];
           setFormData((prevFormData) => ({
@@ -268,25 +138,40 @@ const Sales = () => {
 
   useEffect(() => {
     const fetchBranchName = async () => {
-        if (!saleData.branchs_id) return;
-        
-        const { data, error } = await supabase
-            .from("branchs")
-            .select("name")
-            .eq("id", saleData.branchs_id)
-            .single();
-        
-        if (error) {
-            console.error("Error obteniendo nombre de sucursal:", error);
-            return;
-        }
-
-        setBranchName(data?.name || "VEOPTICS");
+      if (!saleData.branchs_id) return;
+      const { data, error } = await supabase
+        .from("branchs")
+        .select("name")
+        .eq("id", saleData.branchs_id)
+        .single();
+      if (error) {
+        console.error("Error obteniendo nombre de sucursal:", error);
+        return;
+      }
+      setBranchName(data?.name || "VEOPTICS");
     };
-
     fetchBranchName();
   }, [saleData.branchs_id]);
-  
+
+  // Nombre del paciente para mostrarlo en el resumen en vivo (solo lectura, no cambia el flujo de datos)
+  useEffect(() => {
+    const fetchPatientName = async () => {
+      if (!saleData.patient_id) {
+        setPatientName("");
+        return;
+      }
+      const { data, error } = await supabase
+        .from("patients")
+        .select("pt_firstname, pt_lastname")
+        .eq("id", saleData.patient_id)
+        .single();
+      if (!error && data) {
+        setPatientName(`${data.pt_firstname} ${data.pt_lastname}`);
+      }
+    };
+    fetchPatientName();
+  }, [saleData.patient_id]);
+
   useEffect(() => {
     fetchLatestRxFinal();
   }, []);
@@ -297,7 +182,6 @@ const Sales = () => {
         .from("rx_final")
         .select("*")
         .order("created_at", { ascending: false });
-
       if (error) throw error;
 
       const latestMeasuresByPatient = {};
@@ -310,34 +194,46 @@ const Sales = () => {
           latestMeasuresByPatient[measure.patient_id] = measure;
         }
       });
-
-      const latestMeasuresArray = Object.values(latestMeasuresByPatient);
-      setPatientMeasures(latestMeasuresArray || []);
+      setPatientMeasures(Object.values(latestMeasuresByPatient) || []);
     } catch (err) {
       console.error("Error fetching latest rx_final:", err);
     }
   };
 
+  // Mensaje automático de WhatsApp según la sucursal (configurado en otro panel).
+  // No tiene interfaz aquí a propósito: se manda solo, nada que llenar.
+  useEffect(() => {
+    const fetchMessage = async () => {
+      if (!saleData.branchs_id) return;
+      const { data, error } = await supabase
+        .from("messages")
+        .select("content")
+        .eq("branch_id", saleData.branchs_id)
+        .eq("route", "/sales")
+        .single();
+      if (!error && data?.content) {
+        setFormData((prev) => ({ ...prev, message: data.content }));
+      }
+    };
+    fetchMessage();
+  }, [saleData.branchs_id]);
+
   const handlePatientDataChange = (formData) => {
-    setSaleData((prevData) => {
-      const updatedData = {
-        ...prevData,
-        patient_id: formData.patient_id,
-        branchs_id: formData.branchs_id,
-        date: formData.date,
-        pt_phone: formData.pt_phone,
-        brand_id: formData.brand || prevData.brand_id,
-        lens_id: formData.lens_type || prevData.lens_id,
-      };
-      return updatedData;
-    });
+    setSaleData((prevData) => ({
+      ...prevData,
+      patient_id: formData.patient_id,
+      branchs_id: formData.branchs_id,
+      date: formData.date,
+      pt_phone: formData.pt_phone,
+      brand_id: formData.brand || prevData.brand_id,
+      lens_id: formData.lens_type || prevData.lens_id,
+    }));
 
     if (formData.patient_id) {
       const patientLatestMeasures = patientMeasures.filter(
         (measure) => measure.patient_id === formData.patient_id
       );
       setFilteredMeasures(patientLatestMeasures);
-
       if (patientLatestMeasures.length > 0) {
         const latestMeasure = patientLatestMeasures[0];
         setFormData((prevFormData) => ({
@@ -347,7 +243,59 @@ const Sales = () => {
       }
     }
   };
-  
+
+  // Cuando se guarda una medida desde el modal (nueva o editada)
+  const handleMeasureSaved = (savedRow) => {
+    setPatientMeasures((prev) => {
+      const withoutOld = prev.filter((m) => m.patient_id !== savedRow.patient_id);
+      return [...withoutOld, savedRow];
+    });
+    setFilteredMeasures([savedRow]);
+    setFormData((prev) => ({ ...prev, measure_id: savedRow.id }));
+  };
+
+  const handleFormDataChange = (newFormData) => {
+    setFormData((prevFormData) => {
+      const updated = {
+        ...prevFormData,
+        ...newFormData,
+        observation_text:
+          newFormData.observation_text !== undefined
+            ? newFormData.observation_text
+            : prevFormData.observation_text,
+        observation_img:
+          newFormData.observation_img !== undefined
+            ? newFormData.observation_img
+            : prevFormData.observation_img,
+      };
+      if (JSON.stringify(updated) !== JSON.stringify(prevFormData)) {
+        if ("branchs_id" in newFormData) {
+          setSaleData((prevSaleData) => ({
+            ...prevSaleData,
+            branchs_id: newFormData.branchs_id,
+          }));
+        }
+        return updated;
+      }
+      return prevFormData;
+    });
+
+    const saleDataKeys = ["brand_id", "lens_id"];
+    const saleDataUpdates = {};
+    saleDataKeys.forEach((key) => {
+      if (key in newFormData) saleDataUpdates[key] = newFormData[key];
+    });
+    if (Object.keys(saleDataUpdates).length > 0) {
+      setSaleData((prevSaleData) => {
+        const updatedSale = { ...prevSaleData, ...saleDataUpdates };
+        if (JSON.stringify(updatedSale) !== JSON.stringify(prevSaleData)) {
+          return updatedSale;
+        }
+        return prevSaleData;
+      });
+    }
+  };
+
   const mergedFormData = {
     ...formData,
     branchs_id: formData.branchs_id && formData.branchs_id !== "" ? formData.branchs_id : saleData.branchs_id,
@@ -357,8 +305,8 @@ const Sales = () => {
     date: formData.date && formData.date !== "" ? formData.date : saleData.date,
     delivery_time: formData.delivery_time && formData.delivery_time !== "" ? formData.delivery_time : saleData.delivery_time,
     delivery_datetime: formData.delivery_datetime && formData.delivery_datetime !== "" ? formData.delivery_datetime : saleData.delivery_datetime,
-    balance: (formData.balance !== undefined && formData.balance !== "") ? formData.balance : saleData.balance,
-    credit: (formData.credit !== undefined && formData.credit !== "") ? formData.credit : saleData.credit,
+    balance: formData.balance !== undefined && formData.balance !== "" ? formData.balance : saleData.balance,
+    credit: formData.credit !== undefined && formData.credit !== "" ? formData.credit : saleData.credit,
     payment_in: formData.payment_in && formData.payment_in !== "" ? formData.payment_in : saleData.payment_in,
     measure_id: formData.measure_id && formData.measure_id !== "" ? formData.measure_id : saleData.measure_id,
     message: formData.message,
@@ -367,489 +315,359 @@ const Sales = () => {
   };
 
   const handleSubmit = async () => {
-  if (isSubmitting) return;
-  setIsSubmitting(true);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
-  if (!mergedFormData.payment_in) {
-    toast({
-      title: "Error",
-      description: "Por favor, seleccione un método de pago.",
-      status: "error",
-      duration: 5000,
-      isClosable: true,
-    });
-    setIsSubmitting(false);
-    return;
-  }
-  if (!mergedFormData.branchs_id) {
-    toast({
-      title: "Error",
-      description: "Por favor, seleccione una sucursal.",
-      status: "error",
-      duration: 5000,
-      isClosable: true,
-    });
-    setIsSubmitting(false);
-    return;
-  }
-  const signatureDataUrl = mergedFormData.signature;
-  if (!signatureDataUrl) {
-    console.error("La firma no ha sido proporcionada.");
-    setIsSubmitting(false);
-    return;
-  }
-
-  await supabase.rpc('descontar_stock', {
-    p_inventario_id: mergedFormData.brand_id,
-    p_cantidad: 1
-  });
-
-  const saleDataToSave = {
-    date: mergedFormData.date,
-    delivery_time: mergedFormData.delivery_time,
-    delivery_datetime: mergedFormData.delivery_datetime,
-    p_frame: isNaN(parseFloat(mergedFormData.p_frame)) ? 0 : parseFloat(mergedFormData.p_frame),
-    p_lens: isNaN(parseFloat(mergedFormData.p_lens)) ? 0 : parseFloat(mergedFormData.p_lens),
-    price: isNaN(parseFloat(mergedFormData.total)) ? 0 : parseFloat(mergedFormData.total),
-    total: isNaN(parseFloat(mergedFormData.total)) ? 0 : parseFloat(mergedFormData.total),
-    credit: isNaN(parseFloat(mergedFormData.credit)) ? 0 : parseFloat(mergedFormData.credit),
-    balance: isNaN(parseFloat(mergedFormData.balance)) ? 0 : parseFloat(mergedFormData.balance),
-    payment_in: mergedFormData.payment_in,
-    patient_id: mergedFormData.patient_id || null,
-    lens_id: mergedFormData.lens_id || null,
-    branchs_id: mergedFormData.branchs_id,
-    total_p_frame:
-      mergedFormData.discount_frame > 0
-        ? (isNaN(parseFloat(mergedFormData.total_p_frame)) ? null : parseFloat(mergedFormData.total_p_frame))
-        : null,
-    total_p_lens:
-      mergedFormData.discount_lens > 0
-        ? (isNaN(parseFloat(mergedFormData.total_p_lens)) ? null : parseFloat(mergedFormData.total_p_lens))
-        : null,
-    discount_frame: isNaN(parseFloat(mergedFormData.discount_frame)) ? 0 : parseFloat(mergedFormData.discount_frame),
-    discount_lens: isNaN(parseFloat(mergedFormData.discount_lens)) ? 0 : parseFloat(mergedFormData.discount_lens),
-    inventario_id: mergedFormData.brand_id || null,
-    measure_id: mergedFormData.measure_id || null,
-    signature: mergedFormData.signature || null,
-  observation_text: mergedFormData.observation_text || null,
-    observation_img: mergedFormData.observation_img || null,
-  };
-
-  try {
-    console.log("Valor de mergedFormData.date:", mergedFormData.date);
-    console.log("Objeto saleDataToSave:", saleDataToSave);
-
-    const { data, error } = await supabase
-      .from("sales")
-      .insert([saleDataToSave])
-      .select();
-    if (error) throw error;
-    setSaleRegistered(true);
-    if (data && data.length > 0) {
-      setSaleId(data[0].id);
-      setPdfGenerated(true);
-      toast({
-        title: "¡Venta registrada con éxito!",
-        description: "El contrato ha sido creado correctamente.",
-        status: "success",
-        duration: 5000,
-        isClosable: true,
-        position: "top"
-      });
+    if (!mergedFormData.payment_in) {
+      toast({ title: "Error", description: "Por favor, seleccione un método de pago.", status: "error", duration: 5000, isClosable: true });
+      setIsSubmitting(false);
+      setOpenSections((prev) => ({ ...prev, payment: true }));
+      return;
     }
-  } catch (err) {
-    console.error("Error al registrar la venta:", err);
-    toast({
-      title: "Error al procesar la venta",
-      description: "Ha ocurrido un error. Por favor, intente nuevamente.",
-      status: "error",
-      duration: 5000,
-      isClosable: true,
-      position: "top"
+    if (!mergedFormData.branchs_id) {
+      toast({ title: "Error", description: "Por favor, seleccione una sucursal.", status: "error", duration: 5000, isClosable: true });
+      setIsSubmitting(false);
+      setOpenSections((prev) => ({ ...prev, product: true }));
+      return;
+    }
+    const signatureDataUrl = mergedFormData.signature;
+    if (!signatureDataUrl) {
+      toast({ title: "Falta la firma", description: "El cliente debe firmar para registrar la venta.", status: "error", duration: 5000, isClosable: true });
+      setIsSubmitting(false);
+      setOpenSections((prev) => ({ ...prev, terms: true }));
+      return;
+    }
+
+    await supabase.rpc("descontar_stock", {
+      p_inventario_id: mergedFormData.brand_id,
+      p_cantidad: 1,
     });
-  } finally {
-    setIsSubmitting(false);
-  }
-};
 
-  const pdfData = {
-    ...mergedFormData,
-    id: saleId,
-  };
+    const saleDataToSave = {
+      date: mergedFormData.date,
+      delivery_time: mergedFormData.delivery_time,
+      delivery_datetime: mergedFormData.delivery_datetime,
+      p_frame: isNaN(parseFloat(mergedFormData.p_frame)) ? 0 : parseFloat(mergedFormData.p_frame),
+      p_lens: isNaN(parseFloat(mergedFormData.p_lens)) ? 0 : parseFloat(mergedFormData.p_lens),
+      price: isNaN(parseFloat(mergedFormData.total)) ? 0 : parseFloat(mergedFormData.total),
+      total: isNaN(parseFloat(mergedFormData.total)) ? 0 : parseFloat(mergedFormData.total),
+      credit: isNaN(parseFloat(mergedFormData.credit)) ? 0 : parseFloat(mergedFormData.credit),
+      balance: isNaN(parseFloat(mergedFormData.balance)) ? 0 : parseFloat(mergedFormData.balance),
+      payment_in: mergedFormData.payment_in,
+      patient_id: mergedFormData.patient_id || null,
+      lens_id: mergedFormData.lens_id || null,
+      branchs_id: mergedFormData.branchs_id,
+      total_p_frame: mergedFormData.discount_frame > 0 ? (isNaN(parseFloat(mergedFormData.total_p_frame)) ? null : parseFloat(mergedFormData.total_p_frame)) : null,
+      total_p_lens: mergedFormData.discount_lens > 0 ? (isNaN(parseFloat(mergedFormData.total_p_lens)) ? null : parseFloat(mergedFormData.total_p_lens)) : null,
+      discount_frame: isNaN(parseFloat(mergedFormData.discount_frame)) ? 0 : parseFloat(mergedFormData.discount_frame),
+      discount_lens: isNaN(parseFloat(mergedFormData.discount_lens)) ? 0 : parseFloat(mergedFormData.discount_lens),
+      inventario_id: mergedFormData.brand_id || null,
+      measure_id: mergedFormData.measure_id || null,
+      signature: mergedFormData.signature || null,
+      observation_text: mergedFormData.observation_text || null,
+      observation_img: mergedFormData.observation_img || null,
+    };
 
-  const handleSaveSignature = (signatureDataUrl) => {
-    setFormData((prev) => ({
-      ...prev,
-      signature: signatureDataUrl,
-    }));
-  };
+    try {
+      const { data, error } = await supabase.from("sales").insert([saleDataToSave]).select();
+      if (error) throw error;
+      setSaleRegistered(true);
+      if (data && data.length > 0) {
+        const newSaleId = data[0].id;
+        setSaleId(newSaleId);
+        setPdfGenerated(true);
 
-  const handleTotalsChange = (totals) => {
-      // Ignora actualizaciones automáticas con totales en 0 si ya existen valores previos
-      if (
-        (totals.total_p_frame === 0 && formData.total_p_frame > 0) ||
-        (totals.total_p_lens === 0 && formData.total_p_lens > 0)
-      ) {
-        console.log('[handleTotalsChange] Ignorado: totales en 0 pero ya existen valores previos');
-        return;
+        // Guardar accesorios (opcional) como partidas separadas, sin tocar sales.total
+        if (accessories.length > 0) {
+          const itemsToSave = accessories.map((a) => ({
+            sale_id: newSaleId,
+            source: a.source, // "inventario" o "lens"
+            inventario_id: a.source === "inventario" ? a.sourceId : null,
+            lens_id: a.source === "lens" ? a.sourceId : null,
+            name: a.name,
+            quantity: a.quantity,
+            unit_price: a.unit_price,
+            subtotal: a.unit_price * a.quantity,
+          }));
+          const { error: itemsError } = await supabase.from("sale_items").insert(itemsToSave);
+          if (itemsError) {
+            console.error("Error guardando accesorios:", itemsError);
+            toast({
+              title: "Venta registrada, pero los accesorios no se guardaron",
+              description: "Revisa que la tabla sale_items tenga las columnas source y lens_id.",
+              status: "warning",
+              duration: 6000,
+              isClosable: true,
+            });
+          } else {
+            for (const item of accessories) {
+              if (item.source === "inventario") {
+                await supabase.rpc("descontar_stock", {
+                  p_inventario_id: item.sourceId,
+                  p_cantidad: item.quantity,
+                });
+              }
+            }
+          }
+        }
+
+        toast({ title: "¡Venta registrada con éxito!", description: "El contrato ha sido creado correctamente.", status: "success", duration: 5000, isClosable: true, position: "top" });
       }
-    // Solo actualiza los campos si realmente cambiaron, nunca limpia ni reinicia
-    console.log('[handleTotalsChange] Totals recibidos:', totals);
+    } catch (err) {
+      console.error("Error al registrar la venta:", err);
+      toast({ title: "Error al procesar la venta", description: "Ha ocurrido un error. Por favor, intente nuevamente.", status: "error", duration: 5000, isClosable: true, position: "top" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const pdfData = { ...mergedFormData, id: saleId };
+
+  const handleTotalsChange = (newTotals) => {
+    if (
+      (newTotals.total_p_frame === 0 && formData.total_p_frame > 0) ||
+      (newTotals.total_p_lens === 0 && formData.total_p_lens > 0)
+    ) {
+      return;
+    }
     setTotals((prevTotals) => {
       if (
-        prevTotals.total_p_frame !== totals.total_p_frame ||
-        prevTotals.total_p_lens !== totals.total_p_lens ||
-        prevTotals.frameName !== totals.frameName ||
-        prevTotals.lensName !== totals.lensName
+        prevTotals.total_p_frame !== newTotals.total_p_frame ||
+        prevTotals.total_p_lens !== newTotals.total_p_lens ||
+        prevTotals.frameName !== newTotals.frameName ||
+        prevTotals.lensName !== newTotals.lensName
       ) {
-        console.log('[handleTotalsChange] Actualizando totals:', { ...prevTotals, ...totals });
-        return { ...prevTotals, ...totals };
+        return { ...prevTotals, ...newTotals };
       }
       return prevTotals;
     });
     setFormData((prev) => {
-      // Si no hay descuento, pasa el valor de p_frame + p_lens a total
       if (prev.discount_frame === 0 && prev.discount_lens === 0) {
         const newTotal = Number(prev.p_frame) + Number(prev.p_lens);
-        if (prev.total !== newTotal) {
-          console.log('[handleTotalsChange] Actualizando total sin descuento:', newTotal);
-          return {
-            ...prev,
-            total: newTotal,
-          };
-        }
+        if (prev.total !== newTotal) return { ...prev, total: newTotal };
         return prev;
       }
-      // ...lógica anterior para descuentos...
       let updates = {};
-      if (prev.discount_frame > 0 && totals.total_p_frame !== undefined) {
-        updates.total_p_frame = Number(totals.total_p_frame);
+      if (prev.discount_frame > 0 && newTotals.total_p_frame !== undefined) {
+        updates.total_p_frame = Number(newTotals.total_p_frame);
       }
-      if (prev.discount_lens > 0 && totals.total_p_lens !== undefined) {
-        updates.total_p_lens = Number(totals.total_p_lens);
+      if (prev.discount_lens > 0 && newTotals.total_p_lens !== undefined) {
+        updates.total_p_lens = Number(newTotals.total_p_lens);
       }
       if (
         (updates.total_p_frame !== undefined && prev.total_p_frame !== updates.total_p_frame) ||
         (updates.total_p_lens !== undefined && prev.total_p_lens !== updates.total_p_lens)
       ) {
-        console.log('[handleTotalsChange] Actualizando formData:', { ...prev, ...updates });
-        return {
-          ...prev,
-          ...updates,
-        };
+        return { ...prev, ...updates };
       }
-      console.log('[handleTotalsChange] No se actualiza formData, valores iguales o sin descuento:', prev);
       return prev;
     });
   };
 
   const moduleSpecificButton = null;
 
-  // Función mejorada para renderizar el contenido con animaciones
-  const renderStepContent = () => {
-    const content = (() => {
-      switch (currentStep) {
-        case 1:
-          return (
-            <VStack spacing={6} w="full">
-              <SearchPatient onFormDataChange={handlePatientDataChange} initialFormData={saleData} />
-              <Measures initialFormData={saleData} filteredMeasures={filteredMeasures} />
-            </VStack>
-          );
-        case 2:
-          return (
-            <SalesDetailsStep
-              formData={formData}
-              setFormData={setFormData}
-              onTotalsChange={handleTotalsChange}
-            />
-          );
-        case 3:
-          console.log('[Sales] Valores enviados a TotalUI:', {
-            frameName: totals.frameName,
-            lensName: totals.lensName,
-            total_p_frame: totals.total_p_frame,
-            total_p_lens: totals.total_p_lens,
-            total: totals.total,
-            formData,
-          });
-          return (
-            <TotalStep
-              formData={formData}
-              onFormDataChange={handleFormDataChange}
-              frameName={totals.frameName}
-              lensName={totals.lensName}
-              total_p_frame={totals.total_p_frame}
-              total_p_lens={totals.total_p_lens}
-              total={totals.total}
-            />
-          );
-        case 4:
-          return (
-            <PaymentStep
-              formData={formData}
-              onFormDataChange={handleFormDataChange}
-            />
-          );
-        case 5:
-          return (
-            <DeliveryStep
-              saleData={saleData}
-              setSaleData={setSaleData}
-            />
-          );
-        case 6:
-          return (
-            <MessageStep
-              selectedBranch={saleData.branchs_id}
-              formData={formData}
-              setFormData={setFormData}
-            />
-          );
-        case 7:
-          return (
-            <ObservationStep
-              formData={formData}
-              setFormData={setFormData}
-            />
-          );
-        case 8:
-          return (
-            <TermsStep
-              selectedBranch={branchName}
-              formData={formData}
-              setFormData={setFormData}
-            />
-          );
-        default:
-          return null;
-      }
-    })();
+  // ----- Estado de cada sección (para el check verde y el resumen cuando está cerrada) -----
+  const isPatientComplete = !!saleData.patient_id;
+  const isProductComplete = !!saleData.brand_id && !!saleData.lens_id && Number(formData.total) > 0;
+  const isPaymentComplete = !!formData.payment_in && !!saleData.delivery_datetime;
+  const isTermsComplete = !!formData.signature;
 
-    return (
-      <ScaleFade 
-        in={!isStepChanging} 
-        initialScale={0.95}
-        unmountOnExit
-      >
-        <Card
-          shadow="lg"
-          bg={cardBg}
-          borderWidth="1px"
-          borderColor={borderColor}
-          borderRadius="2xl"
-          overflow="hidden"
-          minH="400px"
-        >
-          <CardBody p={cardPadding}>
-            {content}
-          </CardBody>
-        </Card>
-      </ScaleFade>
-    );
-  };
+  const discountTotal = (Number(formData.discount_frame) || 0) + (Number(formData.discount_lens) || 0);
+  const accessoriesTotal = accessories.reduce((sum, a) => sum + a.unit_price * a.quantity, 0);
+  const grandTotal = (Number(formData.total) || 0) + accessoriesTotal;
+  const downPayment = Number(formData.balance) || 0;
+  const pendingBalance = Math.max(0, grandTotal - downPayment);
 
-  // Componente mejorado del indicador de progreso
-  const EnhancedStepsIndicator = () => {
-    const progressPercentage = ((currentStep - 1) / (totalSteps - 1)) * 100;
+  const deliveryText = saleData.delivery_datetime
+    ? new Date(saleData.delivery_datetime).toLocaleString("es-EC", { dateStyle: "medium", timeStyle: "short" })
+    : "";
 
-    return (
-      <Card
-        bg={cardBg}
-        shadow="md"
-        borderRadius="xl"
-        borderWidth="1px"
-        borderColor={borderColor}
-        mb={8}
-        overflow="hidden"
-      >
-        <CardBody p={6}>
-          <VStack spacing={4} w="full">
-            <HStack justify="space-between" w="full">
-              <VStack align="start" spacing={1}>
-                <HStack>
-                  <Icon 
-                    as={stepConfig[currentStep - 1]?.icon} 
-                    color={accentColor} 
-                    boxSize={5}
-                  />
-                  <Heading size="md" color={textColor}>
-                    {stepConfig[currentStep - 1]?.title}
-                  </Heading>
-                </HStack>
-                <Text fontSize="sm" color={mutedTextColor}>
-                  {stepConfig[currentStep - 1]?.description}
-                </Text>
-              </VStack>
-              <Badge 
-                colorScheme="teal" 
-                variant="subtle" 
-                px={3} 
-                py={1} 
-                borderRadius="full"
-                fontSize="sm"
-              >
-                {currentStep} de {totalSteps}
-              </Badge>
+  let missingLabel = null;
+  if (!formData.payment_in) missingLabel = "Falta seleccionar el método de pago";
+  else if (!saleData.branchs_id) missingLabel = "Falta seleccionar la sucursal";
+  else if (!formData.signature) missingLabel = "Falta la firma del cliente";
+
+  const currentMeasure = filteredMeasures.length > 0 ? filteredMeasures[0] : null;
+  const hasMeasures = !!currentMeasure;
+
+  const sections = [
+    {
+      key: "patient",
+      title: "Paciente y Medidas",
+      icon: FiUser,
+      isComplete: isPatientComplete,
+      summary: isPatientComplete ? patientName || "Paciente seleccionado" : "Busca y selecciona un paciente",
+      content: (
+        <VStack spacing={4} w="full" align="stretch">
+          <SearchPatient onFormDataChange={handlePatientDataChange} initialFormData={saleData} />
+          <HStack justify="space-between" p={3} borderRadius="12px" bg={useColorModeValue("gray.50", "whiteAlpha.50")}>
+            <HStack>
+              <EyeIcon size={18} color={hasMeasures ? "#00A88E" : "#A0AEC0"} />
+              <Text fontSize="sm" color={textColor}>
+                {hasMeasures ? "Medidas registradas" : "Sin medidas registradas aún"}
+              </Text>
+              {hasMeasures && <Badge colorScheme="green" borderRadius="full">Listo</Badge>}
             </HStack>
-            
-            <Box w="full">
-              <Progress 
-                value={progressPercentage} 
-                colorScheme="teal"
-                bg={useColorModeValue('gray.100', 'gray.700')}
-                borderRadius="full"
-                size="sm"
-                hasStripe
-                isAnimated
-              />
-            </Box>
-
-            <HStack 
-              justify="space-between" 
-              w="full" 
-              spacing={2}
-              flexWrap="wrap"
+            <Button
+              size="sm"
+              variant="outline"
+              borderRadius="full"
+              onClick={() => setIsMeasuresModalOpen(true)}
+              isDisabled={!saleData.patient_id}
             >
-              {stepConfig.map((step, index) => {
-                const stepNumber = index + 1;
-                const isActive = stepNumber === currentStep;
-                const isCompleted = stepNumber < currentStep;
-                
-                return (
-                  <VStack 
-                    key={stepNumber}
-                    spacing={1}
-                    cursor="pointer"
-                    onClick={() => goToStep(stepNumber)}
-                    transition="all 0.2s"
-                    _hover={{ transform: 'translateY(-2px)' }}
-                    minW="80px"
-                  >
-                    <Box
-                      w={8}
-                      h={8}
-                      borderRadius="full"
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="center"
-                      bg={
-                        isCompleted 
-                          ? accentColor
-                          : isActive 
-                          ? accentColor
-                          : useColorModeValue('gray.200', 'gray.600')
-                      }
-                      color={
-                        isCompleted || isActive 
-                          ? 'white' 
-                          : useColorModeValue('gray.500', 'gray.400')
-                      }
-                      fontSize="sm"
-                      fontWeight="bold"
-                      transition="all 0.3s"
-                    >
-                      {isCompleted ? (
-                        <Icon as={FiCheckCircle} boxSize={4} />
-                      ) : (
-                        stepNumber
-                      )}
-                    </Box>
-                    <Text
-                      fontSize="xs"
-                      color={
-                        isActive 
-                          ? accentColor
-                          : isCompleted
-                          ? textColor
-                          : mutedTextColor
-                      }
-                      fontWeight={isActive ? 'semibold' : 'normal'}
-                      textAlign="center"
-                      lineHeight={1.2}
-                    >
-                      {step.title.length > 10 ? 
-                        `${step.title.substring(0, 10)}...` : 
-                        step.title
-                      }
-                    </Text>
-                  </VStack>
-                );
-              })}
-            </HStack>
-          </VStack>
-        </CardBody>
-      </Card>
-    );
-  };
+              {hasMeasures ? "Ver / Editar medidas" : "Registrar medidas"}
+            </Button>
+          </HStack>
+        </VStack>
+      ),
+    },
+    {
+      key: "product",
+      title: "Producto y Precio",
+      icon: FiShoppingCart,
+      isComplete: isProductComplete,
+      summary: isProductComplete
+        ? `${totals.frameName || "Armazón"} · ${totals.lensName || "Luna"} · $${Number(formData.total || 0).toFixed(2)}`
+        : "Elige el armazón, la luna y revisa el precio",
+      content: (
+        <VStack spacing={5} w="full" align="stretch">
+          <TotalStep formData={formData} onFormDataChange={handleFormDataChange} />
+          <SalesDetailsStep
+            formData={formData}
+            setFormData={setFormData}
+            onTotalsChange={handleTotalsChange}
+            accessories={accessories}
+            setAccessories={setAccessories}
+            onOpenAddMore={() => setIsAccessoriesModalOpen(true)}
+          />
+        </VStack>
+      ),
+    },
+    {
+      key: "payment",
+      title: "Pago y Entrega",
+      icon: FiCreditCard,
+      isComplete: isPaymentComplete,
+      summary: isPaymentComplete
+        ? `${formData.payment_in} · Entrega: ${deliveryText || "sin definir"}`
+        : "Define cómo paga y cuándo se entrega",
+      content: (
+        <VStack spacing={4} w="full" align="stretch">
+          <HStack justify="space-between" p={3} borderRadius="12px" bg={useColorModeValue("gray.50", "whiteAlpha.50")}>
+            <Text fontSize="sm" color={textColor}>
+              {formData.payment_in ? `Pago: ${formData.payment_in}` : "Sin método de pago"}
+              {formData.balance ? ` · Abono $${Number(formData.balance).toFixed(2)}` : ""}
+            </Text>
+            <Button size="sm" variant="outline" borderRadius="full" onClick={() => setIsPaymentModalOpen(true)}>
+              Configurar pago
+            </Button>
+          </HStack>
+          <DeliveryStep saleData={saleData} setSaleData={setSaleData} />
+        </VStack>
+      ),
+    },
+    {
+      key: "observations",
+      title: "Observaciones",
+      icon: FiFileText,
+      isComplete: !!formData.observation_text,
+      isOptional: true,
+      summary: "Notas adicionales sobre la venta (opcional)",
+      content: <ObservationStep formData={formData} setFormData={setFormData} />,
+    },
+    {
+      key: "terms",
+      title: "Términos y Firma",
+      icon: FiCheckCircle,
+      isComplete: isTermsComplete,
+      summary: isTermsComplete ? "Firmado" : "Falta la firma del cliente",
+      content: (
+        <TermsStep selectedBranch={branchName} formData={formData} setFormData={setFormData} />
+      ),
+    },
+  ];
 
   return (
-    <Box 
-      ref={salesRef} 
-      minH="100vh" 
-      bg={bgColor}
-      transition="all 0.3s ease"
-    >
-      <Container maxW={containerMaxW} py={6}>
-        <VStack spacing={6} w="full">
-          <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-          
-          <Fade in={true}>
-            <VStack spacing={2} w="full" textAlign="center">
-              <Heading 
-                size="md"
-                fontWeight="800"
-                bgGradient={`linear(to-r, ${accentColor}, teal.600)`}
-                bgClip="text"
-                letterSpacing="-0.02em"
-              >
-                Contrato de Servicio
-              </Heading>
-              <Text 
-                fontSize="md" 
-                color={mutedTextColor}
-                fontWeight="400"
-              >
-                Complete la información paso a paso para generar el contrato
-              </Text>
-              <Divider my={2} />
-            </VStack>
-          </Fade>
+    <Box ref={salesRef} minH="100vh" bg={bgColor}>
+      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
 
-          <EnhancedStepsIndicator />
-          
-          <Box w="full">
-            {renderStepContent()}
-          </Box>
+      <Container maxW={containerMaxW} py={5} px={{ base: 3, md: 5 }}>
+        <Fade in={true}>
+          <VStack spacing={1} w="full" textAlign="center" mb={5}>
+            <Heading size="md" fontWeight="800" bgGradient={`linear(to-r, ${accentColor}, teal.600)`} bgClip="text">
+              Nueva Venta
+            </Heading>
+            <Text fontSize="sm" color={mutedTextColor}>
+              Completa lo que necesites, en el orden que prefieras — el total se actualiza en vivo
+            </Text>
+          </VStack>
+        </Fade>
 
-          <NavigationButtons
-            currentStep={currentStep}
-            totalSteps={totalSteps}
-            prevStep={prevStep}
-            nextStep={nextStep}
-            handleSubmit={handleSubmit}
+        <Flex align="flex-start" gap={5} direction={{ base: "column", lg: "row" }}>
+          <VStack align="stretch" spacing={3} flex="1" minW={0} pb={{ base: "90px", lg: 0 }}>
+            {sections.map((section) => (
+              <SaleSection
+                key={section.key}
+                icon={section.icon}
+                title={section.title}
+                summary={section.summary}
+                isComplete={section.isComplete}
+                isOptional={section.isOptional}
+                isOpen={!!openSections[section.key]}
+                onToggle={() => toggleSection(section.key)}
+              >
+                {section.content}
+              </SaleSection>
+            ))}
+          </VStack>
+
+          <SaleSummaryPanel
+            patientName={patientName}
+            frameName={totals.frameName}
+            lensName={totals.lensName}
+            accessories={accessories}
+            total={grandTotal}
+            discountTotal={discountTotal}
+            downPayment={downPayment}
+            pendingBalance={pendingBalance}
+            deliveryText={deliveryText}
+            onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
+            missingLabel={missingLabel}
           />
+        </Flex>
 
-          {saleId && (
-            <Pdf 
-              formData={pdfData} 
-              targetRef={salesRef} 
-              onPdfUploaded={async (pdfUrl) => {
-                const { error } = await supabase
-                  .from('sales')
-                  .update({ pdf_url: pdfUrl })
-                  .eq('id', saleId);
-                if (error) {
-                  console.error('Error actualizando pdf_url:', error);
-                } else {
-                  console.log('PDF URL actualizado correctamente');
-                }
-              }}
-            />
-          )}
-        </VStack>
+        {saleId && (
+          <Pdf
+            formData={pdfData}
+            targetRef={salesRef}
+            onPdfUploaded={async (pdfUrl) => {
+              const { error } = await supabase.from("sales").update({ pdf_url: pdfUrl }).eq("id", saleId);
+              if (error) console.error("Error actualizando pdf_url:", error);
+            }}
+          />
+        )}
       </Container>
+
+      <MeasuresModal
+        isOpen={isMeasuresModalOpen}
+        onClose={() => setIsMeasuresModalOpen(false)}
+        patientId={saleData.patient_id}
+        existingMeasure={currentMeasure}
+        onSaved={handleMeasureSaved}
+      />
+      <AccessoriesModal
+        isOpen={isAccessoriesModalOpen}
+        onClose={() => setIsAccessoriesModalOpen(false)}
+        accessories={accessories}
+        setAccessories={setAccessories}
+      />
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        formData={formData}
+        onFormDataChange={handleFormDataChange}
+      />
     </Box>
   );
 };

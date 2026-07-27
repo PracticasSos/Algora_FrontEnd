@@ -53,6 +53,7 @@ export const adminNavSections = [
     title: "Pacientes",
     items: [
       { label: "Registrar Paciente", path: "/register-patient", icon: FiUserPlus },
+      { label: "Lista de Pacientes", path: "/list-patients", icon: FiUsers },
       { label: "Registrar Medidas", path: "/measures-final", icon: FiClipboard },
       { label: "Historial de Medidas", path: "/history-measure-list", icon: FiList },
       { label: "Experiencia", path: "/register-experience", icon: FiSmile },

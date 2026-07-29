@@ -13,128 +13,168 @@ import {
 import { ChevronDownIcon } from '@chakra-ui/icons';
 import { supabase } from '../../../api/supabase';
 
+/**
+ * Selector de profesional para el certificado. Antes partía de la tabla
+ * `sello`, así que un optómetra sin sello cargado ni siquiera aparecía en
+ * la lista. Ahora parte de `users` (todos los que tengan rol Optometra) y
+ * el sello es un dato opcional que se agrega si existe.
+ */
 const SelloSelector = ({ onSelect }) => {
-  const [sellos, setSellos] = useState([]);
+  const [optometrists, setOptometrists] = useState([]);
   const [selectedUserId, setSelectedUserId] = useState('');
-  const [selloData, setSelloData] = useState(null);
+  const [selectedData, setSelectedData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Función para convertir imagen a base64
   const convertImageToBase64 = async (imageUrl) => {
     try {
       const response = await fetch(imageUrl, { mode: 'cors' });
       const blob = await response.blob();
-
       return new Promise((resolve) => {
         const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result); // devuelve el base64
+        reader.onloadend = () => resolve(reader.result);
         reader.readAsDataURL(blob);
       });
     } catch (error) {
-      console.error('Error al convertir la imagen a base64:', error);
+      console.error('Error al convertir el sello a base64:', error);
       return null;
     }
   };
 
   useEffect(() => {
-    const fetchSellos = async () => {
-      const { data, error } = await supabase
-        .from('sello')
-        .select(`
-          user_id,
-          sello_url,
-          users (
-            firstname,
-            lastname,
-            ci
-          )
-        `)
-        .order('user_id', { ascending: true });
+    const load = async () => {
+      const [usersRes, sellosRes] = await Promise.all([
+        supabase
+          .from('users')
+          .select('id, firstname, lastname, ci, senescyt, professional_title')
+          .eq('role_id', 2)
+          .order('firstname', { ascending: true }),
+        supabase.from('sello').select('user_id, sello_url'),
+      ]);
 
-      if (error) {
-        console.error('Error al obtener sellos:', error.message);
+      if (usersRes.error) {
+        console.error('Error al obtener optómetras:', usersRes.error.message);
         setLoading(false);
         return;
       }
 
-      setSellos(data);
+      const sellosByUser = {};
+      (sellosRes.data || []).forEach((s) => {
+        sellosByUser[s.user_id] = s.sello_url;
+      });
+
+      const merged = (usersRes.data || []).map((u) => ({
+        ...u,
+        sello_url: sellosByUser[u.id] || null,
+      }));
+
+      setOptometrists(merged);
       setLoading(false);
     };
 
-    fetchSellos();
+    load();
   }, []);
 
   const handleSelect = async (userId) => {
     setSelectedUserId(userId);
-    const seleccionado = sellos.find((s) => s.user_id === userId);
+    const seleccionado = optometrists.find((o) => o.id === userId);
 
-    if (seleccionado) {
-      const base64Image = await convertImageToBase64(seleccionado.sello_url);
-      const selloConBase64 = {
-        ...seleccionado,
-        sello_base64: base64Image,
-      };
+    if (!seleccionado) {
+      setSelectedData(null);
+      return;
+    }
 
-      setSelloData(selloConBase64);
+    const base64Image = seleccionado.sello_url
+      ? await convertImageToBase64(seleccionado.sello_url)
+      : null;
 
-      if (onSelect) onSelect(base64Image); // también envías el base64 al padre
-    } else {
-      setSelloData(null);
+    setSelectedData({ ...seleccionado, sello_base64: base64Image });
+
+    if (onSelect) {
+      onSelect({
+        sealImage: base64Image,
+        name: `${seleccionado.professional_title || 'Opt.'} ${seleccionado.firstname} ${seleccionado.lastname}`,
+        ci: seleccionado.ci || '',
+        senescyt: seleccionado.senescyt || '',
+      });
     }
   };
 
-  const selectedLabel =
-    selloData && selloData.users
-      ? `${selloData.users.firstname} ${selloData.users.lastname}`
-      : 'Seleccione sello';
+  const selectedLabel = selectedData
+    ? `${selectedData.firstname} ${selectedData.lastname}`
+    : 'Seleccione profesional';
 
   if (loading) {
     return <Text>Cargando...</Text>;
   }
 
   return (
-  <Box 
-    my={1} // ← Reducir margen vertical de 4 a 1
-    maxW="200px" 
-    textAlign="left" 
-    ml={["5%", "10%", "30%", "50%"]}
-    mt={{ base: -4, md: 1 }} // ← Margen negativo en móvil para acercar
-  >
-    {selloData && selloData.users && selloData.sello_base64 && (
-      <>
-        <Image
-          src={selloData.sello_base64}
-          alt={`Sello de ${selloData.users.firstname} ${selloData.users.lastname}`}
-          boxSize="300px"
-          objectFit="contain"
-          mb={-20} // ← Mantener margen negativo para acercar imagen al texto
-        />
-        <Divider mb={1} />
-      </>
-    )}
+    <Box
+      my={1}
+      maxW="220px"
+      textAlign="left"
+      ml={["5%", "10%", "30%", "50%"]}
+      mt={{ base: -4, md: 1 }}
+    >
+      {selectedData && selectedData.sello_base64 && (
+        <>
+          <Image
+            src={selectedData.sello_base64}
+            alt={`Sello de ${selectedData.firstname} ${selectedData.lastname}`}
+            boxSize="300px"
+            objectFit="contain"
+            mb={-20}
+          />
+          <Divider mb={1} />
+        </>
+      )}
 
-    <Menu>
-      <MenuButton as={Button} rightIcon={<ChevronDownIcon />} w="150%">
-        {selectedLabel}
-      </MenuButton>
-      <MenuList maxH="100px" overflowY="auto">
-        {sellos.map((sello) => (
-          <MenuItem key={sello.user_id} onClick={() => handleSelect(sello.user_id)}>
-            {sello.users
-              ? `${sello.users.firstname} ${sello.users.lastname}`
-              : 'Sin nombre'}
-          </MenuItem>
-        ))}
-      </MenuList>
-    </Menu>
+      <Menu>
+        <MenuButton as={Button} rightIcon={<ChevronDownIcon />} w="150%">
+          {selectedLabel}
+        </MenuButton>
+        <MenuList maxH="200px" overflowY="auto">
+          {selectedUserId && (
+            <MenuItem
+              onClick={() => {
+                setSelectedUserId('');
+                setSelectedData(null);
+                if (onSelect) onSelect(null);
+              }}
+              color="red.500"
+            >
+              Quitar selección
+            </MenuItem>
+          )}
+          {optometrists.length === 0 && (
+            <MenuItem isDisabled>No hay optómetras registrados</MenuItem>
+          )}
+          {optometrists.map((opt) => (
+            <MenuItem key={opt.id} onClick={() => handleSelect(opt.id)}>
+              {opt.firstname} {opt.lastname}
+              {!opt.sello_url && (
+                <Text as="span" fontSize="xs" color="gray.400" ml={2}>
+                  (sin sello)
+                </Text>
+              )}
+            </MenuItem>
+          ))}
+        </MenuList>
+      </Menu>
 
-    {selloData && selloData.users && (
-      <Text mt={1} color="gray.600">
-        Cédula: {selloData.users.ci}
-      </Text>
-    )}
-  </Box>
-);
+      {selectedData && (
+        <>
+          <Text mt={1} color="gray.600">
+            Cédula: {selectedData.ci || '—'}
+          </Text>
+          {selectedData.senescyt && (
+            <Text mt={0.5} color="gray.600" fontSize="sm">
+              SENESCYT: {selectedData.senescyt}
+            </Text>
+          )}
+        </>
+      )}
+    </Box>
+  );
 };
 
 export default SelloSelector;

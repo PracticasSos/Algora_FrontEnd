@@ -1,4 +1,5 @@
 import { Box } from "@chakra-ui/react";
+import { useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import AdminSidebar, { COLLAPSED_W } from "./AdminSidebar";
 import AdminTopbar from "./AdminTopbar";
@@ -7,12 +8,18 @@ import AdminMobileNav from "./AdminMobileNav";
 // role_id: 1 Admin, 4 SuperAdmin (igual que en SmartHeader.jsx)
 const ADMIN_ROLE_IDS = [1, 4];
 
+// Pantallas públicas/de autenticación: nunca deben mostrar el sidebar,
+// aunque exista una sesión de Admin cacheada en el navegador.
+const PUBLIC_ROUTES = ["/", "/login-form", "/change-password"];
+
 const AdminShell = ({ children }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
-  const isAdmin = !loading && user && ADMIN_ROLE_IDS.includes(user.role_id);
+  const isPublicRoute = PUBLIC_ROUTES.includes(location.pathname);
+  const isAdmin = !loading && !isPublicRoute && user && ADMIN_ROLE_IDS.includes(user.role_id);
 
-  // Vendedor / Optometra / sin sesión: no se toca nada, se comportan exactamente como antes
+  // Vendedor / Optometra / sin sesión / pantallas públicas: no se toca nada
   if (!isAdmin) {
     return children;
   }

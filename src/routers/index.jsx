@@ -52,6 +52,7 @@ import ChangePassword from "../components/optionsauth/ChangePassword.jsx";
 import Tenants from "../components/tenants/Tenants.jsx";
 import TermsManager from "../components/Admin/Sales/TermsManager.jsx";
 import DeliverySettings from "../components/Admin/DeliverySettings.jsx";
+import OptometristSettings from "../components/Admin/OptometristSettings.jsx";
 
 const AppRouter = () => {
     return (
@@ -61,6 +62,7 @@ const AppRouter = () => {
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/terms-manager" element={<TermsManager />} />
             <Route path="/delivery-settings" element={<DeliverySettings />} />
+            <Route path="/optometrist-settings" element={<OptometristSettings />} />
             <Route path="/inventory" element={<Inventario />}></Route>
             <Route path="/login-form" element={<LoginForm />} />
             <Route path="/admin" element={<AdminDashBoard />} />

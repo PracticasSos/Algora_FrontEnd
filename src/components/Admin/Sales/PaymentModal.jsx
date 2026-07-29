@@ -11,7 +11,7 @@ import {
 } from "@chakra-ui/react";
 import Total from "./Total";
 
-const PaymentModal = ({ isOpen, onClose, formData, onFormDataChange }) => {
+const PaymentModal = ({ isOpen, onClose, formData, onFormDataChange, grandTotal }) => {
   const bgColor = useColorModeValue("white", "gray.800");
 
   return (
@@ -21,7 +21,7 @@ const PaymentModal = ({ isOpen, onClose, formData, onFormDataChange }) => {
         <ModalHeader fontSize="md">Método de pago</ModalHeader>
         <ModalCloseButton />
         <ModalBody pb={6}>
-          <Total formData={formData} setFormData={onFormDataChange} />
+          <Total formData={formData} setFormData={onFormDataChange} grandTotal={grandTotal} />
         </ModalBody>
         <ModalFooter>
           <Button bg="#00A88E" color="white" _hover={{ bg: "#00967f" }} onClick={onClose} w="full">

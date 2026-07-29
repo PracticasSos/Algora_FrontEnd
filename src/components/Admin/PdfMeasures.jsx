@@ -18,9 +18,10 @@ import {
 } from "@chakra-ui/react";
 import { generateCertificatePDF } from "./certificate/pdf/pdfGenerator";
 import { supabase } from "../../api/supabase";
+import CertificatePreviewModal from "./CertificatePreviewModal";
 
 
-const PdfMeasures = ({ formData, selectedPatient, doctorData, tenantId, doctorSeal, footerInfo }) => {
+const PdfMeasures = ({ formData, selectedPatient, doctorData, tenantId, doctorSeal, doctorName, doctorCi, doctorSenescyt, footerInfo }) => {
   const [logoBase64, setLogoBase64] = useState(null);
   const toast = useToast();
   const [loading, setLoading] = useState(false);
@@ -28,6 +29,7 @@ const PdfMeasures = ({ formData, selectedPatient, doctorData, tenantId, doctorSe
   const [modalMessage, setModalMessage] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [pdfUrl, setPdfUrl] = useState(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -82,7 +84,7 @@ const PdfMeasures = ({ formData, selectedPatient, doctorData, tenantId, doctorSe
 
     try {
       const result = await generateCertificatePDF(
-        formData,
+        { ...formData, doctor_name: doctorName, doctor_ci: doctorCi, doctor_senescyt: doctorSenescyt },
         selectedPatient,
         doctorData,
         logoBase64,
@@ -181,7 +183,7 @@ const PdfMeasures = ({ formData, selectedPatient, doctorData, tenantId, doctorSe
     });
   };
 
-  const handlePreviewCertificate = async () => {
+  const handlePreviewCertificate = () => {
     if (!formData || !selectedPatient) {
       toast({
         title: "Error",
@@ -192,33 +194,12 @@ const PdfMeasures = ({ formData, selectedPatient, doctorData, tenantId, doctorSe
       });
       return;
     }
+    setIsPreviewOpen(true);
+  };
 
-    try {
-      const result = await generateCertificatePDF(
-        formData,
-        selectedPatient,
-        doctorData,
-        logoBase64
-      );
-
-      if (result.success) {
-        toast({
-          title: "Vista previa",
-          description: "Se abrió la vista previa del certificado.",
-          status: "info",
-          duration: 2000,
-          isClosable: true,
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error en vista previa",
-        description: error.message,
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-    }
+  const handleConfirmGenerateFromPreview = async () => {
+    const url = await handleDownloadPdf();
+    if (url) setIsPreviewOpen(false);
   };
 
   return (
@@ -226,6 +207,15 @@ const PdfMeasures = ({ formData, selectedPatient, doctorData, tenantId, doctorSe
       <SimpleGrid>
         <Box p={5}>
           <Flex gap={3} wrap="wrap">
+            <Button
+              onClick={handlePreviewCertificate}
+              variant="outline"
+              colorScheme="teal"
+              size="md"
+            >
+              Vista previa
+            </Button>
+
             <Button 
               onClick={handleDownloadPdf} 
               colorScheme="blue"
@@ -295,6 +285,17 @@ const PdfMeasures = ({ formData, selectedPatient, doctorData, tenantId, doctorSe
           )}
         </ModalContent>
       </Modal>
+
+      <CertificatePreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        formData={{ ...formData, doctor_name: doctorName, doctor_ci: doctorCi, doctor_senescyt: doctorSenescyt }}
+        selectedPatient={selectedPatient}
+        logoBase64={logoBase64}
+        doctorSeal={doctorSeal}
+        onConfirmGenerate={handleConfirmGenerateFromPreview}
+        isGenerating={loading}
+      />
     </>
   );
 };

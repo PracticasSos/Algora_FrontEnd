@@ -1,9 +1,114 @@
-import html2pdf from 'html2pdf.js';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { certificateTemplate } from './contractTemplate.js';
 import { supabase } from '../../../../api/supabase.js';
 
+/**
+ * Arma el HTML final del certificado reemplazando los placeholders.
+ * Se usa tanto para la vista previa (se muestra en un iframe) como para
+ * generar el PDF final — así ambos siempre se ven exactamente igual.
+ */
+export const buildCertificateHtml = (formData, patientData, doctorData, logoBase64, doctorSeal) => {
+    const fullname = formData?.pt_firstname && formData?.pt_lastname
+        ? `${formData.pt_firstname} ${formData.pt_lastname}`.trim()
+        : patientData?.pt_firstname && patientData?.pt_lastname
+            ? `${patientData.pt_firstname} ${patientData.pt_lastname}`.trim()
+            : 'Paciente';
+
+    // Fecha de emisión: la que elige el admin en el formulario; si no hay
+    // ninguna, se usa la fecha de hoy como respaldo.
+    const currentDate = formData?.date
+        ? new Date(`${formData.date}T00:00:00`).toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        })
+        : new Date().toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+
+    let branchHtml = '';
+    if (formData?.branch_name) {
+        branchHtml = `
+            <div class="branch-details">
+                <p class="branch-name">${formData.branch_name}</p>
+                ${formData.branch_address ? `<p>${formData.branch_address}</p>` : ''}
+                ${formData.branch_cell ? `<p>Cel: ${formData.branch_cell}</p>` : ''}
+                ${formData.branch_email ? `<p>Email: ${formData.branch_email}</p>` : ''}
+            </div>
+        `;
+    }
+
+    return certificateTemplate
+        .replace(/{{certificateLogo}}/g, logoBase64 ? `<img src="${logoBase64}" alt="Logo" style="max-width:120px; margin-bottom:10px;" />` : '')
+        .replace(/{{branchInfo}}/g, branchHtml)
+        .replace(/{{patientName}}/g, fullname)
+        .replace(/{{currentDate}}/g, currentDate)
+
+        .replace(/{{sphereRight}}/g, formData?.sphere_right || '')
+        .replace(/{{cylinderRight}}/g, formData?.cylinder_right || '')
+        .replace(/{{axisRight}}/g, formData?.axis_right || '')
+        .replace(/{{prismRight}}/g, formData?.prism_right || '')
+        .replace(/{{addRight}}/g, formData?.add_right || '')
+        .replace(/{{avVlRight}}/g, formData?.av_vl_right || '')
+        .replace(/{{avVpRight}}/g, formData?.av_vp_right || '')
+        .replace(/{{dnpRight}}/g, formData?.dnp_right || '')
+        .replace(/{{altRight}}/g, formData?.alt_right || '')
+
+        .replace(/{{sphereLeft}}/g, formData?.sphere_left || '')
+        .replace(/{{cylinderLeft}}/g, formData?.cylinder_left || '')
+        .replace(/{{axisLeft}}/g, formData?.axis_left || '')
+        .replace(/{{prismLeft}}/g, formData?.prism_left || '')
+        .replace(/{{addLeft}}/g, formData?.add_left || '')
+        .replace(/{{avVlLeft}}/g, formData?.av_vl_left || '')
+        .replace(/{{avVpLeft}}/g, formData?.av_vp_left || '')
+        .replace(/{{dnpLeft}}/g, formData?.dnp_left || '')
+        .replace(/{{altLeft}}/g, formData?.alt_left || '')
+
+        .replace(/{{diagnosis}}/g, formData?.diagnosis || 'No especificado')
+
+        .replace(/{{nearVisionApproved}}/g, formData?.near_vision === 'Aprobado' ? 'radio-checked' : '')
+        .replace(/{{nearVisionNotApproved}}/g, formData?.near_vision === 'No Aprobado' ? 'radio-checked' : '')
+        .replace(/{{needsLensesNear}}/g, formData?.needs_lenses_near ? 'checkbox-checked' : '')
+
+        .replace(/{{farVision2020}}/g, formData?.far_vision === '20/20' ? 'radio-checked' : '')
+        .replace(/{{farVisionLess2020}}/g, formData?.far_vision === 'Menor a 20/20' ? 'radio-checked' : '')
+        .replace(/{{needsLensesFar}}/g, formData?.needs_lenses_far ? 'checkbox-checked' : '')
+
+        .replace(/{{colorPerception}}/g, formData?.color_perception ? 'checkbox-checked' : '')
+        .replace(/{{colorIssues}}/g, formData?.color_issues || '')
+        .replace(/{{showColorIssues}}/g, formData?.color_issues ? 'block' : 'none')
+
+        .replace(/{{doctorSeal}}/g, (doctorSeal && formData?.doctor_signature) ? `<img src="${doctorSeal}" alt="Sello del doctor" style="max-width:120px; max-height:80px; display:block; margin:auto;" />` : '')
+        .replace(/{{doctorName}}/g, formData?.doctor_name || '')
+        .replace(/{{doctorCi}}/g, formData?.doctor_ci ? `C.I. ${formData.doctor_ci}` : '')
+        .replace(/{{doctorSenescyt}}/g, formData?.doctor_senescyt ? `Reg. SENESCYT: ${formData.doctor_senescyt}` : '')
+
+        // Patologías
+        .replace(/{{pathologyOD}}/g, formData?.pathology_od || 'No refiere')
+        .replace(/{{pathologyOI}}/g, formData?.pathology_oi || 'No refiere')
+
+        // En consecuencia / tratamiento prescrito
+        .replace(/{{prescribesYes}}/g, formData?.prescribes_treatment === true ? 'radio-checked' : '')
+        .replace(/{{prescribesNo}}/g, formData?.prescribes_treatment === false ? 'radio-checked' : '')
+        .replace(/{{treatmentOptometric}}/g, formData?.treatment_optometric ? 'checkbox-checked' : '')
+        .replace(/{{treatmentOphthalmological}}/g, formData?.treatment_ophthalmological ? 'checkbox-checked' : '')
+        .replace(/{{treatmentPermanentLenses}}/g, formData?.treatment_permanent_lenses ? 'checkbox-checked' : '')
+        .replace(/{{treatmentOccasionalLenses}}/g, formData?.treatment_occasional_lenses ? 'checkbox-checked' : '')
+        .replace(/{{treatmentContactLenses}}/g, formData?.treatment_contact_lenses ? 'checkbox-checked' : '')
+
+        // Observación
+        .replace(/{{showObservation}}/g, formData?.observation ? 'block' : 'none')
+        .replace(/{{observation}}/g, formData?.observation || '')
+        .replace(/{{doctorSignature}}/g, formData?.doctor_signature
+            ? `<img src="${formData.doctor_signature}" alt="Firma del profesional" />`
+            : ''
+        );
+};
+
 export const generateCertificatePDF = async (formData, patientData, doctorData, logoBase64, doctorSeal) => {
-    console.log('Logo base64 recibido para PDF:', logoBase64);
     try {
         const fullname = formData?.pt_firstname && formData?.pt_lastname
             ? `${formData.pt_firstname} ${formData.pt_lastname}`.trim()
@@ -11,98 +116,8 @@ export const generateCertificatePDF = async (formData, patientData, doctorData, 
                 ? `${patientData.pt_firstname} ${patientData.pt_lastname}`.trim()
                 : 'Paciente';
 
-        // Fecha actual formateada
-        const currentDate = new Date().toLocaleDateString('es-ES', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit'
-        });
+        const finalHtml = buildCertificateHtml(formData, patientData, doctorData, logoBase64, doctorSeal);
 
-        // Se mantiene el objeto doctor solo para el título, pero el resto está comentado
-        const doctor = doctorData || {
-            //name: 'Dr. Amuary Minuche Anchones',
-            title: 'SELLO',
-            //registration: '1019-2018-2140119'
-        };
-
-        // Generar el bloque HTML para la información de la sucursal dinámicamente
-        let branchHtml = '';
-        if (formData?.branch_name) {
-            branchHtml = `
-                <div class="branch-details">
-                    <p class="branch-name">${formData.branch_name}</p>
-                    ${formData.branch_address ? `<p>${formData.branch_address}</p>` : ''}
-                    ${formData.branch_cell ? `<p>Cel: ${formData.branch_cell}</p>` : ''}
-                    ${formData.branch_email ? `<p>Email: ${formData.branch_email}</p>` : ''}
-                </div>
-            `;
-        }
-
-        // Reemplazar placeholders en el template
-        let finalHtml = certificateTemplate
-            // Logo dinámico
-            .replace(/{{certificateLogo}}/g, logoBase64 ? `<img src="${logoBase64}" alt="Logo" style="max-width:120px; margin-bottom:10px;" />` : '')
-            // Añadir el bloque de información de la sucursal
-            .replace(/{{branchInfo}}/g, branchHtml)
-            // Datos del paciente
-            .replace(/{{patientName}}/g, fullname)
-            .replace(/{{currentDate}}/g, currentDate)
-
-            // Medidas ojo derecho
-            .replace(/{{sphereRight}}/g, formData?.sphere_right || '')
-            .replace(/{{cylinderRight}}/g, formData?.cylinder_right || '')
-            .replace(/{{axisRight}}/g, formData?.axis_right || '')
-            .replace(/{{prismRight}}/g, formData?.prism_right || '')
-            .replace(/{{addRight}}/g, formData?.add_right || '')
-            .replace(/{{avVlRight}}/g, formData?.av_vl_right || '')
-            .replace(/{{avVpRight}}/g, formData?.av_vp_right || '')
-            .replace(/{{dnpRight}}/g, formData?.dnp_right || '')
-            .replace(/{{altRight}}/g, formData?.alt_right || '')
-
-            // Medidas ojo izquierdo
-            .replace(/{{sphereLeft}}/g, formData?.sphere_left || '')
-            .replace(/{{cylinderLeft}}/g, formData?.cylinder_left || '')
-            .replace(/{{axisLeft}}/g, formData?.axis_left || '')
-            .replace(/{{prismLeft}}/g, formData?.prism_left || '')
-            .replace(/{{addLeft}}/g, formData?.add_left || '')
-            .replace(/{{avVlLeft}}/g, formData?.av_vl_left || '')
-            .replace(/{{avVpLeft}}/g, formData?.av_vp_left || '')
-            .replace(/{{dnpLeft}}/g, formData?.dnp_left || '')
-            .replace(/{{altLeft}}/g, formData?.alt_left || '')
-
-            // Diagnóstico
-            .replace(/{{diagnosis}}/g, formData?.diagnosis || 'No especificado')
-
-            // Visión cercana
-            .replace(/{{nearVisionApproved}}/g, formData?.near_vision === 'Aprobado' ? 'radio-checked' : '')
-            .replace(/{{nearVisionNotApproved}}/g, formData?.near_vision === 'No Aprobado' ? 'radio-checked' : '')
-            .replace(/{{needsLensesNear}}/g, formData?.needs_lenses_near ? 'checkbox-checked' : '')
-
-            // Visión lejana
-            .replace(/{{farVision2020}}/g, formData?.far_vision === '20/20' ? 'radio-checked' : '')
-            .replace(/{{farVisionLess2020}}/g, formData?.far_vision === 'Menor a 20/20' ? 'radio-checked' : '')
-            .replace(/{{needsLensesFar}}/g, formData?.needs_lenses_far ? 'checkbox-checked' : '')
-
-            // Percepción de colores
-            .replace(/{{colorPerception}}/g, formData?.color_perception ? 'checkbox-checked' : '')
-            .replace(/{{colorIssues}}/g, formData?.color_issues || '')
-            .replace(/{{showColorIssues}}/g, formData?.color_issues ? 'block' : 'none')
-
-            // Información del doctor (solo sello)
-            // .replace(/{{doctorName}}/g, doctor.name)
-            // .replace(/{{doctorTitle}}/g, doctor.title)
-            // .replace(/{{doctorRegistration}}/g, doctor.registration)
-            .replace(/{{doctorSeal}}/g, doctorSeal ? `<img src="${doctorSeal}" alt="Sello del doctor" style="max-width:120px; max-height:80px; display:block; margin:auto;" />` : '')
-            
-            // --- CORRECCIÓN: Firma del paciente ---
-            // Se restaura el código para mostrar la firma del paciente.
-            .replace(/{{patientSignature}}/g, formData?.signature
-                ? `<img src="${formData.signature}" alt="Firma " style="max-width:180px; max-height:60px; display:block; margin:auto;" />`
-                : ''
-            );
-            // --- FIN DE LA MODIFICACIÓN ---
-
-        // Preparar nombre del archivo
         const safeName = fullname || 'Certificado';
         const cleanName = safeName
             .toLowerCase()
@@ -114,28 +129,59 @@ export const generateCertificatePDF = async (formData, patientData, doctorData, 
 
         const fileName = `certificado-agudeza-visual-${cleanName}-${Date.now()}.pdf`;
 
-        // Configuración para html2pdf
-        const options = {
-            margin: [5, 5, 5, 5],
-            filename: fileName,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: {
-                scale: 2,
-                useCORS: true,
-                letterRendering: true,
-                allowTaint: false,
-            },
-            jsPDF: {
-                unit: 'mm',
-                format: 'a4',
-                orientation: 'portrait'
-            }
-        };
+        // Se renderiza en un iframe oculto (igual que la vista previa) para
+        // que el PDF final se vea exactamente igual a lo que ya se mostró.
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-9999px';
+        iframe.style.top = '0';
+        iframe.style.width = '794px'; // ancho A4 aprox. a 96dpi
+        iframe.style.border = 'none';
+        document.body.appendChild(iframe);
 
-        // Generar PDF
-        const pdfBlob = await html2pdf().set(options).from(finalHtml).outputPdf('blob');
+        await new Promise((resolve) => {
+            iframe.onload = resolve;
+            iframe.srcdoc = finalHtml;
+        });
 
-        // Subir a Supabase
+        // Pequeña espera adicional para que las imágenes (logo, sello, firma)
+        // terminen de pintarse dentro del iframe antes de capturarlo.
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
+        const canvas = await html2canvas(iframe.contentDocument.body, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            windowWidth: 794,
+        });
+
+        document.body.removeChild(iframe);
+
+        // Se arma el PDF encogiendo la imagen completa para que quepa siempre
+        // en UNA sola página A4, sin importar cuánto contenido tenga el
+        // certificado (así no se corta ni se va a una segunda hoja casi vacía).
+        const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 6;
+        const maxWidth = pageWidth - margin * 2;
+        const maxHeight = pageHeight - margin * 2;
+
+        const canvasRatio = canvas.width / canvas.height;
+        let renderWidth = maxWidth;
+        let renderHeight = renderWidth / canvasRatio;
+
+        if (renderHeight > maxHeight) {
+            renderHeight = maxHeight;
+            renderWidth = renderHeight * canvasRatio;
+        }
+
+        const xOffset = (pageWidth - renderWidth) / 2;
+        const imgData = canvas.toDataURL('image/jpeg', 0.97);
+        pdf.addImage(imgData, 'JPEG', xOffset, margin, renderWidth, renderHeight);
+
+        const pdfBlob = pdf.output('blob');
+
         const { data: uploadData, error: uploadError } = await supabase.storage
             .from('measures')
             .upload(fileName, pdfBlob, {
@@ -149,26 +195,25 @@ export const generateCertificatePDF = async (formData, patientData, doctorData, 
 
         let pdfUrl = null;
         if (uploadData) {
-            // Usar el mismo bucket donde subimos ('measures') para obtener la URL pública
             const { data: publicUrlData } = supabase.storage
                 .from('measures')
                 .getPublicUrl(fileName);
-            console.log('[generateCertificatePDF] publicUrlData:', publicUrlData);
             pdfUrl = publicUrlData?.publicUrl || null;
+        }
 
-            if (!pdfUrl) {
-                console.warn('[generateCertificatePDF] No se obtuvo publicUrl tras subida. uploadData:', uploadData);
+        // Registrar en el historial de certificados (para poder consultarlos después)
+        if (pdfUrl && formData?.patient_id) {
+            const { error: historyError } = await supabase.from('certificates').insert([{
+                patient_id: formData.patient_id,
+                issue_date: formData.date || new Date().toISOString().slice(0, 10),
+                pdf_url: pdfUrl,
+                diagnosis: formData.diagnosis || null,
+            }]);
+            if (historyError) {
+                console.warn('No se pudo guardar en el historial de certificados:', historyError.message);
             }
         }
-        
-        const { data: publicUrlData } = supabase.storage
-            .from('measures')
-            .getPublicUrl(fileName);
-        console.log('[generateCertificatePDF] publicUrlData:', publicUrlData);
-        pdfUrl = publicUrlData?.publicUrl || null;
 
-        
-            
         // Descargar automáticamente
         const link = document.createElement('a');
         link.href = URL.createObjectURL(pdfBlob);
@@ -176,7 +221,6 @@ export const generateCertificatePDF = async (formData, patientData, doctorData, 
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-
         URL.revokeObjectURL(link.href);
 
         return {

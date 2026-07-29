@@ -101,6 +101,7 @@ export const adminNavSections = [
       { label: "Usuarios", path: "/register", icon: FiUsers },
       { label: "Mensajes", path: "/message-manager", icon: FiMessageSquare },
       { label: "Configuración de Retiros", path: "/delivery-settings", icon: FiClock },
+      { label: "Optómetras", path: "/optometrist-settings", icon: FiUsers },
     ],
   },
 ];

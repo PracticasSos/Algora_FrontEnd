@@ -13,29 +13,26 @@ export const certificateTemplate = `
             box-sizing: border-box;
             -webkit-print-color-adjust: exact;
         }
-
-            body {
-                font-family: 'Helvetica', Arial, sans-serif;
-                font-size: 11.5px;
-                line-height: 1.5;
-                color: #333;
-                background: #fff;
-                margin: 0;
-                padding: 0;
-            }
+        body {
+            font-family: 'Helvetica', Arial, sans-serif;
+            font-size: 11.5px;
+            line-height: 1.5;
+            color: #2B2F36;
+            background: #fff;
+            margin: 0;
+            padding: 0;
+        }
         :root {
-            --primary-color: #005A9C;
-            --secondary-color: #4A4A4A;
-            --border-color: #EAEAEA;
-            --background-light: #F8F9FA;
+            --primary-color: #1B5E9E;
+            --primary-dark: #0F3D6B;
+            --secondary-color: #5A6472;
+            --border-color: #DCE2EA;
+            --rule-color: #C6CEDA;
         }
         .certificate-container {
-            border: 1px solid var(--border-color);
-            padding: 25px;
-            border-radius: 8px;
+            padding: 30px 40px;
             background: white;
             margin: 0 auto;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
         /* --- Header Section --- */
         .header {
@@ -43,15 +40,15 @@ export const certificateTemplate = `
             justify-content: space-between;
             align-items: flex-start;
             gap: 20px;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid var(--rule-color);
         }
         .header-left {
-            flex: 0 0 160px;
+            flex: 0 0 150px;
         }
         .header-left img {
             max-width: 100%;
-            max-height: 75px;
+            max-height: 68px;
             object-fit: contain;
         }
         .header-right {
@@ -59,204 +56,303 @@ export const certificateTemplate = `
             text-align: right;
         }
         .branch-details {
-            font-size: 11.5px;
+            font-size: 11px;
             line-height: 1.4;
             color: var(--secondary-color);
-            margin-bottom: 15px;
         }
         .branch-details .branch-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: #000;
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            letter-spacing: 0.3px;
         }
         .branch-details p {
             margin: 2px 0;
         }
-        /* --- Title Centered --- */
+        /* --- Title --- */
         .document-title {
-            font-size: 22px;
-            font-weight: 600;
-            color: var(--primary-color);
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary-dark);
             text-transform: uppercase;
-            letter-spacing: 1px;
-            margin: 0 auto;
+            letter-spacing: 1.8px;
             text-align: center;
-            display: block;
-            margin-bottom: 15px;
+            margin: 18px 0 5px;
         }
-        /* --- Patient Info Section --- */
+        .document-subtitle {
+            text-align: center;
+            font-size: 9.5px;
+            color: var(--secondary-color);
+            letter-spacing: 0.5px;
+            margin-bottom: 18px;
+        }
+        /* --- Patient Info --- */
         .patient-info {
-            background: var(--background-light);
-            padding: 12px 18px;
-            margin-bottom: 25px;
-            border-radius: 6px;
-            border-left: 5px solid var(--primary-color);
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            padding: 8px 0 12px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--rule-color);
             font-size: 12px;
         }
         .info-label {
             font-weight: 600;
-            color: var(--primary-color);
-            margin-right: 8px;
+            color: var(--secondary-color);
+            text-transform: uppercase;
+            font-size: 9px;
+            letter-spacing: 0.5px;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .info-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1A1D22;
         }
         .main-content {
-            margin-bottom: 30px;
+            margin-bottom: 8px;
         }
+        /* --- Measurements table --- */
         .measurements-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 25px;
-            font-size: 11px;
+            margin-bottom: 20px;
+            font-size: 10.5px;
         }
-        .measurements-table th, 
+        .measurements-table th,
         .measurements-table td {
-            padding: 9px 6px;
+            padding: 7px 6px;
             text-align: center;
-            border: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
         }
-        .measurements-table th {
-            background: #F1F3F4;
-            font-weight: 600;
-            color: #333;
-            font-size: 10px;
+        .measurements-table thead th {
+            border-bottom: 2px solid var(--primary-dark);
+            font-weight: 700;
+            color: var(--primary-dark);
+            font-size: 9.5px;
             text-transform: uppercase;
+            letter-spacing: 0.4px;
+            padding-bottom: 7px;
         }
         .measurements-table .eye-label {
-            background: #EAF2F8;
             font-weight: 700;
             color: var(--primary-color);
             font-size: 12px;
+            text-align: left;
+        }
+        /* --- Section titles --- */
+        .section-title {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            margin-bottom: 8px;
         }
         .diagnosis-section {
-            margin-bottom: 25px;
-        }
-        .section-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--secondary-color);
-            margin-bottom: 10px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 5px;
+            margin-bottom: 18px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--rule-color);
         }
         .diagnosis-content {
-            background: var(--background-light);
-            padding: 15px;
-            border-radius: 4px;
-            min-height: 50px;
+            font-size: 11.5px;
+            line-height: 1.5;
             white-space: pre-wrap;
+            color: #2B2F36;
         }
+        /* --- Vision tests --- */
         .vision-tests-grid {
             display: flex;
             flex-wrap: wrap;
-            gap: 20px;
-            margin-bottom: 25px;
+            margin-bottom: 4px;
         }
         .vision-test {
-            background: var(--background-light);
-            padding: 15px;
-            border-radius: 6px;
-            flex: 1 1 calc(50% - 10px);
+            flex: 1 1 50%;
+            padding: 0 20px 12px 0;
+        }
+        .vision-test:nth-child(2) {
+            padding-left: 20px;
+            padding-right: 0;
+            border-left: 1px solid var(--rule-color);
         }
         .vision-test.full-width {
             flex-basis: 100%;
+            padding: 12px 0 0;
+            border-top: 1px solid var(--rule-color);
+            margin-top: 4px;
         }
         .test-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--primary-color);
-            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 3px;
         }
         .test-description {
-            font-size: 10px;
-            color: #666;
-            margin-bottom: 12px;
+            font-size: 9.5px;
+            color: var(--secondary-color);
+            margin-bottom: 8px;
             font-style: italic;
         }
         .test-result {
             display: flex;
             align-items: center;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
+            font-size: 11.5px;
+            color: var(--secondary-color);
         }
-        .radio-checked::before, .checkbox-checked::before {
-            font-family: 'Arial', sans-serif;
-            color: var(--primary-color);
-            font-size: 18px;
-            width: 20px;
+        .radio-option, .checkbox-option {
+            display: inline-flex;
+            align-items: center;
+        }
+        .radio-option::before {
+            content: "";
+            width: 11px;
+            height: 11px;
+            border: 1.5px solid #B7BFCA;
+            border-radius: 50%;
             display: inline-block;
-            text-align: left;
+            margin-right: 8px;
+            flex-shrink: 0;
         }
-        .radio-checked::before {
-            content: "●";
-            line-height: 1;
+        .checkbox-option::before {
+            content: "";
+            width: 11px;
+            height: 11px;
+            border: 1.5px solid #B7BFCA;
+            border-radius: 3px;
+            display: inline-block;
+            margin-right: 8px;
+            flex-shrink: 0;
         }
-        .checkbox-checked::before {
+        .radio-option.radio-checked,
+        .checkbox-option.checkbox-checked {
+            color: #1A1D22;
+            font-weight: 600;
+        }
+        .radio-option.radio-checked::before {
+            border-color: var(--primary-color);
+            background: radial-gradient(var(--primary-color) 0%, var(--primary-color) 45%, transparent 50%);
+        }
+        .checkbox-option.checkbox-checked::before {
             content: "✓";
-            font-weight: bold;
-            line-height: 1;
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+            color: #fff;
+            font-size: 8.5px;
+            line-height: 11px;
+            text-align: center;
         }
         .color-issues {
-            margin-top: 12px;
-            padding: 10px;
-            background: #FFF9E6;
-            border-left: 3px solid #FFC107;
-            font-size: 10px;
+            margin-top: 8px;
+            padding-left: 19px;
+            font-size: 9.5px;
+            color: var(--secondary-color);
             display: {{showColorIssues}};
         }
+        .color-issues strong {
+            color: #1A1D22;
+        }
+        /* --- Patologías / Prescripción / Observación --- */
+        .clinical-section {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--rule-color);
+        }
+        .pathology-row {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 4px;
+            font-size: 11.5px;
+        }
+        .pathology-row .eye {
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-right: 6px;
+        }
+        .prescription-choice {
+            display: flex;
+            gap: 24px;
+            margin: 10px 0 10px;
+        }
+        .treatment-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            row-gap: 6px;
+            column-gap: 20px;
+        }
+        .treatment-list .checkbox-option {
+            font-size: 11px;
+        }
+        .observation-section {
+            margin-top: 12px;
+            font-size: 11.5px;
+            display: {{showObservation}};
+        }
+        /* --- Footer / signatures --- */
         .footer-section {
-            border-top: 2px solid var(--border-color);
-            padding-top: 30px;
-            margin-top: 30px;
+            margin-top: 24px;
+            page-break-inside: avoid;
         }
         .signatures-grid {
             display: flex;
-            justify-content: space-around;
+            justify-content: center;
             align-items: flex-end;
-            gap: 40px;
-            margin-bottom: 40px;
-            min-height: 120px;
+            min-height: 80px;
         }
         .signature-box {
             text-align: center;
-            width: 45%;
+            width: 260px;
         }
-        .signature-line {
-            border-bottom: 1.5px solid #999;
-            height: 70px;
-            margin-bottom: 8px;
+        .signature-seal {
+            min-height: 55px;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-end;
+            margin-bottom: 3px;
+        }
+        .signature-seal img {
+            max-width: 115px;
+            max-height: 55px;
+            object-fit: contain;
+        }
+        .signature-line {
+            border-bottom: 1px solid #9AA3AF;
+            height: 40px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
         }
         .signature-line img {
             max-width: 100%;
-            max-height: 60px;
+            max-height: 44px;
             object-fit: contain;
         }
         .signature-text {
+            font-size: 10.5px;
+            font-weight: 500;
+            color: var(--secondary-color);
+            letter-spacing: 0.3px;
+        }
+        .doctor-info {
+            text-align: center;
+            margin-top: 4px;
+        }
+        .doctor-info .doctor-name {
             font-size: 11px;
-            font-weight: 600;
+            font-weight: 700;
+            color: #1A1D22;
+        }
+        .doctor-info .doctor-reg {
+            font-size: 9px;
             color: var(--secondary-color);
         }
-        .doctor-seal {
-            width: 130px;
-            height: 90px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin: 0 auto;
-        }
-        .doctor-seal img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-        .footer-text {
+        .footer-brand {
             text-align: center;
-            font-size: 10px;
-            color: #999;
+            font-size: 9px;
+            color: #9AA3AF;
             margin-top: 20px;
+            letter-spacing: 0.3px;
         }
     </style>
 </head>
@@ -270,26 +366,30 @@ export const certificateTemplate = `
                 {{branchInfo}}
             </div>
         </header>
+
         <h1 class="document-title">Certificado de Agudeza Visual</h1>
+        <p class="document-subtitle">Evaluación optométrica profesional</p>
+
         <section class="patient-info">
             <div>
-                <span class="info-label">Paciente:</span>
-                <span>{{patientName}}</span>
+                <span class="info-label">Paciente</span>
+                <span class="info-value">{{patientName}}</span>
             </div>
             <div>
-                <span class="info-label">Fecha de Emisión:</span>
-                <span>{{currentDate}}</span>
+                <span class="info-label">Fecha de emisión</span>
+                <span class="info-value">{{currentDate}}</span>
             </div>
         </section>
+
         <main class="main-content">
             <table class="measurements-table">
                 <thead>
                     <tr>
-                        <th>Rx FINAL</th>
-                        <th>ESFERA</th>
-                        <th>CILINDRO</th>
-                        <th>EJE</th>
-                        <th>PRISMA</th>
+                        <th style="text-align:left;">Rx Final</th>
+                        <th>Esfera</th>
+                        <th>Cilindro</th>
+                        <th>Eje</th>
+                        <th>Prisma</th>
                         <th>ADD</th>
                         <th>AV VL</th>
                         <th>AV VP</th>
@@ -324,53 +424,82 @@ export const certificateTemplate = `
                     </tr>
                 </tbody>
             </table>
+
             <div class="diagnosis-section">
-                <h2 class="section-title">Diagnóstico Profesional</h2>
+                <h2 class="section-title">Diagnóstico profesional</h2>
                 <div class="diagnosis-content">{{diagnosis}}</div>
             </div>
-            <h2 class="section-title">Pruebas de Capacidad Visual</h2>
+
+            <h2 class="section-title">Pruebas de capacidad visual</h2>
             <div class="vision-tests-grid">
                 <div class="vision-test">
-                    <h3 class="test-title">Visión Cercana</h3>
+                    <h3 class="test-title">Visión cercana</h3>
                     <p class="test-description">Capacidad de leer la escala 1 de la carta Jaeger.</p>
-                    <div class="test-result"><span class="{{nearVisionApproved}}">Aprobado</span></div>
-                    <div class="test-result"><span class="{{nearVisionNotApproved}}">No Aprobado</span></div>
-                    <div class="test-result"><span class="{{needsLensesNear}}">Precisa lentes correctores</span></div>
+                    <div class="test-result"><span class="radio-option {{nearVisionApproved}}">Aprobado</span></div>
+                    <div class="test-result"><span class="radio-option {{nearVisionNotApproved}}">No Aprobado</span></div>
+                    <div class="test-result"><span class="checkbox-option {{needsLensesNear}}">Precisa lentes correctores</span></div>
                 </div>
                 <div class="vision-test">
-                    <h3 class="test-title">Visión Lejana</h3>
+                    <h3 class="test-title">Visión lejana</h3>
                     <p class="test-description">Agudeza visual según la escala de SNELLEN.</p>
-                    <div class="test-result"><span class="{{farVision2020}}">Agudeza 20/20 o superior</span></div>
-                    <div class="test-result"><span class="{{farVisionLess2020}}">Agudeza menor a 20/20</span></div>
-                    <div class="test-result"><span class="{{needsLensesFar}}">Precisa lentes correctores</span></div>
+                    <div class="test-result"><span class="radio-option {{farVision2020}}">Agudeza 20/20 o superior</span></div>
+                    <div class="test-result"><span class="radio-option {{farVisionLess2020}}">Agudeza menor a 20/20</span></div>
+                    <div class="test-result"><span class="checkbox-option {{needsLensesFar}}">Precisa lentes correctores</span></div>
                 </div>
                 <div class="vision-test full-width">
-                    <h3 class="test-title">Percepción de Colores</h3>
+                    <h3 class="test-title">Percepción de colores</h3>
                     <div class="test-result">
-                        <span class="{{colorPerception}}">Demuestra capacidad para distinguir y diferenciar colores.</span>
+                        <span class="checkbox-option {{colorPerception}}">Demuestra capacidad para distinguir y diferenciar colores.</span>
                     </div>
                     <div class="color-issues">
-                        <strong>Presenta dificultad para distinguir los siguientes colores:</strong><br>
-                        {{colorIssues}}
+                        <strong>Presenta dificultad para distinguir los siguientes colores:</strong> {{colorIssues}}
                     </div>
+                </div>
+            </div>
+
+            <div class="clinical-section">
+                <h2 class="section-title">Patologías</h2>
+                <div class="pathology-row"><span class="eye">O.D</span> {{pathologyOD}}</div>
+                <div class="pathology-row"><span class="eye">O.I</span> {{pathologyOI}}</div>
+
+                <h2 class="section-title" style="margin-top:16px;">En consecuencia</h2>
+                <div class="prescription-choice">
+                    <span class="radio-option {{prescribesYes}}">Se prescribe</span>
+                    <span class="radio-option {{prescribesNo}}">No se prescribe</span>
+                </div>
+                <div class="treatment-list">
+                    <span class="checkbox-option {{treatmentOptometric}}">Tratamiento Optométrico y Ortóptico</span>
+                    <span class="checkbox-option {{treatmentOphthalmological}}">Tratamiento Oftalmológico</span>
+                    <span class="checkbox-option {{treatmentPermanentLenses}}">Lentes correctos permanentes</span>
+                    <span class="checkbox-option {{treatmentOccasionalLenses}}">Lentes correctores de uso ocasional</span>
+                    <span class="checkbox-option {{treatmentContactLenses}}">Lentes de Contacto</span>
+                </div>
+
+                <div class="observation-section">
+                    <span class="info-label">Observación</span>
+                    <div>{{observation}}</div>
                 </div>
             </div>
         </main>
+
         <footer class="footer-section">
             <div class="signatures-grid">
-                <div class="signature-box patient">
-                    <div class="signature-line">
-                        {{patientSignature}}
-                    </div>
-                    <div class="signature-text" style="font-weight: 400;">Firma</div>
-                </div>
                 <div class="signature-box professional">
-                    <div class="doctor-seal">
+                    <div class="signature-seal">
                         {{doctorSeal}}
                     </div>
+                    <div class="signature-line">
+                        {{doctorSignature}}
+                    </div>
+                    <div class="doctor-info">
+                        <div class="doctor-name">{{doctorName}}</div>
+                        <div class="doctor-reg">{{doctorCi}}</div>
+                        <div class="doctor-reg">{{doctorSenescyt}}</div>
+                    </div>
+                    <div class="signature-text">Firma y sello profesional</div>
                 </div>
             </div>
-           
+            <p class="footer-brand">Este documento certifica los resultados de la evaluación de agudeza visual realizada en la fecha indicada.</p>
         </footer>
     </div>
 </body>

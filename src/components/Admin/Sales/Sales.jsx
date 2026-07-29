@@ -667,6 +667,7 @@ const Sales = () => {
         onClose={() => setIsPaymentModalOpen(false)}
         formData={formData}
         onFormDataChange={handleFormDataChange}
+        grandTotal={grandTotal}
       />
     </Box>
   );

@@ -6,10 +6,12 @@ import {
   FormLabel,
   Input,
   Text,
+  Button,
+  Icon,
   useColorModeValue,
 } from "@chakra-ui/react";
 import React from "react";
-import { Banknote, CreditCard, ArrowRightLeft } from "lucide-react";
+import { Banknote, CreditCard, ArrowRightLeft, CheckCircle } from "lucide-react";
 
 const paymentMethods = [
   { icon: Banknote, label: "Efectivo", value: "efectivo" },
@@ -21,12 +23,13 @@ const paymentMethods = [
  * Selector de método de pago + abono. El total ya se ve en el resumen de la
  * venta (panel lateral), así que aquí no se repite un campo "Total" más.
  */
-const Total = ({ formData, setFormData }) => {
+const Total = ({ formData, setFormData, grandTotal }) => {
   const totalFrame = formData.total_p_frame > 0 ? formData.total_p_frame : formData.p_frame || 0;
   const totalLens = formData.total_p_lens > 0 ? formData.total_p_lens : formData.p_lens || 0;
-  const total = Number(totalFrame) + Number(totalLens);
+  // Si el padre pasa el total real (incluye accesorios), se usa ese; si no, se calcula local.
+  const total = typeof grandTotal === "number" ? grandTotal : Number(totalFrame) + Number(totalLens);
   const balance = formData.balance === "" ? 0 : parseFloat(formData.balance);
-  const credit = isNaN(balance) ? total : total - balance;
+  const credit = isNaN(balance) ? total : Math.max(0, total - balance);
 
   React.useEffect(() => {
     setFormData({ ...formData, total, credit });
@@ -39,6 +42,12 @@ const Total = ({ formData, setFormData }) => {
       setFormData({ ...formData, balance: value });
     }
   };
+
+  const handleFullPayment = () => {
+    setFormData({ ...formData, balance: total });
+  };
+
+  const isFullPayment = Number(balance) > 0 && Number(balance) >= total;
 
   const handleSelect = (method) => setFormData({ ...formData, payment_in: method });
   const isSelected = (method) => formData.payment_in === method;
@@ -88,7 +97,7 @@ const Total = ({ formData, setFormData }) => {
         </Text>
       )}
 
-      <SimpleGrid columns={2} spacing={4}>
+      <SimpleGrid columns={2} spacing={4} mb={3}>
         <FormControl>
           <FormLabel fontSize="xs" fontWeight="semibold">Abono</FormLabel>
           <Input
@@ -121,6 +130,21 @@ const Total = ({ formData, setFormData }) => {
           />
         </FormControl>
       </SimpleGrid>
+
+      <Button
+        size="sm"
+        w="full"
+        variant={isFullPayment ? "solid" : "outline"}
+        bg={isFullPayment ? "#00A88E" : "transparent"}
+        color={isFullPayment ? "white" : "#00A88E"}
+        borderColor="#00A88E"
+        _hover={{ bg: isFullPayment ? "#00967f" : activeBg }}
+        borderRadius="full"
+        leftIcon={<Icon as={CheckCircle} boxSize="14px" />}
+        onClick={handleFullPayment}
+      >
+        {isFullPayment ? "Pago completo ✓" : `Marcar como pago completo ($${total.toFixed(2)})`}
+      </Button>
     </Box>
   );
 };

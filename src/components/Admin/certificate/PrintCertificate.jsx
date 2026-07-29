@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from '../../../api/supabase';
-import { Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Input, Select, Stack, SimpleGrid, FormControl, FormLabel, Textarea, RadioGroup, Radio, Checkbox, Text, useColorModeValue, VStack } from '@chakra-ui/react';
+import { Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Input, Select, Stack, SimpleGrid, FormControl, FormLabel, Textarea, RadioGroup, Radio, Checkbox, Text, useColorModeValue, VStack, useToast } from '@chakra-ui/react';
 import PdfMeasures from "../PdfMeasures";
 import CertificateLogo from "./CertificateLogo";
 import CertificateFooter from "./CertificateFooter";
@@ -9,6 +9,7 @@ import SelloSelector from "./SelloSelector";
 import SignaturePadComponent from "../Sales/SignaturePadComponent";
 import { useAuth } from '../../AuthContext';
 import SmartHeader from "../../header/SmartHeader";
+import CertificateHistoryModal from "../CertificateHistoryModal";
 
 const PrintCertificate = () => {
   const [patients, setPatients] = useState([]);
@@ -18,8 +19,10 @@ const PrintCertificate = () => {
   const [searchTermPatients, setSearchTermPatients] = useState("");
   const [showColorIssuesInput, setShowColorIssuesInput] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const targetRef = useRef(null);
   const { user } = useAuth();
+  const toast = useToast();
 
   const [formData, setFormData] = useState({
     patient_id: "",
@@ -48,7 +51,17 @@ const PrintCertificate = () => {
     needs_lenses_far: false,
     color_perception: false,
     color_issues: "",
+    pathology_od: "",
+    pathology_oi: "",
+    prescribes_treatment: null,
+    treatment_optometric: false,
+    treatment_ophthalmological: false,
+    treatment_permanent_lenses: false,
+    treatment_occasional_lenses: false,
+    treatment_contact_lenses: false,
+    observation: "",
     created_at: "",
+    date: new Date().toISOString().slice(0, 10),
     branch_name: "",
     branch_address: "",
     branch_cell: "",
@@ -57,7 +70,8 @@ const PrintCertificate = () => {
 
   const navigate = useNavigate();
   const [tenantId, setTenantId] = useState(null);
-  const [doctorSeal, setDoctorSeal] = useState(null);
+  const [doctorInfo, setDoctorInfo] = useState(null);
+  const [showDoctorSignaturePad, setShowDoctorSignaturePad] = useState(false);
   const [footerInfo, setFooterInfo] = useState('');
   const diagnosisRef = useRef(null);
 
@@ -110,6 +124,19 @@ const PrintCertificate = () => {
       return;
     }
     setBranches(data);
+
+    // Se precarga la primera sucursal por defecto, así los datos de la
+    // óptica siempre aparecen en el certificado sin tener que elegirlos
+    // a mano cada vez (el admin igual puede cambiarla en el selector).
+    if (data && data.length > 0) {
+      setFormData(prev => ({
+        ...prev,
+        branch_name: prev.branch_name || data[0].name,
+        branch_address: prev.branch_address || data[0].address,
+        branch_cell: prev.branch_cell || data[0].cell,
+        branch_email: prev.branch_email || data[0].email,
+      }));
+    }
   };
 
   const handleSearchPatients = (e) => {
@@ -138,9 +165,10 @@ const PrintCertificate = () => {
       .from('rx_final')
       .select('*')
       .eq('patient_id', patient.id)
-      .order('created_at', { ascending: false })
+      .order('created_at', { ascending: false, nullsFirst: false })
+      .order('id', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error('Error fetching rx_final data:', error);
@@ -150,6 +178,9 @@ const PrintCertificate = () => {
       ...prev,
       ...data,
       patient_id: patient.id,
+      // La fecha de emisión del certificado es independiente de cuándo se
+      // tomó la medida; se conserva lo que el admin ya haya elegido.
+      date: prev.date,
     }));
   };
 
@@ -181,6 +212,56 @@ const PrintCertificate = () => {
         branch_email: ""
       }));
     }
+  };
+
+  /**
+   * Sugerencia automática de diagnóstico, basada en reglas ópticas estándar
+   * (no usa ningún servicio de IA externo, así que no genera ningún costo).
+   * Es solo un punto de partida: el doctor siempre puede editarlo o borrarlo.
+   */
+  const suggestDiagnosis = () => {
+    const parseVal = (v) => {
+      if (v === undefined || v === null || v === "") return 0;
+      const n = parseFloat(String(v).replace(",", "."));
+      return isNaN(n) ? 0 : n;
+    };
+
+    const sphereR = parseVal(formData.sphere_right);
+    const sphereL = parseVal(formData.sphere_left);
+    const cylR = parseVal(formData.cylinder_right);
+    const cylL = parseVal(formData.cylinder_left);
+
+    const describeEye = (sphere, cyl) => {
+      const parts = [];
+      if (sphere <= -0.25) {
+        parts.push(sphere <= -6 ? "Miopía alta" : sphere <= -3 ? "Miopía moderada" : "Miopía leve");
+      } else if (sphere >= 0.25) {
+        parts.push(sphere >= 5 ? "Hipermetropía alta" : sphere >= 2 ? "Hipermetropía moderada" : "Hipermetropía leve");
+      }
+      if (Math.abs(cyl) >= 0.25) parts.push("Astigmatismo");
+      return parts.length ? parts.join(" y ") : "Emetropía";
+    };
+
+    const odDiagnosis = describeEye(sphereR, cylR);
+    const oiDiagnosis = describeEye(sphereL, cylL);
+
+    let text;
+    if (odDiagnosis === "Emetropía" && oiDiagnosis === "Emetropía") {
+      text = "Paciente presenta Emetropía en ambos ojos. Se recomienda control anual.";
+    } else if (odDiagnosis === oiDiagnosis) {
+      text = `Paciente presenta ${odDiagnosis} en ambos ojos. Se recomienda uso de corrección óptica y control periódico.`;
+    } else {
+      text = `Ojo derecho (O.D): ${odDiagnosis}. Ojo izquierdo (O.I): ${oiDiagnosis}. Se recomienda uso de corrección óptica y control periódico.`;
+    }
+
+    setFormData((prev) => ({ ...prev, diagnosis: text }));
+    toast({
+      title: "Sugerencia generada",
+      description: "Revísala y ajústala según tu criterio profesional antes de emitir el certificado.",
+      status: "info",
+      duration: 4000,
+      isClosable: true,
+    });
   };
 
   const renderInputField = (label, name, type, isRequired = false) => (
@@ -314,6 +395,19 @@ const PrintCertificate = () => {
                   ))}
                 </Box>
               )}
+              {selectedPatient && (
+                <Text
+                  mt={2}
+                  fontSize="sm"
+                  color={accentColor}
+                  fontWeight="semibold"
+                  cursor="pointer"
+                  textDecoration="underline"
+                  onClick={() => setIsHistoryOpen(true)}
+                >
+                  Ver certificados anteriores
+                </Text>
+              )}
             </FormControl>
             {renderInputField("Fecha", "date", "date", true)}
           </SimpleGrid>
@@ -420,10 +514,15 @@ const PrintCertificate = () => {
             boxShadow={shadow}
             mb={6}
           >
-            <Heading size="md" mb={4} color={accentColor}>Su diagnóstico es:</Heading>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+              <Heading size="md" color={accentColor}>Su diagnóstico es:</Heading>
+              <Button size="sm" variant="outline" colorScheme="blue" onClick={suggestDiagnosis}>
+                Sugerir diagnóstico
+              </Button>
+            </Box>
             <Textarea
               ref={diagnosisRef}
-              placeholder="Escriba el diagnóstico del paciente"
+              placeholder="Escriba el diagnóstico del paciente, o use 'Sugerir diagnóstico' como punto de partida"
               value={formData.diagnosis}
               onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })}
               mb={4}
@@ -520,6 +619,108 @@ const PrintCertificate = () => {
           </Box>
 
           <Box
+            p={[4, 6, 8]}
+            maxWidth="1000px"
+            mx="auto"
+            border="1px solid"
+            borderColor={accentColor}
+            borderRadius="xl"
+            bg={sectionBg}
+            boxShadow={shadow}
+            mb={6}
+          >
+            <Heading size="md" mb={4} color={accentColor}>Patologías</Heading>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={6}>
+              <FormControl>
+                <FormLabel fontSize="sm">O.D</FormLabel>
+                <Input
+                  placeholder="No refiere"
+                  value={formData.pathology_od}
+                  onChange={(e) => setFormData({ ...formData, pathology_od: e.target.value })}
+                  bg={cardBg}
+                  borderColor={accentColor}
+                  _focus={{ borderColor: accentColor }}
+                />
+              </FormControl>
+              <FormControl>
+                <FormLabel fontSize="sm">O.I</FormLabel>
+                <Input
+                  placeholder="No refiere"
+                  value={formData.pathology_oi}
+                  onChange={(e) => setFormData({ ...formData, pathology_oi: e.target.value })}
+                  bg={cardBg}
+                  borderColor={accentColor}
+                  _focus={{ borderColor: accentColor }}
+                />
+              </FormControl>
+            </SimpleGrid>
+
+            <Heading size="sm" mb={2} color={accentColor}>En consecuencia</Heading>
+            <RadioGroup
+              value={formData.prescribes_treatment === null ? "" : formData.prescribes_treatment ? "yes" : "no"}
+              onChange={(val) => setFormData({ ...formData, prescribes_treatment: val === "yes" })}
+              mb={4}
+            >
+              <Stack direction={{ base: "column", sm: "row" }} spacing={[2, 6]}>
+                <Radio value="yes" colorScheme="blue">Se prescribe</Radio>
+                <Radio value="no" colorScheme="red">No se prescribe</Radio>
+              </Stack>
+            </RadioGroup>
+
+            {formData.prescribes_treatment && (
+              <Stack spacing={2} mb={6}>
+                <Checkbox
+                  isChecked={formData.treatment_optometric}
+                  onChange={(e) => setFormData({ ...formData, treatment_optometric: e.target.checked })}
+                  colorScheme="blue"
+                >
+                  Tratamiento Optométrico y Ortóptico
+                </Checkbox>
+                <Checkbox
+                  isChecked={formData.treatment_ophthalmological}
+                  onChange={(e) => setFormData({ ...formData, treatment_ophthalmological: e.target.checked })}
+                  colorScheme="blue"
+                >
+                  Tratamiento Oftalmológico
+                </Checkbox>
+                <Checkbox
+                  isChecked={formData.treatment_permanent_lenses}
+                  onChange={(e) => setFormData({ ...formData, treatment_permanent_lenses: e.target.checked })}
+                  colorScheme="blue"
+                >
+                  Lentes correctos permanentes
+                </Checkbox>
+                <Checkbox
+                  isChecked={formData.treatment_occasional_lenses}
+                  onChange={(e) => setFormData({ ...formData, treatment_occasional_lenses: e.target.checked })}
+                  colorScheme="blue"
+                >
+                  Lentes correctores de uso ocasional
+                </Checkbox>
+                <Checkbox
+                  isChecked={formData.treatment_contact_lenses}
+                  onChange={(e) => setFormData({ ...formData, treatment_contact_lenses: e.target.checked })}
+                  colorScheme="blue"
+                >
+                  Lentes de Contacto
+                </Checkbox>
+              </Stack>
+            )}
+
+            <FormControl>
+              <FormLabel fontSize="sm" fontWeight="bold" color={accentColor}>Observación</FormLabel>
+              <Input
+                placeholder="Ej. Control anual"
+                value={formData.observation}
+                onChange={(e) => setFormData({ ...formData, observation: e.target.value })}
+                bg={cardBg}
+                borderColor={accentColor}
+                _focus={{ borderColor: accentColor }}
+              />
+            </FormControl>
+          </Box>
+
+          <Box
             display="flex"
             flexDirection={{ base: "column", md: "row" }}
             gap={6}
@@ -529,19 +730,46 @@ const PrintCertificate = () => {
           >
             <Box
               flex="1"
-              maxW={{ base: "100%", md: "320px" }}
-              w="100%"
-              p={4}
-            >
-              <SignaturePadComponent onSave={(signatureDataUrl) => setFormData((prev) => ({ ...prev, signature: signatureDataUrl, }))} />
-            </Box>
-            <Box
-              flex="1"
               maxW={{ base: "100%", md: "420px" }}
               w="100%"
               p={4}
             >
-              <SelloSelector onSelect={setDoctorSeal} />
+              <SelloSelector onSelect={setDoctorInfo} />
+
+              {!showDoctorSignaturePad ? (
+                <Button
+                  size="sm"
+                  variant="link"
+                  colorScheme="blue"
+                  mt={3}
+                  onClick={() => setShowDoctorSignaturePad(true)}
+                >
+                  + Agregar firma digital del profesional (opcional)
+                </Button>
+              ) : (
+                <Box mt={3}>
+                  <Text fontSize="xs" color="gray.500" mb={1}>
+                    Si no la agregas, el certificado deja el espacio en blanco para firmar a mano al imprimir.
+                  </Text>
+                  <SignaturePadComponent
+                    onSave={(signatureDataUrl) =>
+                      setFormData((prev) => ({ ...prev, doctor_signature: signatureDataUrl }))
+                    }
+                  />
+                  <Button
+                    size="sm"
+                    variant="link"
+                    colorScheme="red"
+                    mt={2}
+                    onClick={() => {
+                      setShowDoctorSignaturePad(false);
+                      setFormData((prev) => ({ ...prev, doctor_signature: null }));
+                    }}
+                  >
+                    Quitar firma digital
+                  </Button>
+                </Box>
+              )}
             </Box>
           </Box>
 
@@ -557,8 +785,18 @@ const PrintCertificate = () => {
         }}
         selectedPatient={selectedPatient}
         tenantId={tenantId}
-        doctorSeal={doctorSeal}
+        doctorSeal={doctorInfo?.sealImage}
+        doctorName={doctorInfo?.name}
+        doctorCi={doctorInfo?.ci}
+        doctorSenescyt={doctorInfo?.senescyt}
         footerInfo={footerInfo}
+      />
+
+      <CertificateHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        patientId={selectedPatient?.id}
+        patientName={selectedPatient ? `${selectedPatient.pt_firstname} ${selectedPatient.pt_lastname}` : ""}
       />
     </Box>
   );

@@ -7,14 +7,16 @@ const SignaturePadComponent = ({ onSave }) => {
   const canvasRef = useRef(null);
   const signaturePadRef = useRef(null);
 
-  // Adaptive colors
-  const canvasBg = useColorModeValue("#fff", "#2D3748");
+  // La firma siempre se exporta en blanco/negro, sin importar el modo
+  // claro/oscuro de la app — el certificado se imprime en papel blanco,
+  // y una firma con fondo oscuro se ve como una caja negra en el PDF.
+  const canvasBg = "#ffffff";
+  const penColor = "#1A1A1A";
   const borderColor = useColorModeValue("gray.300", "gray.600");
   const boxShadow = useColorModeValue(
     "0 4px 16px rgba(0,0,0,0.10)",
     "0 4px 16px rgba(0,0,0,0.40)"
   );
-  const penColor = useColorModeValue("#222", "#fff");
 
   const initializeCanvas = () => {
     if (canvasRef.current) {
@@ -37,9 +39,7 @@ const SignaturePadComponent = ({ onSave }) => {
   useEffect(() => {
     const interval = setInterval(() => {
       const signatureDataUrl = getSignatureDataUrl();
-      if (signatureDataUrl) {
-        onSave(signatureDataUrl);
-      }
+      onSave(signatureDataUrl); // se avisa también cuando queda vacío (null)
     }, 1000);
 
     return () => clearInterval(interval);
@@ -57,6 +57,7 @@ const SignaturePadComponent = ({ onSave }) => {
       signaturePadRef.current.clear();
       initializeCanvas();
     }
+    onSave(null); // avisa de inmediato, no hay que esperar al intervalo
   };
 
   return (

@@ -447,20 +447,33 @@ const Sales = () => {
         if (prev.total !== newTotal) return { ...prev, total: newTotal };
         return prev;
       }
-      let updates = {};
+      // Con descuento activo, el total SIEMPRE se recalcula sumando los
+      // montos ya descontados de armazón y luna (antes se quedaba pegado
+      // en el total sin descuento porque nunca se volvía a sumar aquí).
+      const frameAmount =
+        prev.discount_frame > 0
+          ? Number(newTotals.total_p_frame ?? prev.total_p_frame ?? prev.p_frame)
+          : Number(prev.p_frame);
+      const lensAmount =
+        prev.discount_lens > 0
+          ? Number(newTotals.total_p_lens ?? prev.total_p_lens ?? prev.p_lens)
+          : Number(prev.p_lens);
+      const newTotal = frameAmount + lensAmount;
+
+      const updates = { total: newTotal };
       if (prev.discount_frame > 0 && newTotals.total_p_frame !== undefined) {
         updates.total_p_frame = Number(newTotals.total_p_frame);
       }
       if (prev.discount_lens > 0 && newTotals.total_p_lens !== undefined) {
         updates.total_p_lens = Number(newTotals.total_p_lens);
       }
-      if (
+
+      const changed =
+        prev.total !== updates.total ||
         (updates.total_p_frame !== undefined && prev.total_p_frame !== updates.total_p_frame) ||
-        (updates.total_p_lens !== undefined && prev.total_p_lens !== updates.total_p_lens)
-      ) {
-        return { ...prev, ...updates };
-      }
-      return prev;
+        (updates.total_p_lens !== undefined && prev.total_p_lens !== updates.total_p_lens);
+
+      return changed ? { ...prev, ...updates } : prev;
     });
   };
 
@@ -472,7 +485,15 @@ const Sales = () => {
   const isPaymentComplete = !!formData.payment_in && !!saleData.delivery_datetime;
   const isTermsComplete = !!formData.signature;
 
-  const discountTotal = (Number(formData.discount_frame) || 0) + (Number(formData.discount_lens) || 0);
+  const frameDiscountAmount =
+    Number(formData.discount_frame) > 0
+      ? Math.max(0, Number(formData.p_frame || 0) - Number(formData.total_p_frame || formData.p_frame || 0))
+      : 0;
+  const lensDiscountAmount =
+    Number(formData.discount_lens) > 0
+      ? Math.max(0, Number(formData.p_lens || 0) - Number(formData.total_p_lens || formData.p_lens || 0))
+      : 0;
+  const discountTotal = frameDiscountAmount + lensDiscountAmount;
   const accessoriesTotal = accessories.reduce((sum, a) => sum + a.unit_price * a.quantity, 0);
   const grandTotal = (Number(formData.total) || 0) + accessoriesTotal;
   const downPayment = Number(formData.balance) || 0;

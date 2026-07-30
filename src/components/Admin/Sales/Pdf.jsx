@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -183,7 +183,15 @@ const Pdf = ({ formData, onPdfUploaded }) => {
       setGenerating(false);
     }
   };
-    const handleSendWhatsApp = () => {
+
+  // Se genera solo, apenas aparece este componente (justo después de que la
+  // venta se registró) — ya no hace falta un clic extra para "Generar PDF".
+  useEffect(() => {
+    handleGeneratePdf();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSendWhatsApp = () => {
     if (!pdfUrl || !patientPhone) {
       toast({
         title: "Error",
@@ -241,27 +249,33 @@ const Pdf = ({ formData, onPdfUploaded }) => {
       mx="auto"
     >
       <VStack spacing={4}>
-        {/* Botón Generar PDF */}
-        <Button 
-          onClick={handleGeneratePdf} 
-          isLoading={generating}
-          colorScheme="blue"
-          size="lg"
-          width="100%"
-          leftIcon={<Icon as={pdfGenerated ? FaCheck : FaDownload} />}
-          isDisabled={pdfGenerated}
-        >
-          {generating ? "Generando PDF..." : pdfGenerated ? "PDF Generado ✓" : "Generar PDF"}
-        </Button>
-
-        {/* Loading indicator */}
+        {/* Progreso automático */}
         {generating && (
           <HStack>
             <Spinner size="sm" color="blue.500" />
             <Text fontSize="sm" color="gray.600">
-              Generando PDF y guardando en base de datos...
+              Generando el PDF de la venta automáticamente...
             </Text>
           </HStack>
+        )}
+
+        {pdfGenerated && (
+          <HStack color="green.500">
+            <Icon as={FaCheck} />
+            <Text fontSize="sm" fontWeight="semibold">PDF generado y guardado</Text>
+          </HStack>
+        )}
+
+        {!generating && !pdfGenerated && (
+          <Button
+            onClick={handleGeneratePdf}
+            colorScheme="blue"
+            size="lg"
+            width="100%"
+            leftIcon={<Icon as={FaDownload} />}
+          >
+            Reintentar generar PDF
+          </Button>
         )}
 
         {/* Botón WhatsApp */}

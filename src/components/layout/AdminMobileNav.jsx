@@ -198,9 +198,6 @@ const AdminMobileNav = () => {
           <Text fontSize="10px" mt={1}>Más</Text>
         </Flex>
       </Flex>
-
-      {/* Espaciador para que la bottom bar no tape contenido */}
-      <Box h="64px" />
     </Box>
   );
 };

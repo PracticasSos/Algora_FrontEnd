@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from '../../../api/supabase';
-import { Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Input, Select, Stack, SimpleGrid, FormControl, FormLabel, Textarea, RadioGroup, Radio, Checkbox, Text, useColorModeValue, VStack, useToast } from '@chakra-ui/react';
+import { Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Input, Select, Stack, SimpleGrid, FormControl, FormLabel, Textarea, RadioGroup, Radio, Checkbox, Text, useColorModeValue, VStack, HStack, useToast, Icon, Flex } from '@chakra-ui/react';
+import { Search, Eye, Stethoscope, ClipboardList, PenTool, Sparkles } from 'lucide-react';
 import PdfMeasures from "../PdfMeasures";
-import CertificateLogo from "./CertificateLogo";
 import CertificateFooter from "./CertificateFooter";
 import SelloSelector from "./SelloSelector";
 import SignaturePadComponent from "../Sales/SignaturePadComponent";
@@ -49,7 +49,7 @@ const PrintCertificate = () => {
     needs_lenses_near: false,
     far_vision: "",
     needs_lenses_far: false,
-    color_perception: false,
+    color_perception: null,
     color_issues: "",
     pathology_od: "",
     pathology_oi: "",
@@ -266,12 +266,16 @@ const PrintCertificate = () => {
 
   const renderInputField = (label, name, type, isRequired = false) => (
     <FormControl id={name} isRequired={isRequired}>
-      <FormLabel>{label}</FormLabel>
+      <FormLabel fontWeight="semibold" fontSize="sm" color={accentColor}>{label}</FormLabel>
       <Input
         type={type}
         name={name}
         value={formData[name] || ""}
         onChange={handleChange}
+        borderRadius="12px"
+        bg={sectionBg}
+        borderColor={borderColor}
+        _focus={{ borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor}` }}
       />
     </FormControl>
   );
@@ -304,10 +308,29 @@ const PrintCertificate = () => {
     }
   };
 
-  const accentColor = useColorModeValue('blue.500', 'blue.300');
-  const cardBg = useColorModeValue('white', 'gray.800');
-  const sectionBg = useColorModeValue('gray.100', 'gray.700');
-  const shadow = "0 4px 12px rgba(0,0,0,0.08)";
+  const ACCENT = '#00A88E';
+  const accentColor = ACCENT;
+  const cardBg = useColorModeValue('white', 'gray.700');
+  const sectionBg = useColorModeValue('gray.50', 'gray.700');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const subtitleColor = useColorModeValue('gray.500', 'gray.400');
+  const sectionIconBg = useColorModeValue('#E6FBF6', 'rgba(0,168,142,0.15)');
+  const shadow = useColorModeValue(
+    '0 20px 45px -20px rgba(0,168,142,0.25)',
+    '0 20px 45px -20px rgba(0,168,142,0.35)'
+  );
+
+  const SectionTitle = ({ icon, children }) => (
+    <Flex align="center" gap={3} mb={4}>
+      <Flex align="center" justify="center" boxSize="30px" borderRadius="10px" bg={sectionIconBg} color={ACCENT} flexShrink={0}>
+        <Icon as={icon} boxSize="15px" />
+      </Flex>
+      <Text fontWeight="bold" fontSize="sm" letterSpacing="wide" textTransform="uppercase" color={ACCENT} whiteSpace="nowrap">
+        {children}
+      </Text>
+      <Box flex="1" h="1px" bgGradient={`linear(to-r, ${sectionIconBg}, transparent)`} />
+    </Flex>
+  );
 
 
   return (
@@ -316,7 +339,7 @@ const PrintCertificate = () => {
       flexDirection="column"
       alignItems="center"
       minHeight="100dvh"
-      bg={useColorModeValue("gray.50", "gray.900")}
+      bgGradient={useColorModeValue('linear(to-br, gray.50, teal.50)', 'linear(to-br, gray.900, #0d1f1c)')}
       px={[2, 4, 8]}
     >
       <Box
@@ -326,7 +349,7 @@ const PrintCertificate = () => {
         minHeight="100dvh"
         p={[2, 4, 6]}
         w="100%"
-        maxW="1400px"
+        maxW="1050px"
       >
         <SmartHeader />
 
@@ -334,22 +357,45 @@ const PrintCertificate = () => {
           as="form"
           onSubmit={(e) => { e.preventDefault() }}
           width="100%"
-          maxWidth="1300px"
+          maxWidth="1050px"
           boxShadow={shadow}
-          borderRadius="xl"
-          p={[4, 6, 8]}
+          borderRadius="24px"
           bg={cardBg}
-          mb={6}
+          border={`1px solid ${borderColor}`}
+          overflow="hidden"
+          mb={4}
         >
-          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6} mb={4}>
+          <Box h="5px" bgGradient="linear(to-r, #00A88E, #2DD4BF, #00A88E)" />
+          <Box p={[3, 4, 5]}>
+          <HStack spacing={3} mb={5}>
+            <Box
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              boxSize="40px"
+              borderRadius="12px"
+              bgGradient="linear(to-br, #00A88E, #00786A)"
+              color="white"
+              boxShadow="0 6px 16px -4px rgba(0,168,142,0.5)"
+              flexShrink={0}
+            >
+              <Text fontWeight="bold" fontSize="lg">C</Text>
+            </Box>
+            <Heading size="md" fontWeight="800" color={useColorModeValue('gray.800', 'white')} letterSpacing="tight">
+              Nuevo Certificado
+            </Heading>
+          </HStack>
+          <SectionTitle icon={Search}>Paciente y Sucursal</SectionTitle>
+          <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mb={4}>
             <FormControl id="branch-select">
-              <FormLabel fontWeight="bold" color={accentColor}>Sucursal</FormLabel>
+              <FormLabel fontWeight="semibold" fontSize="sm" color={accentColor}>Sucursal</FormLabel>
               <Select
                 placeholder="Seleccione una sucursal"
                 onChange={handleBranchChange}
+                borderRadius="12px"
                 bg={sectionBg}
-                borderColor={accentColor}
-                _focus={{ borderColor: accentColor }}
+                borderColor={borderColor}
+                _focus={{ borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor}` }}
               >
                 {branches.map(branch => (
                   <option key={branch.id} value={branch.id}>{branch.name} </option>
@@ -358,21 +404,21 @@ const PrintCertificate = () => {
             </FormControl>
 
             <FormControl id="patient-search" position="relative">
-              <FormLabel fontWeight="bold" color={accentColor}>Buscar Paciente</FormLabel>
+              <FormLabel fontWeight="semibold" fontSize="sm" color={accentColor}>Buscar Paciente</FormLabel>
               <Input
                 type="text"
                 placeholder="Buscar por nombre..."
                 value={searchTermPatients}
                 onChange={handleSearchPatients}
+                borderRadius="12px"
                 bg={sectionBg}
-                borderColor={accentColor}
-                _focus={{ borderColor: accentColor }}
+                borderColor={borderColor}
+                _focus={{ borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor}` }}
               />
               {searchTermPatients && filteredPatients.length > 0 && (
                 <Box
-                  border="1px solid"
-                  borderColor={accentColor}
-                  borderRadius="md"
+                  border={`1px solid ${borderColor}`}
+                  borderRadius="12px"
                   mt={2}
                   maxHeight="150px"
                   overflowY="auto"
@@ -380,14 +426,14 @@ const PrintCertificate = () => {
                   position="absolute"
                   width="100%"
                   bg={cardBg}
-                  boxShadow={shadow}
+                  boxShadow="md"
                 >
                   {filteredPatients.map((patient) => (
                     <Box
                       key={patient.id}
                       p={2}
                       onClick={() => handleSelectPatient(patient)}
-                      _hover={{ bg: accentColor, color: "white", cursor: "pointer" }}
+                      _hover={{ bg: sectionIconBg, cursor: "pointer" }}
                       transition="background 0.2s"
                     >
                       {patient.pt_firstname} {patient.pt_lastname}
@@ -411,47 +457,34 @@ const PrintCertificate = () => {
             </FormControl>
             {renderInputField("Fecha", "date", "date", true)}
           </SimpleGrid>
+          </Box>
         </Box>
 
         <Box
           ref={targetRef}
           w="100%"
-          maxWidth="1300px"
-          p={[4, 6, 8]}
-          mt={6}
+          maxWidth="1050px"
+          p={[3, 4, 5]}
+          mt={4}
           boxShadow={shadow}
           borderRadius="xl"
           bg={cardBg}
         >
-          <CertificateLogo tenantId={tenantId} />
-
-          {formData.branch_name && (
-            <VStack spacing={0} my={4} alignItems="center" textAlign="center">
-              <Text fontWeight="bold" fontSize="xl" color={accentColor}>{formData.branch_name}</Text>
-              <Text fontSize="md">{formData.branch_address}</Text>
-              <Text fontSize="md">Cel: {formData.branch_cell}</Text>
-              <Text fontSize="md">Email: {formData.branch_email}</Text>
-            </VStack>
-          )}
-
-          <Heading mb={6} textAlign="center" fontSize={["2xl", "3xl", "4xl"]} color={accentColor} letterSpacing="wide">
-            Certificado de Agudeza Visual
-          </Heading>
-
-          <Box display={{ base: "none", lg: "block" }} overflowX="auto" mb={6}>
-            <Table variant="striped" colorScheme="blue" size="md" boxShadow={shadow} borderRadius="md">
+          <SectionTitle icon={ClipboardList}>Refracción — Rx Final</SectionTitle>
+          <Box display={{ base: "none", lg: "block" }} overflowX="auto" mb={4}>
+            <Table variant="simple" size="md" minW="920px">
               <Thead>
                 <Tr>
-                  <Th>Rx Final</Th>
-                  <Th>Esfera</Th>
-                  <Th>Cilindro</Th>
-                  <Th>Eje</Th>
-                  <Th>Prisma</Th>
-                  <Th>ADD</Th>
-                  <Th>AV VL</Th>
-                  <Th>AV VP</Th>
-                  <Th>DNP</Th>
-                  <Th>ALT</Th>
+                  <Th w="70px" whiteSpace="nowrap">Rx Final</Th>
+                  <Th textAlign="center" whiteSpace="nowrap">Esfera</Th>
+                  <Th textAlign="center" whiteSpace="nowrap">Cilindro</Th>
+                  <Th textAlign="center" whiteSpace="nowrap">Eje</Th>
+                  <Th textAlign="center" whiteSpace="nowrap">Prisma</Th>
+                  <Th textAlign="center" whiteSpace="nowrap">ADD</Th>
+                  <Th textAlign="center" whiteSpace="nowrap">AV VL</Th>
+                  <Th textAlign="center" whiteSpace="nowrap">AV VP</Th>
+                  <Th textAlign="center" whiteSpace="nowrap">DNP</Th>
+                  <Th textAlign="center" whiteSpace="nowrap">ALT</Th>
                 </Tr>
               </Thead>
               <Tbody>
@@ -464,10 +497,13 @@ const PrintCertificate = () => {
                           name={`${field}_${eye === 'OD' ? 'right' : 'left'}`}
                           value={formData[`${field}_${eye === 'OD' ? 'right' : 'left'}`] || ''}
                           onChange={handleChange}
-                          size="sm"
+                          size="md"
+                          minW="80px"
+                          textAlign="center"
+                          borderRadius="10px"
                           bg={sectionBg}
-                          borderColor={accentColor}
-                          _focus={{ borderColor: accentColor }}
+                          borderColor={borderColor}
+                          _focus={{ borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor}` }}
                         />
                       </Td>
                     ))}
@@ -477,9 +513,9 @@ const PrintCertificate = () => {
             </Table>
           </Box>
 
-          <Box display={{ base: "block", lg: "none" }} mb={6}>
+          <Box display={{ base: "block", lg: "none" }} mb={4}>
             {['OD', 'OI'].map((eye) => (
-              <Box key={eye} mb={6} p={4} borderWidth="1px" borderRadius="xl" bg={sectionBg} boxShadow={shadow}>
+              <Box key={eye} mb={4} p={4} borderWidth="1px" borderRadius="xl" bg={sectionBg} boxShadow={shadow}>
                 <Heading size="md" mb={3} color={accentColor}>
                   {eye === 'OD' ? 'Ojo Derecho (OD)' : 'Ojo Izquierdo (OI)'}
                 </Heading>
@@ -504,139 +540,144 @@ const PrintCertificate = () => {
           </Box>
 
           <Box
-            p={[4, 6, 8]}
+            p={[3, 4, 5]}
             maxWidth="1000px"
             mx="auto"
-            border="1px solid"
-            borderColor={accentColor}
-            borderRadius="xl"
+            border={`1px solid ${borderColor}`}
+            borderRadius="20px"
             bg={sectionBg}
-            boxShadow={shadow}
-            mb={6}
+            boxShadow="sm"
+            mb={4}
           >
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-              <Heading size="md" color={accentColor}>Su diagnóstico es:</Heading>
-              <Button size="sm" variant="outline" colorScheme="blue" onClick={suggestDiagnosis}>
+            <SectionTitle icon={ClipboardList}>Diagnóstico</SectionTitle>
+            <Flex justify="flex-end" mb={2}>
+              <Button size="sm" variant="outline" colorScheme="teal" borderRadius="10px" leftIcon={<Icon as={Sparkles} boxSize="14px" />} onClick={suggestDiagnosis}>
                 Sugerir diagnóstico
               </Button>
-            </Box>
+            </Flex>
             <Textarea
               ref={diagnosisRef}
               placeholder="Escriba el diagnóstico del paciente, o use 'Sugerir diagnóstico' como punto de partida"
               value={formData.diagnosis}
-              onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })}
+              onChange={(e) => setFormData(prev => ({ ...prev, diagnosis: e.target.value }))}
               mb={4}
               resize="none"
               minHeight="100px"
+              borderRadius="12px"
               style={{ overflow: "hidden" }}
               bg={cardBg}
-              borderColor={accentColor}
-              _focus={{ borderColor: accentColor }}
+              borderColor={borderColor}
+              _focus={{ borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor}` }}
             />
-            <Box mb={6}>
-              <Heading size="sm" mb={2} color={accentColor}>Visión cercana</Heading>
-              <Text mb={2} fontSize={["sm", "md"]}>
-                Capacidad de leer como mínimo, las letras de la escala 1 de la carta normalizada Jaeger...
-              </Text>
+
+            <SectionTitle icon={Eye}>Pruebas de capacidad visual</SectionTitle>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
+              <Box p={4} borderRadius="14px" bg={cardBg} border={`1px solid ${borderColor}`}>
+                <Text fontWeight="bold" mb={1} color={accentColor}>Visión cercana</Text>
+                <Text mb={2} fontSize="xs" color={subtitleColor}>
+                  Línea de la carta Jaeger hasta donde pudo leer (1 al 7).
+                </Text>
+                <HStack mb={2} maxW="140px">
+                  <Text fontWeight="bold" color={accentColor}>J</Text>
+                  <Input
+                    type="text"
+                    value={formData.near_vision_line ? formData.near_vision_line.replace("J", "") : ""}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9]/g, "");
+                      setFormData(prev => ({ ...prev, near_vision_line: raw ? `J${raw}` : "", }));
+                    }}
+                    placeholder="1-7"
+                    textAlign="center"
+                    borderRadius="10px"
+                    bg={sectionBg}
+                    borderColor={borderColor}
+                    _focus={{ borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor}` }}
+                  />
+                </HStack>
+                <Checkbox
+                  isChecked={formData.needs_lenses_near}
+                  onChange={(e) => setFormData(prev => ({ ...prev, needs_lenses_near: e.target.checked }))}
+                  colorScheme="teal"
+                >
+                  Precisa lentes
+                </Checkbox>
+              </Box>
+
+              <Box p={4} borderRadius="14px" bg={cardBg} border={`1px solid ${borderColor}`}>
+                <Text fontWeight="bold" mb={1} color={accentColor}>Visión lejana</Text>
+                <Text mb={2} fontSize="xs" color={subtitleColor}>Escala de SNELLEN.</Text>
+                <RadioGroup
+                  value={formData.far_vision}
+                  onChange={(val) => setFormData(prev => ({ ...prev, far_vision: val }))}
+                  mb={2}
+                >
+                  <Stack spacing={2}>
+                    <Radio value="20/20" colorScheme="teal">20/20 o superior</Radio>
+                    <Radio value="Menor a 20/20" colorScheme="red">Menor a 20/20</Radio>
+                  </Stack>
+                </RadioGroup>
+                <Checkbox
+                  isChecked={formData.needs_lenses_far}
+                  onChange={(e) => setFormData(prev => ({ ...prev, needs_lenses_far: e.target.checked }))}
+                  colorScheme="teal"
+                >
+                  Precisa lentes
+                </Checkbox>
+              </Box>
+            </SimpleGrid>
+
+            <Box mb={4} p={4} borderRadius="14px" bg={cardBg} border={`1px solid ${borderColor}`}>
+              <Text fontWeight="bold" mb={2} color={accentColor}>Percepción de colores</Text>
               <RadioGroup
-                value={formData.near_vision}
-                onChange={(val) => setFormData({ ...formData, near_vision: val })}
-                mb={2}
+                value={formData.color_perception === null ? "" : formData.color_perception ? "good" : "bad"}
+                onChange={(val) => setFormData(prev => ({ ...prev, color_perception: val === "good" }))}
               >
-                <Stack direction={{ base: "column", sm: "row" }} spacing={[2, 4, 6]}>
-                  <Radio value="Aprobado" colorScheme="blue">Aprobado</Radio>
-                  <Radio value="No Aprobado" colorScheme="red">No Aprobado</Radio>
+                <Stack spacing={3}>
+                  <Radio value="good" colorScheme="teal">
+                    Demuestra capacidad para distinguir y diferenciar los colores.
+                  </Radio>
+                  <Box>
+                    <Radio value="bad" colorScheme="red">
+                      Presenta dificultad para distinguir los siguientes colores:
+                    </Radio>
+                    {formData.color_perception === false && (
+                      <Input
+                        placeholder="Ej. rojo, verde..."
+                        value={formData.color_issues}
+                        onChange={(e) => setFormData(prev => ({ ...prev, color_issues: e.target.value }))}
+                        mt={2}
+                        ml={6}
+                        w="calc(100% - 24px)"
+                        borderRadius="10px"
+                        bg={sectionBg}
+                        borderColor={borderColor}
+                        _focus={{ borderColor: accentColor, boxShadow: `0 0 0 1px ${accentColor}` }}
+                      />
+                    )}
+                  </Box>
                 </Stack>
               </RadioGroup>
-              <Checkbox
-                isChecked={formData.needs_lenses_near}
-                onChange={(e) => setFormData({ ...formData, needs_lenses_near: e.target.checked })}
-                colorScheme="blue"
-              >
-                Precisa lentes
-              </Checkbox>
-            </Box>
-
-            <Box mb={6}>
-              <Heading size="sm" mb={2} color={accentColor}>Visión lejana</Heading>
-              <RadioGroup
-                value={formData.far_vision}
-                onChange={(val) => setFormData({ ...formData, far_vision: val })}
-                mb={2}
-              >
-                <Stack direction={{ base: "column", sm: "row" }} spacing={[2, 4, 6]}>
-                  <Radio value="20/20" colorScheme="blue">Mayor o igual a 20/20 en la escala SNELLEN</Radio>
-                  <Radio value="Menor a 20/20" colorScheme="red">Menor a 20/20</Radio>
-                </Stack>
-              </RadioGroup>
-              <Checkbox
-                isChecked={formData.needs_lenses_far}
-                onChange={(e) => setFormData({ ...formData, needs_lenses_far: e.target.checked })}
-                colorScheme="blue"
-              >
-                Precisa lentes
-              </Checkbox>
-            </Box>
-
-            <Box mb={6}>
-              <Heading size="sm" mb={2} color={accentColor}>Percepción de colores</Heading>
-              <Checkbox
-                isChecked={formData.color_perception}
-                onChange={(e) => setFormData({ ...formData, color_perception: e.target.checked })}
-                colorScheme="blue"
-              >
-                Ha demostrado capacidad para distinguir y diferenciar los colores.
-              </Checkbox>
-            </Box>
-
-            <Box mb={6}>
-              <Checkbox
-                isChecked={showColorIssuesInput}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setShowColorIssuesInput(checked);
-                  if (!checked) {
-                    setFormData({ ...formData, color_issues: "" });
-                  }
-                }}
-                colorScheme="red"
-              >
-                Tiene problemas para distinguir o diferenciar los siguientes colores.
-              </Checkbox>
-
-              {showColorIssuesInput && (
-                <Input
-                  placeholder="Especifique los colores con los que tiene problemas"
-                  value={formData.color_issues}
-                  onChange={(e) => setFormData({ ...formData, color_issues: e.target.value })}
-                  mt={2}
-                  bg={cardBg}
-                  borderColor={accentColor}
-                  _focus={{ borderColor: accentColor }}
-                />
-              )}
             </Box>
           </Box>
 
           <Box
-            p={[4, 6, 8]}
+            p={[3, 4, 5]}
             maxWidth="1000px"
             mx="auto"
-            border="1px solid"
-            borderColor={accentColor}
-            borderRadius="xl"
+            border={`1px solid ${borderColor}`}
+            borderRadius="20px"
             bg={sectionBg}
-            boxShadow={shadow}
-            mb={6}
+            boxShadow="sm"
+            mb={4}
           >
-            <Heading size="md" mb={4} color={accentColor}>Patologías</Heading>
-            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={6}>
+            <SectionTitle icon={Stethoscope}>Patologías</SectionTitle>
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
               <FormControl>
                 <FormLabel fontSize="sm">O.D</FormLabel>
                 <Input
                   placeholder="No refiere"
                   value={formData.pathology_od}
-                  onChange={(e) => setFormData({ ...formData, pathology_od: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, pathology_od: e.target.value }))}
                   bg={cardBg}
                   borderColor={accentColor}
                   _focus={{ borderColor: accentColor }}
@@ -647,7 +688,7 @@ const PrintCertificate = () => {
                 <Input
                   placeholder="No refiere"
                   value={formData.pathology_oi}
-                  onChange={(e) => setFormData({ ...formData, pathology_oi: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, pathology_oi: e.target.value }))}
                   bg={cardBg}
                   borderColor={accentColor}
                   _focus={{ borderColor: accentColor }}
@@ -658,49 +699,49 @@ const PrintCertificate = () => {
             <Heading size="sm" mb={2} color={accentColor}>En consecuencia</Heading>
             <RadioGroup
               value={formData.prescribes_treatment === null ? "" : formData.prescribes_treatment ? "yes" : "no"}
-              onChange={(val) => setFormData({ ...formData, prescribes_treatment: val === "yes" })}
+              onChange={(val) => setFormData(prev => ({ ...prev, prescribes_treatment: val === "yes" }))}
               mb={4}
             >
               <Stack direction={{ base: "column", sm: "row" }} spacing={[2, 6]}>
-                <Radio value="yes" colorScheme="blue">Se prescribe</Radio>
+                <Radio value="yes" colorScheme="teal">Se prescribe</Radio>
                 <Radio value="no" colorScheme="red">No se prescribe</Radio>
               </Stack>
             </RadioGroup>
 
             {formData.prescribes_treatment && (
-              <Stack spacing={2} mb={6}>
+              <Stack spacing={2} mb={4}>
                 <Checkbox
                   isChecked={formData.treatment_optometric}
-                  onChange={(e) => setFormData({ ...formData, treatment_optometric: e.target.checked })}
-                  colorScheme="blue"
+                  onChange={(e) => setFormData(prev => ({ ...prev, treatment_optometric: e.target.checked }))}
+                  colorScheme="teal"
                 >
                   Tratamiento Optométrico y Ortóptico
                 </Checkbox>
                 <Checkbox
                   isChecked={formData.treatment_ophthalmological}
-                  onChange={(e) => setFormData({ ...formData, treatment_ophthalmological: e.target.checked })}
-                  colorScheme="blue"
+                  onChange={(e) => setFormData(prev => ({ ...prev, treatment_ophthalmological: e.target.checked }))}
+                  colorScheme="teal"
                 >
                   Tratamiento Oftalmológico
                 </Checkbox>
                 <Checkbox
                   isChecked={formData.treatment_permanent_lenses}
-                  onChange={(e) => setFormData({ ...formData, treatment_permanent_lenses: e.target.checked })}
-                  colorScheme="blue"
+                  onChange={(e) => setFormData(prev => ({ ...prev, treatment_permanent_lenses: e.target.checked }))}
+                  colorScheme="teal"
                 >
                   Lentes correctos permanentes
                 </Checkbox>
                 <Checkbox
                   isChecked={formData.treatment_occasional_lenses}
-                  onChange={(e) => setFormData({ ...formData, treatment_occasional_lenses: e.target.checked })}
-                  colorScheme="blue"
+                  onChange={(e) => setFormData(prev => ({ ...prev, treatment_occasional_lenses: e.target.checked }))}
+                  colorScheme="teal"
                 >
                   Lentes correctores de uso ocasional
                 </Checkbox>
                 <Checkbox
                   isChecked={formData.treatment_contact_lenses}
-                  onChange={(e) => setFormData({ ...formData, treatment_contact_lenses: e.target.checked })}
-                  colorScheme="blue"
+                  onChange={(e) => setFormData(prev => ({ ...prev, treatment_contact_lenses: e.target.checked }))}
+                  colorScheme="teal"
                 >
                   Lentes de Contacto
                 </Checkbox>
@@ -712,7 +753,7 @@ const PrintCertificate = () => {
               <Input
                 placeholder="Ej. Control anual"
                 value={formData.observation}
-                onChange={(e) => setFormData({ ...formData, observation: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, observation: e.target.value }))}
                 bg={cardBg}
                 borderColor={accentColor}
                 _focus={{ borderColor: accentColor }}
@@ -723,10 +764,10 @@ const PrintCertificate = () => {
           <Box
             display="flex"
             flexDirection={{ base: "column", md: "row" }}
-            gap={6}
+            gap={4}
             justifyContent="center"
             alignItems={{ base: "center", md: "flex-start" }}
-            my={6}
+            my={4}
           >
             <Box
               flex="1"
@@ -734,13 +775,14 @@ const PrintCertificate = () => {
               w="100%"
               p={4}
             >
+              <SectionTitle icon={PenTool}>Firma y sello profesional</SectionTitle>
               <SelloSelector onSelect={setDoctorInfo} />
 
               {!showDoctorSignaturePad ? (
                 <Button
                   size="sm"
                   variant="link"
-                  colorScheme="blue"
+                  colorScheme="teal"
                   mt={3}
                   onClick={() => setShowDoctorSignaturePad(true)}
                 >

@@ -54,7 +54,7 @@ const CertificateLogo = ({ tenantId }) => {
 
   if (loading) {
     return (
-      <Center my={6}>
+      <Center my={2}>
         <Spinner size="lg" />
       </Center>
     );
@@ -62,14 +62,14 @@ const CertificateLogo = ({ tenantId }) => {
 
   if (!logoUrl) {
     return (
-      <Box textAlign="center" my={6}>
+      <Box textAlign="center" my={2}>
         <Text color="gray.500">Sin logo configurado</Text>
       </Box>
     );
   }
 
   return (
-    <Center my={6}>
+    <Center my={2}>
       <Image src={logoUrl} alt="Logo de la óptica" maxW="200px" />
     </Center>
   );

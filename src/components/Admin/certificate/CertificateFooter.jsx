@@ -36,41 +36,12 @@ const CertificateFooter = ({ currentUser, onFooterInfo }) => {
     fetchBranch();
   }, [currentUser?.branch_id]);
 
-  if (loading) {
-    return (
-      <Box textAlign="center" mt={10}>
-        <Spinner />
-      </Box>
-    );
-  }
+  if (loading || !branch) return null;
 
-  if (!branch) return null;
-
-  return (
-    <Box mt={10} pt={4} borderTop="1px solid #ccc" fontSize="sm">
-      <Flex direction="column" align="center" gap={2}>
-        <Flex align="center" gap={2}>
-          <Icon as={FaMapMarkerAlt} />
-          <Text>{branch.address}</Text>
-        </Flex>
-
-        <Flex align="center" gap={2}>
-          <Icon as={FaPhoneAlt} />
-          <Text>{branch.cell}</Text>
-        </Flex>
-
-        <Flex align="center" gap={2}>
-          <Icon as={FaEnvelope} />
-          <Text>{branch.email}</Text>
-        </Flex>
-
-        <Flex align="center" gap={4} mt={2}>
-          <Icon as={FaFacebook} boxSize={5} />
-          <Icon as={FaInstagram} boxSize={5} />
-        </Flex>
-      </Flex>
-    </Box>
-  );
+  // Ya no se muestra en pantalla — esta información completa (dirección,
+  // teléfono, redes) se ve en la Vista Previa y en el PDF final, mostrarla
+  // también aquí mientras se edita era redundante.
+  return null;
 };
 
 export default CertificateFooter;

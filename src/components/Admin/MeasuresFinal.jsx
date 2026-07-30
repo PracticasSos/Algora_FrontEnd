@@ -1,19 +1,35 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../api/supabase";
 import {
-  Box, Button, FormControl, Input, SimpleGrid, Heading,
+  Box, Button, Container, FormControl, FormLabel, Input, SimpleGrid, Heading,
   Table, Thead, Tbody, Tr, Th, Td, Textarea, RadioGroup,
-  Radio, Stack, Checkbox, Text, FormLabel, useColorModeValue,
-  HStack, useToast, Divider, Alert, AlertIcon, Icon, Badge
+  Radio, Stack, Checkbox, Text, useColorModeValue,
+  HStack, VStack, useToast, Alert, AlertIcon, Icon, Badge, Flex
 } from "@chakra-ui/react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaEye } from 'react-icons/fa';
+import { User, Eye, MessageSquare, Sparkles, ScanLine } from 'lucide-react';
 import SmartHeader from "../header/SmartHeader";
+import ScanRxModal from "./ScanRxModal";
 
-// NUEVO: Definimos una clave única para sessionStorage
+const ACCENT = '#00A88E';
+
+// Líneas estándar de la carta Jaeger, de más fina (J1) a más gruesa (J20).
+// El doctor elige hasta qué línea pudo leer el paciente, en vez de un simple
+// aprobado/no aprobado — así queda un dato clínico real, no solo binario.
+const JAEGER_LINES = ["J1", "J2", "J3", "J4", "J5", "J6", "J7"];
+// Umbral clínico común: J1-J5 se considera visión cercana funcional para
+// lectura normal. Se usa solo para completar el campo "Aprobado/No Aprobado"
+// que ya usa el certificado, sin pedirle al doctor llenarlo dos veces.
+const deriveNearVisionApproval = (line) => {
+  if (!line) return "";
+  const n = parseInt(line.replace("J", ""), 10);
+  if (isNaN(n)) return "";
+  return n <= 5 ? "Aprobado" : "No Aprobado";
+};
+
 const STORAGE_KEY = 'measuresFinalFormData';
 
-// NUEVO: Estado inicial por defecto (formulario vacío)
 const defaultInitialState = {
   patient_id: "",
   sphere_right: "",
@@ -36,53 +52,45 @@ const defaultInitialState = {
   alt_left: "",
   diagnosis: "",
   near_vision: "",
+  near_vision_line: "",
   needs_lenses_near: false,
   far_vision: "",
   needs_lenses_far: false,
-  color_perception: false,
+  color_perception: null,
   color_issues: "",
   created_at: ""
 };
 
-// NUEVO: Función para obtener el estado inicial
-// Intenta cargar desde sessionStorage, si falla o no existe, usa el estado por defecto.
 const getInitialFormData = () => {
   const savedData = sessionStorage.getItem(STORAGE_KEY);
   if (savedData) {
     try {
-      // Si hay datos guardados, los parseamos y los retornamos
       return JSON.parse(savedData);
     } catch (e) {
       console.error("Error al parsear datos de sessionStorage", e);
-      // Si hay un error (ej. JSON corrupto), limpiamos y usamos el estado por defecto
       sessionStorage.removeItem(STORAGE_KEY);
       return defaultInitialState;
     }
   }
-  // Si no hay nada guardado, usamos el estado por defecto
   return defaultInitialState;
 };
 
 const MeasuresFinal = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const { id } = useParams();
 
-  // MODIFICADO: Usamos la función getInitialFormData para inicializar el estado
   const [formData, setFormData] = useState(getInitialFormData);
-
   const [patients, setPatients] = useState([]);
   const [filteredPatients, setFilteredPatients] = useState([]);
   const [searchTermPatients, setSearchTermPatients] = useState("");
-
-  // MODIFICADO: Inicializamos este estado basado en los datos cargados
   const [showColorIssuesInput, setShowColorIssuesInput] = useState(
-    () => !!getInitialFormData().color_issues // true si color_issues tiene texto
+    () => !!getInitialFormData().color_issues
   );
-
   const [error, setError] = useState(null);
-  const { id } = useParams();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isScanOpen, setIsScanOpen] = useState(false);
 
-  // Definimos campos de medida (label para UI, key para formData)
   const measureFields = [
     { label: "Esfera", key: "sphere" },
     { label: "Cilindro", key: "cylinder" },
@@ -95,37 +103,36 @@ const MeasuresFinal = () => {
     { label: "ALT", key: "alt" },
   ];
 
-  // NUEVO: useEffect para guardar en sessionStorage CADA VEZ que formData cambie
   useEffect(() => {
-    // No guardamos si el formulario está en su estado inicial (ej. después de guardar)
-    // Opcional: puedes quitar esta condición si quieres guardar incluso el estado vacío.
     if (JSON.stringify(formData) !== JSON.stringify(defaultInitialState)) {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(formData));
     }
-  }, [formData]); // La dependencia es formData
+  }, [formData]);
 
+  // Si la URL trae un paciente específico (ej. vienes de "Guardar y Continuar
+  // a Medidas") y es DISTINTO al que hay en el formulario, siempre se
+  // prioriza el de la URL y se empieza en limpio. Antes, si quedaba un
+  // patient_id viejo pegado de una sesión anterior sin guardar, este bloqueo
+  // nunca dejaba entrar al paciente nuevo — ese era el bug.
   useEffect(() => {
-    if (id && patients.length > 0) {
-      // Verificamos si ya hay un patient_id cargado del storage
-      // para no sobrescribirlo si el usuario ya había seleccionado uno
-      const currentPatientId = formData.patient_id;
-      if (!currentPatientId) {
-        const found = patients.find(p => String(p.id) === String(id));
-        if (found) {
-          setFormData(f => ({ ...f, patient_id: found.id }));
-          setSearchTermPatients(`${found.pt_firstname} ${found.pt_lastname}`);
-          setFilteredPatients([]);
-        }
+    if (id && patients.length > 0 && String(formData.patient_id) !== String(id)) {
+      const found = patients.find(p => String(p.id) === String(id));
+      if (found) {
+        setFormData({ ...defaultInitialState, patient_id: found.id });
+        setSearchTermPatients(`${found.pt_firstname} ${found.pt_lastname}`);
+        setFilteredPatients([]);
+        setShowColorIssuesInput(false);
       }
     }
-  }, [id, patients, formData.patient_id]); // Agregamos formData.patient_id a las dependencias
+  }, [id, patients]);
 
   useEffect(() => {
     fetchData('patients', data => {
       setPatients(data);
       setFilteredPatients(data);
 
-      // Comprobamos si el formulario ya tiene un patient_id (cargado de sessionStorage)
+      if (id) return; // si hay id en la URL, lo maneja el efecto de arriba
+
       const currentPatientId = getInitialFormData().patient_id;
       if (currentPatientId) {
         const found = data.find(p => String(p.id) === String(currentPatientId));
@@ -133,27 +140,9 @@ const MeasuresFinal = () => {
           setSearchTermPatients(`${found.pt_firstname} ${found.pt_lastname}`);
           setFilteredPatients([]);
         }
-        return; // Salimos para no procesar lógicas de 'selectedPatient'
-      }
-
-      // Tu lógica existente de localStorage (si vienes de otra página)
-      const stored = localStorage.getItem('selectedPatient');
-      if (stored) {
-        const selected = JSON.parse(stored);
-        const found = data.find(
-          p =>
-            (selected.pt_ci && p.pt_ci === selected.pt_ci) ||
-            (p.pt_firstname === selected.pt_firstname && p.pt_lastname === selected.pt_lastname)
-        );
-        if (found) {
-          setFormData(f => ({ ...f, patient_id: found.id }));
-          setSearchTermPatients(`${found.pt_firstname} ${found.pt_lastname}`);
-          setFilteredPatients([]);
-        }
-        localStorage.removeItem('selectedPatient');
       }
     });
-  }, []); // Este efecto corre solo una vez al montar
+  }, []);
 
   const fetchData = async (table, setter) => {
     try {
@@ -167,8 +156,10 @@ const MeasuresFinal = () => {
         title: "Error",
         description: `No se pudieron obtener los datos de ${table}.`,
         status: "error",
+        variant: "left-accent",
         duration: 5000,
         isClosable: true,
+        containerStyle: { borderRadius: "14px", overflow: "hidden" },
       });
     }
   };
@@ -178,403 +169,554 @@ const MeasuresFinal = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // --- (El resto de tus manejadores handleSearchPatients, handlePatientSelect, etc. quedan igual) ---
-
   const handleSearchPatients = (e) => {
     const searchTerm = e.target.value.toLowerCase();
     setSearchTermPatients(searchTerm);
-
     setFilteredPatients(
       patients.filter((patient) => {
         const fullname = `${patient.pt_firstname} ${patient.pt_lastname}`.toLowerCase();
-        return (
-          fullname.includes(searchTerm) ||
-          patient.pt_ci?.toLowerCase().includes(searchTerm)
-        );
+        return fullname.includes(searchTerm) || patient.pt_ci?.toLowerCase().includes(searchTerm);
       })
     );
   };
 
   const handlePatientSelect = (patient) => {
-    setFormData({ ...formData, patient_id: patient.id });
+    // Cambiar de paciente a mano también empieza en limpio, para no
+    // arrastrar medidas de la persona anterior por accidente.
+    setFormData({ ...defaultInitialState, patient_id: patient.id });
     setSearchTermPatients(`${patient.pt_firstname} ${patient.pt_lastname}`);
     setFilteredPatients([]);
+    setShowColorIssuesInput(false);
   };
 
+  // Aplica los valores ya revisados/corregidos del modal de escaneo a la
+  // tabla principal. Solo llena los campos que el optómetra dejó con datos;
+  // si un campo del escaneo viene vacío, no borra lo que ya había escrito.
+  const handleApplyScan = (scannedGrid) => {
+    setFormData((prev) => {
+      const updated = { ...prev };
+      Object.entries(scannedGrid).forEach(([key, value]) => {
+        if (value !== "") updated[key] = value;
+      });
+      return updated;
+    });
+    toast({
+      title: "Valores aplicados",
+      description: "Revisa la tabla una vez más antes de guardar.",
+      status: "info",
+      variant: "left-accent",
+      duration: 4000,
+      isClosable: true,
+      containerStyle: { borderRadius: "14px", overflow: "hidden" },
+    });
+  };
+
+  const handleNearVisionLineChange = (line) => {
+    setFormData(prev => ({
+      ...prev,
+      near_vision_line: line,
+      near_vision: deriveNearVisionApproval(line),
+    }));
+  };
+
+  // Sugerencia automática de diagnóstico basada en reglas ópticas estándar
+  // (sin IA de pago ni servicio externo — gratis e instantáneo). El doctor
+  // siempre puede editar o borrar el texto sugerido.
+  const suggestDiagnosis = () => {
+    const parseVal = (v) => {
+      if (v === undefined || v === null || v === "") return 0;
+      const n = parseFloat(String(v).replace(",", "."));
+      return isNaN(n) ? 0 : n;
+    };
+    const sphereR = parseVal(formData.sphere_right);
+    const sphereL = parseVal(formData.sphere_left);
+    const cylR = parseVal(formData.cylinder_right);
+    const cylL = parseVal(formData.cylinder_left);
+
+    const describeEye = (sphere, cyl) => {
+      const parts = [];
+      if (sphere <= -0.25) {
+        parts.push(sphere <= -6 ? "Miopía alta" : sphere <= -3 ? "Miopía moderada" : "Miopía leve");
+      } else if (sphere >= 0.25) {
+        parts.push(sphere >= 5 ? "Hipermetropía alta" : sphere >= 2 ? "Hipermetropía moderada" : "Hipermetropía leve");
+      }
+      if (Math.abs(cyl) >= 0.25) parts.push("Astigmatismo");
+      return parts.length ? parts.join(" y ") : "Emetropía";
+    };
+
+    const odDiagnosis = describeEye(sphereR, cylR);
+    const oiDiagnosis = describeEye(sphereL, cylL);
+
+    let text;
+    if (odDiagnosis === "Emetropía" && oiDiagnosis === "Emetropía") {
+      text = "Paciente presenta Emetropía en ambos ojos. Se recomienda control anual.";
+    } else if (odDiagnosis === oiDiagnosis) {
+      text = `Paciente presenta ${odDiagnosis} en ambos ojos. Se recomienda uso de corrección óptica y control periódico.`;
+    } else {
+      text = `Ojo derecho (O.D): ${odDiagnosis}. Ojo izquierdo (O.I): ${oiDiagnosis}. Se recomienda uso de corrección óptica y control periódico.`;
+    }
+
+    setFormData(prev => ({ ...prev, diagnosis: text }));
+    toast({
+      title: "Sugerencia generada",
+      description: "Revísala y ajústala según tu criterio profesional.",
+      status: "info",
+      variant: "left-accent",
+      duration: 4000,
+      isClosable: true,
+      containerStyle: { borderRadius: "14px", overflow: "hidden" },
+    });
+  };
 
   const handleSubmit = async () => {
+    if (isSaving) return; // bloqueo real contra doble guardado
     if (!formData.patient_id) {
       toast({
-        title: "Campos obligatorios",
-        description: "Por favor completa los campos obligatorios.",
+        title: "Falta seleccionar paciente",
+        description: "Busca y selecciona un paciente antes de guardar.",
         status: "warning",
+        variant: "left-accent",
         duration: 5000,
         isClosable: true,
+        containerStyle: { borderRadius: "14px", overflow: "hidden" },
       });
       return;
     }
 
-    const newFormData = {
-      ...formData,
-      created_at: new Date().toISOString(),
-    };
+    setIsSaving(true);
+    const newFormData = { ...formData, created_at: new Date().toISOString() };
 
     try {
       const { data, error } = await supabase.from("rx_final").insert([newFormData]);
       if (error) throw error;
-      console.log("Medidas registradas:", data);
+
       toast({
-        title: "Éxito",
-        description: "Medidas registradas exitosamente.",
+        title: "¡Medidas registradas!",
+        description: "Se guardaron correctamente.",
         status: "success",
-        duration: 5000,
+        variant: "left-accent",
+        duration: 4000,
         isClosable: true,
+        containerStyle: { borderRadius: "14px", overflow: "hidden" },
       });
 
-      // NUEVO: Limpiamos el sessionStorage después de guardar exitosamente
       sessionStorage.removeItem(STORAGE_KEY);
-
-      // MODIFICADO: Reseteamos el formulario al estado inicial por defecto
       setFormData(defaultInitialState);
-
-      // Reseteamos también el buscador de pacientes y el input de color
       setSearchTermPatients("");
       setShowColorIssuesInput(false);
-
-    } catch (error) {
-      console.error("Error al registrar medidas:", error.message);
+    } catch (err) {
+      console.error("Error al registrar medidas:", err.message);
       toast({
         title: "Error",
         description: "Hubo un error al registrar las medidas.",
         status: "error",
+        variant: "left-accent",
         duration: 5000,
         isClosable: true,
+        containerStyle: { borderRadius: "14px", overflow: "hidden" },
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // --- (Tu función handleNavigate queda igual) ---
-
   const handleNavigate = (route = null) => {
-    const user = JSON.parse(localStorage.getItem('user'));
     if (route) {
       navigate(route);
       return;
     }
-    if (!user || !user.role_id) {
-      navigate('/LoginForm');
-      return;
-    }
-    switch (user.role_id) {
-      case 1:
-        navigate('/Admin');
-        break;
-      case 2:
-        navigate('/Optometra');
-        break;
-      case 3:
-        navigate('/Vendedor');
-        break;
-      case 4:
-        navigate('/SuperAdmin');
-        break;
-      default:
-        navigate('/');
-    }
+    navigate('/admin');
   };
 
   const moduleSpecificButton = null;
 
+  const cardBg = useColorModeValue('white', 'gray.700');
+  const inputBg = useColorModeValue('gray.50', 'gray.700');
+  const focusBg = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.200', 'gray.600');
+  const subtitleColor = useColorModeValue('gray.500', 'gray.400');
+  const sectionIconBg = useColorModeValue('#E6FBF6', 'rgba(0,168,142,0.15)');
+
+  const SectionTitle = ({ icon, children }) => (
+    <Flex align="center" gap={3} mb={4}>
+      <Flex align="center" justify="center" boxSize="30px" borderRadius="10px" bg={sectionIconBg} color={ACCENT} flexShrink={0}>
+        <Icon as={icon} boxSize="15px" />
+      </Flex>
+      <Text fontWeight="bold" fontSize="sm" letterSpacing="wide" textTransform="uppercase" color={ACCENT} whiteSpace="nowrap">
+        {children}
+      </Text>
+      <Box flex="1" h="1px" bgGradient={`linear(to-r, ${sectionIconBg}, transparent)`} />
+    </Flex>
+  );
+
+  const selectedPatient = patients.find(p => String(p.id) === String(formData.patient_id));
 
   return (
     <Box
-      display="flex"
-      flexDirection="column"
-      alignItems="center"
-      minHeight="100dvh"
-      bg={useColorModeValue("gray.50", "gray.900")}
-      p={[2, 4, 8]}
+      minHeight="100vh"
+      bgGradient={useColorModeValue('linear(to-br, gray.50, teal.50)', 'linear(to-br, gray.900, #0d1f1c)')}
     >
-      
-      {error && (
-        <Alert status="error" mb={4} borderRadius="md">
-          <AlertIcon />
-          {error}
-        </Alert>
-      )}
       <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-      <Box w="80%" pt={5} mb={4}>
-        <Heading
-          mb={2}
-          textAlign="center"
-          size="lg"
-          fontWeight="800"
-          color={useColorModeValue('teal.700', 'teal.300')}
-          pb={2}
-          letterSpacing="tight"
-        >
-          Registrar Medidas Finales
-        </Heading>
-        <Divider mb={2} />
-      </Box>
-      <Box
-        as="form"
-        onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
-        width="100%"
-        maxWidth="1200px"
-        boxShadow="2xl"
-        borderRadius="xl"
-        bg={useColorModeValue("white", "gray.800")}
-        p={[4, 8]}
-        mb={8}
-      >
-        <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} mb={6}>
-          <FormControl id="patient-search">
-            <FormLabel fontWeight="bold" color="teal.600" mb={1}>Buscar Paciente</FormLabel>
-            <Input
-              type="text"
-              placeholder="Buscar por nombre o CI..."
-              value={searchTermPatients}
-              onChange={handleSearchPatients}
-              size="lg"
-              borderColor="teal.300"
-              focusBorderColor="teal.500"
-              bg={useColorModeValue("gray.100", "gray.700")}
-            />
-            {searchTermPatients && (
-              <Box
-                border="1px solid #e2e8f0"
-                borderRadius="md"
-                mt={2}
-                maxHeight="180px"
-                overflowY="auto"
-                bg={useColorModeValue("white", "gray.700")}
-                M boxShadow="md"
-              >
-                {filteredPatients.map((patient) => (
-                  <Box
-                    key={patient.id}
-                    p={2}
-                    _hover={{ bg: "teal.50", cursor: "pointer" }}
-                    onClick={() => handlePatientSelect(patient)}
-                    borderBottom="1px solid #f1f1f1"
-                  >
-                    <HStack>
-                      <Icon as={FaEye} color="teal.400" />
-                      <Text fontWeight="500">{patient.pt_firstname} {patient.pt_lastname}</Text>
-                      <Badge colorScheme="teal" ml={2}>{patient.pt_ci}</Badge>
-                    </HStack>
-                  </Box>
-                ))}
-              </Box>
-            )}
-          </FormControl>
-        </SimpleGrid>
 
-        <Box display={{ base: "none", lg: "block" }} overflowX="auto" mb={6}>
-          <Table variant="striped" colorScheme="teal" size="md" borderRadius="xl">
-            <Thead bg={useColorModeValue("teal.100", "teal.900")}>
-              <Tr>
-                <Th>Rx Final</Th>
-                <Th>Esfera</Th>
-                <Th>Cilindro</Th>
-                nbsp;             <Th>Eje</Th>
-                <Th>Prisma</Th>
-                <Th>ADD</Th>
-                <Th>AV VL</Th>
-                <Th>AV VP</Th>
-                <Th>DNP</Th>
-                <Th>ALT</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {['OD', 'OI'].map((eye) => (
-                <Tr key={eye}>
-                  <Td fontWeight="bold" color="teal.600"> {eye}</Td>
-                  {measureFields.map(({ key }) => (
-                    <Td key={key}>
-                      <Input
-                        name={`${key}_${eye === 'OD' ? 'right' : 'left'}`}
-                        value={formData[`${key}_${eye === 'OD' ? 'right' : 'left'}`] || ""}
-                        onChange={handleChange}
-                        size="sm"
-                        borderColor="teal.200"
-                        bg={useColorModeValue("gray.50", "gray.700")}
-                        _focus={{ borderColor: "teal.400" }}
-                      />
-                    </Td>
-                  ))}
-                </Tr>
-              ))}
-            </Tbody>
-          </Table>
-        </Box>
-
-        <Box display={{ base: "block", lg: "none" }} mb={6}>
-          {['OD', 'OI'].map((eye) => (
-            <Box key={eye} mb={6} p={4} borderWidth="1px" borderRadius="lg" bg={useColorModeValue("gray.50", "gray.700")}>
-              <Heading size="sm" mb={3} color="teal.600">{eye === 'OD' ? 'Ojo Derecho (OD)' : 'Ojo Izquierdo (OI)'}</Heading>
-              <SimpleGrid columns={2} spacing={4}>
-                {measureFields.map(({ label, key }) => (
-                  <FormControl key={key}>
-                    <FormLabel fontSize="sm" color="teal.500">{label}</FormLabel>
-                    <Input
-                      name={`${key}_${eye === 'OD' ? 'right' : 'left'}`}
-                      value={formData[`${key}_${eye === 'OD' ? 'right' : 'left'}`] || ""}
-                      onChange={handleChange}
-                      size="sm"
-                      borderColor="teal.200"
-                      bg={useColorModeValue("white", "gray.800")}
-                      _focus={{ borderColor: "teal.400" }}
-                      t />
-                  </FormControl>
-                ))}
-              </SimpleGrid>
-            </Box>
-          ))}
-        </Box>
+      <Container maxW="1100px" py={8} px={{ base: 3, md: 6 }}>
+        {error && (
+          <Alert status="error" mb={4} borderRadius="12px">
+            <AlertIcon />
+            {error}
+          </Alert>
+        )}
 
         <Box
-          p={[4, 6]}
-          maxWidth="800px"
-          s mx="auto"
-          border="1px solid"
-          borderColor={useColorModeValue("teal.100", "teal.700")}
-          borderRadius="xl"
-          bg={useColorModeValue("gray.50", "gray.800")}
-          boxShadow="md"
+          as="form"
+          onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
+          width="100%"
+          borderRadius="24px"
+          bg={cardBg}
+          border={`1px solid ${borderColor}`}
+          boxShadow={useColorModeValue(
+            '0 20px 45px -20px rgba(0,168,142,0.25)',
+            '0 20px 45px -20px rgba(0,168,142,0.35)'
+          )}
+          overflow="hidden"
         >
-          <Heading size="md" mb={4} color="teal.700">Diagnóstico</Heading>
-          <Textarea
-            placeholder="Escriba el diagnóstico del paciente"
-            value={formData.diagnosis}
-            onChange={(e) => setFormData({ ...formData, diagnosis: e.target.value })}
-            mb={4}
-            size="lg"
-            borderColor="teal.200"
-            bg={useColorModeValue("white", "gray.700")}
-            _focus={{ borderColor: "teal.400" }}
-          />
-
-          <Divider mb={4} />
-
-          <Box mb={6}>
-            <Heading size="sm" mb={2} color="teal.600">Visión cercana</Heading>
-            <Text mb={2} fontSize={["sm", "md"]} color="gray.600">
-              Capacidad de leer como mínimo, las letras de la escala 1 de la carta normalizada Jaeger...
+          <Box h="5px" bgGradient="linear(to-r, #00A88E, #2DD4BF, #00A88E)" />
+          <Box p={{ base: 5, md: 10 }}>
+            <HStack spacing={3} mb={1}>
+              <Flex
+                align="center"
+                justify="center"
+                boxSize="44px"
+                borderRadius="14px"
+                bgGradient="linear(to-br, #00A88E, #00786A)"
+                color="white"
+                boxShadow="0 6px 16px -4px rgba(0,168,142,0.5)"
+              >
+                <Icon as={Eye} boxSize="20px" />
+              </Flex>
+              <Heading size="lg" fontWeight="800" color={useColorModeValue('gray.800', 'white')} letterSpacing="tight">
+                Registrar Medidas
+              </Heading>
+            </HStack>
+            <Text fontSize="sm" color={subtitleColor} mb={6} ml={{ base: 0, md: '56px' }}>
+              Busca al paciente, completa la refracción y el diagnóstico.
             </Text>
-            <RadioGroup
-              value={formData.near_vision}
-              onChange={(val) => setFormData({ ...formData, near_vision: val })}
-              mb={2}
-            >
-              <Stack direction={{ base: "column", sm: "row" }} spacing={[2, 4]}>
-                <Radio value="Aprobado" colorScheme="teal">Aprobado</Radio>
-                <Radio value="No Aprobado" colorScheme="red">No Aprobado</Radio>
-              </Stack>
-            </RadioGroup>
-            <Checkbox
-              isChecked={formData.needs_lenses_near}
-              onChange={(e) => setFormData({ ...formData, needs_lenses_near: e.target.checked })}
-              colorScheme="teal"
-              mt={2}
-            >
-              Precisa lentes
-            </Checkbox>
-          </Box>
 
-          <Divider mb={4} />
+            {/* --- Paciente --- */}
+            <Box mb={8}>
+              <SectionTitle icon={User}>Paciente</SectionTitle>
+              <FormControl id="patient-search" position="relative">
+                <FormLabel fontWeight="semibold" fontSize="sm">Buscar paciente</FormLabel>
+                <Input
+                  type="text"
+                  placeholder="Nombre o cédula..."
+                  value={searchTermPatients}
+                  onChange={handleSearchPatients}
+                  size="lg"
+                  borderRadius="12px"
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}`, bg: focusBg }}
+                />
+                {searchTermPatients && filteredPatients.length > 0 && (
+                  <Box
+                    border={`1px solid ${borderColor}`}
+                    borderRadius="12px"
+                    mt={2}
+                    maxHeight="200px"
+                    overflowY="auto"
+                    bg={cardBg}
+                    boxShadow="md"
+                    position="absolute"
+                    w="100%"
+                    zIndex={10}
+                  >
+                    {filteredPatients.map((patient) => (
+                      <Box
+                        key={patient.id}
+                        p={3}
+                        _hover={{ bg: sectionIconBg, cursor: "pointer" }}
+                        onClick={() => handlePatientSelect(patient)}
+                        borderBottom={`1px solid ${borderColor}`}
+                      >
+                        <HStack>
+                          <Icon as={FaEye} color={ACCENT} />
+                          <Text fontWeight="500">{patient.pt_firstname} {patient.pt_lastname}</Text>
+                          <Badge colorScheme="teal" ml={2}>{patient.pt_ci}</Badge>
+                        </HStack>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </FormControl>
+              {selectedPatient && (
+                <HStack mt={3} p={3} borderRadius="12px" bg={sectionIconBg}>
+                  <Icon as={FaEye} color={ACCENT} />
+                  <Text fontWeight="semibold" color={ACCENT}>
+                    {selectedPatient.pt_firstname} {selectedPatient.pt_lastname}
+                  </Text>
+                  <Badge colorScheme="teal">{selectedPatient.pt_ci}</Badge>
+                </HStack>
+              )}
+            </Box>
 
-          <Box mb={6}>
-            <Heading size="sm" mb={2} color="teal.600">Visión lejana</Heading>
-            <RadioGroup
-              value={formData.far_vision}
-              onChange={(val) => setFormData({ ...formData, far_vision: val })}
-              mb={2}
-            >
-              <Stack direction={{ base: "column", sm: "row" }} spacing={[2, 4]}>
-                <Radio value="20/20" colorScheme="teal">Mayor o igual a 20/20 en la escala SNELLEN</Radio>
-                <Radio value="Menor a 20/20" colorScheme="red">Menor a 20/20</Radio>
-              </Stack>
-            </RadioGroup>
-            <Checkbox
-              isChecked={formData.needs_lenses_far}
-              onChange={(e) => setFormData({ ...formData, needs_lenses_far: e.target.checked })}
-              colorScheme="teal"
-              mt={2}
-            >
-              Precisa lentes
-            </Checkbox>
-          </Box>
+            {/* --- Refracción (Rx Final) --- */}
+            <Box mb={8}>
+              <SectionTitle icon={Eye}>Refracción — Rx Final</SectionTitle>
+              <Flex justify="flex-end" mb={2}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorScheme="teal"
+                  leftIcon={<Icon as={ScanLine} boxSize="14px" />}
+                  onClick={() => setIsScanOpen(true)}
+                >
+                  Escanear receta
+                </Button>
+              </Flex>
 
-          <Divider mb={4} />
+              <Box display={{ base: "none", lg: "block" }} overflowX="auto">
+                <Table size="md" variant="simple" minW="920px">
+                  <Thead>
+                    <Tr>
+                      <Th w="70px" whiteSpace="nowrap">Rx Final</Th>
+                      {measureFields.map(({ label, key }) => (
+                        <Th key={key} textAlign="center" fontSize="xs" color={subtitleColor} whiteSpace="nowrap">{label}</Th>
+                      ))}
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {['OD', 'OI'].map((eye) => (
+                      <Tr key={eye}>
+                        <Td fontWeight="bold" color={ACCENT}>{eye}</Td>
+                        {measureFields.map(({ key }) => (
+                          <Td key={key} p={1}>
+                            <Input
+                              name={`${key}_${eye === 'OD' ? 'right' : 'left'}`}
+                              value={formData[`${key}_${eye === 'OD' ? 'right' : 'left'}`] || ""}
+                              onChange={handleChange}
+                              size="md"
+                              minW="80px"
+                              textAlign="center"
+                              borderRadius="10px"
+                              bg={inputBg}
+                              borderColor={borderColor}
+                              _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                            />
+                          </Td>
+                        ))}
+                      </Tr>
+                    ))}
+                  </Tbody>
+                </Table>
+              </Box>
 
-          <Box mb={6}>
-            <Heading size="sm" mb={2} color="teal.600">Percepción de colores</Heading>
-            <Checkbox
-              isChecked={formData.color_perception}
-              onChange={(e) => setFormData({ ...formData, color_perception: e.target.checked })}
-              colorScheme="teal"
-            >
-              Ha demostrado capacidad para distinguir y diferenciar los colores.
-            </Checkbox>
-          </Box>
+              <VStack display={{ base: "flex", lg: "none" }} spacing={4} align="stretch">
+                {['OD', 'OI'].map((eye) => (
+                  <Box key={eye} p={4} borderRadius="14px" border={`1px solid ${borderColor}`} bg={inputBg}>
+                    <Text fontWeight="bold" mb={3} color={ACCENT}>{eye === 'OD' ? 'Ojo Derecho (OD)' : 'Ojo Izquierdo (OI)'}</Text>
+                    <SimpleGrid columns={3} spacing={3}>
+                      {measureFields.map(({ label, key }) => (
+                        <FormControl key={key}>
+                          <FormLabel fontSize="xs" color={subtitleColor} mb={1}>{label}</FormLabel>
+                          <Input
+                            name={`${key}_${eye === 'OD' ? 'right' : 'left'}`}
+                            value={formData[`${key}_${eye === 'OD' ? 'right' : 'left'}`] || ""}
+                            onChange={handleChange}
+                            size="sm"
+                            textAlign="center"
+                            borderRadius="10px"
+                            bg={cardBg}
+                            borderColor={borderColor}
+                            _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                          />
+                        </FormControl>
+                      ))}
+                    </SimpleGrid>
+                  </Box>
+                ))}
+              </VStack>
+            </Box>
 
-          <Box mb={6}>
-            <Checkbox
-              isChecked={showColorIssuesInput}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                setShowColorIssuesInput(checked);
-                if (!checked) {
-                  setFormData({ ...formData, color_issues: "" });
-                }
-              }}
-              colorScheme="orange"
-            >
-              Tiene problemas para distinguir o diferenciar los siguientes colores.
-            </Checkbox>
-            {showColorIssuesInput && (
-              <Input
-                placeholder="Especifique los colores con los que tiene problemas"
-                value={formData.color_issues}
-                onChange={(e) =>
-                  setFormData({ ...formData, color_issues: e.target.value })
-                }
-                mt={2}
-                borderColor="orange.300"
-                bg={useColorModeValue("white", "gray.700")}
-                _focus={{ borderColor: "orange.400" }}
+            {/* --- Diagnóstico --- */}
+            <Box mb={8}>
+              <Flex justify="space-between" align="center" mb={4} flexWrap="wrap" gap={2}>
+                <SectionTitle icon={MessageSquare}>Diagnóstico</SectionTitle>
+              </Flex>
+              <Flex justify="flex-end" mb={2}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  colorScheme="teal"
+                  leftIcon={<Icon as={Sparkles} boxSize="14px" />}
+                  onClick={suggestDiagnosis}
+                >
+                  Sugerir diagnóstico
+                </Button>
+              </Flex>
+              <Textarea
+                placeholder="Escriba el diagnóstico, o use 'Sugerir diagnóstico' como punto de partida"
+                value={formData.diagnosis}
+                onChange={(e) => setFormData(prev => ({ ...prev, diagnosis: e.target.value }))}
+                borderRadius="12px"
+                size="lg"
+                minH="100px"
+                bg={inputBg}
+                borderColor={borderColor}
+                _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}`, bg: focusBg }}
               />
-            )}
-          </Box>
-          <Divider mb={4} />
+            </Box>
 
-          <Stack direction={{ base: "column", sm: "row" }} spacing={6} justify="center" mt={6}>
-            <Button
-              colorScheme="teal"
-              onClick={handleSubmit}
-              width={["100%", "auto"]}
-              size="lg"
-              fontWeight="bold"
-              boxShadow="md"
-            >
-              GUARDAR
-            </Button>
-            <Button
-              colorScheme="teal"
-              variant="outline"
-              onClick={() => handleNavigate(`/sales/${formData.patient_id}`)}
-              width={["100%", "auto"]}
-              size="lg"
-              fontWeight="bold"
-              boxShadow="md"
-            >
-              Realizar Venta
-            </Button>
-          </Stack>
+            {/* --- Pruebas visuales --- */}
+            <Box mb={8}>
+              <SectionTitle icon={Eye}>Pruebas de capacidad visual</SectionTitle>
+
+              <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+                <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
+                  <Text fontWeight="bold" mb={1} color={ACCENT}>Visión cercana</Text>
+                  <Text fontSize="xs" color={subtitleColor} mb={3}>
+                    Toca hasta qué línea de la carta Jaeger pudo leer.
+                  </Text>
+                  <Flex wrap="wrap" gap={2} mb={3}>
+                    {JAEGER_LINES.map((line) => {
+                      const isSelected = formData.near_vision_line === line;
+                      return (
+                        <Box
+                          key={line}
+                          as="button"
+                          type="button"
+                          onClick={() => handleNearVisionLineChange(line)}
+                          boxSize="38px"
+                          borderRadius="10px"
+                          border={isSelected ? `2px solid ${ACCENT}` : `1px solid ${borderColor}`}
+                          bg={isSelected ? sectionIconBg : cardBg}
+                          color={isSelected ? ACCENT : undefined}
+                          fontWeight={isSelected ? "bold" : "medium"}
+                          fontSize="sm"
+                          _hover={{ borderColor: ACCENT }}
+                          transition="all 0.15s ease"
+                        >
+                          {line.replace("J", "")}
+                        </Box>
+                      );
+                    })}
+                    <Box
+                      as="button"
+                      type="button"
+                      onClick={() => handleNearVisionLineChange("No lee")}
+                      px={3}
+                      h="38px"
+                      borderRadius="10px"
+                      border={formData.near_vision_line === "No lee" ? `2px solid #E53E3E` : `1px solid ${borderColor}`}
+                      bg={formData.near_vision_line === "No lee" ? "red.50" : cardBg}
+                      color={formData.near_vision_line === "No lee" ? "red.500" : undefined}
+                      fontWeight="medium"
+                      fontSize="xs"
+                      _hover={{ borderColor: "red.400" }}
+                      transition="all 0.15s ease"
+                    >
+                      No lee
+                    </Box>
+                  </Flex>
+                  <Checkbox
+                    isChecked={formData.needs_lenses_near}
+                    onChange={(e) => setFormData(prev => ({ ...prev, needs_lenses_near: e.target.checked }))}
+                    colorScheme="teal"
+                  >
+                    Precisa lentes
+                  </Checkbox>
+                </Box>
+
+                <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
+                  <Text fontWeight="bold" mb={1} color={ACCENT}>Visión lejana</Text>
+                  <Text fontSize="xs" color={subtitleColor} mb={3}>Escala de Snellen.</Text>
+                  <RadioGroup
+                    value={formData.far_vision}
+                    onChange={(val) => setFormData(prev => ({ ...prev, far_vision: val }))}
+                    mb={3}
+                  >
+                    <Stack spacing={2}>
+                      <Radio value="20/20" colorScheme="teal">20/20 o superior</Radio>
+                      <Radio value="Menor a 20/20" colorScheme="red">Menor a 20/20</Radio>
+                    </Stack>
+                  </RadioGroup>
+                  <Checkbox
+                    isChecked={formData.needs_lenses_far}
+                    onChange={(e) => setFormData(prev => ({ ...prev, needs_lenses_far: e.target.checked }))}
+                    colorScheme="teal"
+                  >
+                    Precisa lentes
+                  </Checkbox>
+                </Box>
+              </SimpleGrid>
+
+              <Box mt={4} p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
+                <Text fontWeight="bold" mb={2} color={ACCENT}>Percepción de colores</Text>
+                <RadioGroup
+                  value={formData.color_perception === null ? "" : formData.color_perception ? "good" : "bad"}
+                  onChange={(val) => setFormData(prev => ({ ...prev, color_perception: val === "good" }))}
+                >
+                  <Stack spacing={3}>
+                    <Radio value="good" colorScheme="teal">
+                      Demuestra capacidad para distinguir y diferenciar los colores.
+                    </Radio>
+                    <Box>
+                      <Radio value="bad" colorScheme="red">
+                        Presenta dificultad para distinguir los siguientes colores:
+                      </Radio>
+                      {formData.color_perception === false && (
+                        <Input
+                          placeholder="Ej. rojo, verde..."
+                          value={formData.color_issues}
+                          onChange={(e) => setFormData(prev => ({ ...prev, color_issues: e.target.value }))}
+                          mt={2}
+                          ml={6}
+                          w="calc(100% - 24px)"
+                          borderRadius="10px"
+                          bg={cardBg}
+                          borderColor={borderColor}
+                          _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                        />
+                      )}
+                    </Box>
+                  </Stack>
+                </RadioGroup>
+              </Box>
+            </Box>
+
+            <Stack direction={{ base: "column", sm: "row" }} spacing={3} justify="flex-end" pt={2} borderTop={`1px solid ${borderColor}`} mt={2}>
+              <Button
+                variant="outline"
+                onClick={() => handleNavigate(`/sales/${formData.patient_id}`)}
+                size="lg"
+                borderRadius="12px"
+                px={8}
+              >
+                Realizar Venta
+              </Button>
+              <Button
+                type="submit"
+                bg={ACCENT}
+                color="white"
+                _hover={{ bg: '#00967f' }}
+                size="lg"
+                borderRadius="12px"
+                px={8}
+                isLoading={isSaving}
+                loadingText="Guardando..."
+                isDisabled={isSaving}
+              >
+                Guardar Medidas
+              </Button>
+            </Stack>
+          </Box>
         </Box>
-      </Box>
+      </Container>
+
+      <ScanRxModal
+        isOpen={isScanOpen}
+        onClose={() => setIsScanOpen(false)}
+        onApply={handleApplyScan}
+      />
     </Box>
   );
 };

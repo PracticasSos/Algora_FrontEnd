@@ -200,57 +200,14 @@ export const certificateTemplate = `
             font-size: 11.5px;
             color: var(--secondary-color);
         }
-        .radio-option, .checkbox-option {
-            display: inline-flex;
-            align-items: center;
-        }
-        .radio-option::before {
-            content: "";
-            width: 11px;
-            height: 11px;
-            border: 1.5px solid #B7BFCA;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
-            flex-shrink: 0;
-        }
-        .checkbox-option::before {
-            content: "";
-            width: 11px;
-            height: 11px;
-            border: 1.5px solid #B7BFCA;
-            border-radius: 3px;
-            display: inline-block;
-            margin-right: 8px;
-            flex-shrink: 0;
-        }
-        .radio-option.radio-checked,
-        .checkbox-option.checkbox-checked {
+        .option-label.option-checked {
             color: #1A1D22;
             font-weight: 600;
         }
-        .radio-option.radio-checked::before {
-            border-color: var(--primary-color);
-            background: radial-gradient(var(--primary-color) 0%, var(--primary-color) 45%, transparent 50%);
-        }
-        .checkbox-option.checkbox-checked::before {
-            content: "✓";
-            border-color: var(--primary-color);
-            background: var(--primary-color);
-            color: #fff;
-            font-size: 8.5px;
-            line-height: 11px;
-            text-align: center;
-        }
-        .color-issues {
-            margin-top: 8px;
-            padding-left: 19px;
-            font-size: 9.5px;
-            color: var(--secondary-color);
-            display: {{showColorIssues}};
-        }
-        .color-issues strong {
-            color: #1A1D22;
+        .option-check {
+            color: var(--primary-color);
+            font-weight: 700;
+            margin-left: 4px;
         }
         /* --- Patologías / Prescripción / Observación --- */
         .clinical-section {
@@ -280,7 +237,7 @@ export const certificateTemplate = `
             row-gap: 6px;
             column-gap: 20px;
         }
-        .treatment-list .checkbox-option {
+        .treatment-list .option-label {
             font-size: 11px;
         }
         .observation-section {
@@ -434,25 +391,23 @@ export const certificateTemplate = `
             <div class="vision-tests-grid">
                 <div class="vision-test">
                     <h3 class="test-title">Visión cercana</h3>
-                    <p class="test-description">Capacidad de leer la escala 1 de la carta Jaeger.</p>
-                    <div class="test-result"><span class="radio-option {{nearVisionApproved}}">Aprobado</span></div>
-                    <div class="test-result"><span class="radio-option {{nearVisionNotApproved}}">No Aprobado</span></div>
-                    <div class="test-result"><span class="checkbox-option {{needsLensesNear}}">Precisa lentes correctores</span></div>
+                    <p class="test-description">Última línea legible de la carta Jaeger: <b style="color:var(--primary-dark); font-style: normal;">{{nearVisionLine}}</b>.</p>
+                    <div class="test-result"><span class="option-label {{needsLensesNear}}">Precisa lentes correctores{{needsLensesNearCheck}}</span></div>
                 </div>
                 <div class="vision-test">
                     <h3 class="test-title">Visión lejana</h3>
                     <p class="test-description">Agudeza visual según la escala de SNELLEN.</p>
-                    <div class="test-result"><span class="radio-option {{farVision2020}}">Agudeza 20/20 o superior</span></div>
-                    <div class="test-result"><span class="radio-option {{farVisionLess2020}}">Agudeza menor a 20/20</span></div>
-                    <div class="test-result"><span class="checkbox-option {{needsLensesFar}}">Precisa lentes correctores</span></div>
+                    <div class="test-result"><span class="option-label {{farVision2020}}">Agudeza 20/20 o superior{{farVision2020Check}}</span></div>
+                    <div class="test-result"><span class="option-label {{farVisionLess2020}}">Agudeza menor a 20/20{{farVisionLess2020Check}}</span></div>
+                    <div class="test-result"><span class="option-label {{needsLensesFar}}">Precisa lentes correctores{{needsLensesFarCheck}}</span></div>
                 </div>
                 <div class="vision-test full-width">
                     <h3 class="test-title">Percepción de colores</h3>
                     <div class="test-result">
-                        <span class="checkbox-option {{colorPerception}}">Demuestra capacidad para distinguir y diferenciar colores.</span>
+                        <span class="option-label {{colorPerceptionGood}}">Demuestra capacidad para distinguir y diferenciar los colores.{{colorPerceptionGoodCheck}}</span>
                     </div>
-                    <div class="color-issues">
-                        <strong>Presenta dificultad para distinguir los siguientes colores:</strong> {{colorIssues}}
+                    <div class="test-result">
+                        <span class="option-label {{colorPerceptionBad}}">Presenta dificultad para distinguir los siguientes colores: {{colorIssues}}{{colorPerceptionBadCheck}}</span>
                     </div>
                 </div>
             </div>
@@ -464,15 +419,15 @@ export const certificateTemplate = `
 
                 <h2 class="section-title" style="margin-top:16px;">En consecuencia</h2>
                 <div class="prescription-choice">
-                    <span class="radio-option {{prescribesYes}}">Se prescribe</span>
-                    <span class="radio-option {{prescribesNo}}">No se prescribe</span>
+                    <span class="option-label {{prescribesYes}}">Se prescribe{{prescribesYesCheck}}</span>
+                    <span class="option-label {{prescribesNo}}">No se prescribe{{prescribesNoCheck}}</span>
                 </div>
                 <div class="treatment-list">
-                    <span class="checkbox-option {{treatmentOptometric}}">Tratamiento Optométrico y Ortóptico</span>
-                    <span class="checkbox-option {{treatmentOphthalmological}}">Tratamiento Oftalmológico</span>
-                    <span class="checkbox-option {{treatmentPermanentLenses}}">Lentes correctos permanentes</span>
-                    <span class="checkbox-option {{treatmentOccasionalLenses}}">Lentes correctores de uso ocasional</span>
-                    <span class="checkbox-option {{treatmentContactLenses}}">Lentes de Contacto</span>
+                    <span class="option-label {{treatmentOptometric}}">Tratamiento Optométrico y Ortóptico{{treatmentOptometricCheck}}</span>
+                    <span class="option-label {{treatmentOphthalmological}}">Tratamiento Oftalmológico{{treatmentOphthalmologicalCheck}}</span>
+                    <span class="option-label {{treatmentPermanentLenses}}">Lentes correctos permanentes{{treatmentPermanentLensesCheck}}</span>
+                    <span class="option-label {{treatmentOccasionalLenses}}">Lentes correctores de uso ocasional{{treatmentOccasionalLensesCheck}}</span>
+                    <span class="option-label {{treatmentContactLenses}}">Lentes de Contacto{{treatmentContactLensesCheck}}</span>
                 </div>
 
                 <div class="observation-section">

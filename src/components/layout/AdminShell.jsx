@@ -34,7 +34,11 @@ const AdminShell = ({ children }) => {
       <AdminMobileNav />
 
       {/* Contenido de la página */}
-      <Box ml={{ base: 0, md: COLLAPSED_W }}>{children}</Box>
+      <Box ml={{ base: 0, md: COLLAPSED_W }}>
+        {children}
+        {/* Espacio para que la bottom bar móvil no tape el final del contenido */}
+        <Box h={{ base: "64px", md: 0 }} display={{ base: "block", md: "none" }} />
+      </Box>
     </Box>
   );
 };

@@ -24,12 +24,14 @@ import {
   Alert,
   AlertIcon,
   AlertDescription,
+  Checkbox,
+  Collapse,
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import PhoneInput from 'react-phone-input-2';
 import 'react-phone-input-2/lib/style.css';
 import { FaEye } from 'react-icons/fa';
-import { User, MapPin, Cake, Stethoscope } from 'lucide-react';
+import { User, MapPin, Cake, Stethoscope, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import SmartHeader from '../header/SmartHeader';
 
@@ -66,6 +68,7 @@ const RegisterPatientForm = () => {
     pt_phone: '',
     pt_birthdate: '',
     pt_birthdate_approx: false,
+    pt_data_consent: false,
     pt_age: '',
     pt_ci: '',
     pt_city: '',
@@ -79,6 +82,7 @@ const RegisterPatientForm = () => {
 
   const [branches, setBranches] = useState([]);
   const [errors, setErrors] = useState({});
+  const [showDataPolicyText, setShowDataPolicyText] = useState(false);
   const [existingPatientId, setExistingPatientId] = useState(null);
   const [checkingCi, setCheckingCi] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -170,6 +174,10 @@ const RegisterPatientForm = () => {
       newErrors.pt_email = 'El formato del correo no es válido.';
     }
 
+    if (!formData.pt_data_consent) {
+      newErrors.pt_data_consent = 'Debe aceptar el tratamiento de datos personales para continuar.';
+    }
+
     return newErrors;
   };
 
@@ -258,7 +266,12 @@ const RegisterPatientForm = () => {
         return null;
       }
 
-      const { id, ...dataToSave } = formData; // nunca reenviar un "id" viejo en un insert
+      const { id, ...rest } = formData; // nunca reenviar un "id" viejo en un insert
+      const dataToSave = {
+        ...rest,
+        pt_data_consent_at: formData.pt_data_consent ? new Date().toISOString() : null,
+        last_visit_at: new Date().toISOString(),
+      };
 
       const { data, error } = existingPatientId
         ? await supabase.from('patients').update(dataToSave).eq('id', existingPatientId).select()
@@ -340,6 +353,7 @@ const RegisterPatientForm = () => {
       pt_phone: '',
       pt_birthdate: '',
       pt_birthdate_approx: false,
+      pt_data_consent: false,
       pt_age: '',
       pt_ci: '',
       pt_city: '',
@@ -691,6 +705,60 @@ const RegisterPatientForm = () => {
                 {renderTextareaField('Razón de Consulta', 'pt_consultation_reason', errors.pt_consultation_reason)}
                 {renderTextareaField('Recomendaciones', 'pt_recommendations', errors.pt_recommendations)}
               </VStack>
+            </Box>
+
+            {/* --- Protección de Datos --- */}
+            <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${errors.pt_data_consent ? 'red' : borderColor}`}>
+              <SectionTitle icon={ShieldCheck}>Protección de datos</SectionTitle>
+              <Text fontSize="sm" color={subtitleColor} mb={3}>
+                Antes de continuar, el paciente debe aceptar el tratamiento de sus datos personales.
+              </Text>
+              <Box mb={3}>
+                <Button
+                  size="xs"
+                  variant="link"
+                  colorScheme="teal"
+                  onClick={() => setShowDataPolicyText((v) => !v)}
+                >
+                  {showDataPolicyText ? 'Ocultar detalle' : 'Leer el texto completo'}
+                </Button>
+              </Box>
+              <Collapse in={showDataPolicyText} animateOpacity>
+                <Box
+                  fontSize="xs"
+                  color={subtitleColor}
+                  bg={cardBg}
+                  border={`1px solid ${borderColor}`}
+                  borderRadius="10px"
+                  p={3}
+                  mb={3}
+                  maxH="160px"
+                  overflowY="auto"
+                >
+                  De conformidad con la Ley Orgánica de Protección de Datos Personales (LOPDP) del Ecuador,
+                  informamos que los datos personales y de salud visual recolectados en este formulario
+                  serán tratados con la finalidad de brindar atención óptica y de salud visual, gestionar
+                  su historial clínico, y contactarlo para fines relacionados con su atención (citas,
+                  recordatorios, entrega de resultados). Sus datos no serán compartidos con terceros salvo
+                  requerimiento legal. Usted puede ejercer sus derechos de acceso, rectificación,
+                  actualización, eliminación y oposición sobre sus datos personales en cualquier momento,
+                  dirigiéndose a esta óptica.
+                </Box>
+              </Collapse>
+              <Checkbox
+                mt={1}
+                isChecked={formData.pt_data_consent}
+                onChange={(e) => {
+                  setFormData((prev) => ({ ...prev, pt_data_consent: e.target.checked }));
+                  if (errors.pt_data_consent) setErrors((prev) => ({ ...prev, pt_data_consent: null }));
+                }}
+                colorScheme="teal"
+              >
+                He leído y acepto el tratamiento de mis datos personales conforme a la LOPDP. *
+              </Checkbox>
+              {errors.pt_data_consent && (
+                <Text fontSize="xs" color="red.400" mt={1}>{errors.pt_data_consent}</Text>
+              )}
             </Box>
 
             <Flex justify="flex-end" gap={3} flexWrap="wrap" pt={6} mt={2} borderTop={`1px solid ${borderColor}`}>

@@ -4,12 +4,13 @@ import {
   Box, Button, Container, FormControl, FormLabel, Input, SimpleGrid, Heading,
   Table, Thead, Tbody, Tr, Th, Td, Textarea, RadioGroup,
   Radio, Stack, Checkbox, Text, useColorModeValue,
-  HStack, VStack, useToast, Alert, AlertIcon, Icon, Badge, Flex
+  HStack, VStack, useToast, Alert, AlertIcon, Icon, Badge, Flex, Collapse
 } from "@chakra-ui/react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FaEye } from 'react-icons/fa';
-import { User, Eye, MessageSquare, Sparkles, ScanLine } from 'lucide-react';
+import { User, Eye, MessageSquare, Sparkles, ScanLine, ShieldCheck } from 'lucide-react';
 import SmartHeader from "../header/SmartHeader";
+import SignaturePadComponent from "./Sales/SignaturePadComponent";
 import ScanRxModal from "./ScanRxModal";
 
 const ACCENT = '#00A88E';
@@ -58,6 +59,9 @@ const defaultInitialState = {
   needs_lenses_far: false,
   color_perception: null,
   color_issues: "",
+  informed_consent: false,
+  informed_consent_signature: "",
+  clinical_history_consent: false,
   created_at: ""
 };
 
@@ -90,6 +94,8 @@ const MeasuresFinal = () => {
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isScanOpen, setIsScanOpen] = useState(false);
+  const [lastSavedPatientId, setLastSavedPatientId] = useState(null);
+  const [showConsentText, setShowConsentText] = useState(false);
 
   const measureFields = [
     { label: "Esfera", key: "sphere" },
@@ -282,6 +288,18 @@ const MeasuresFinal = () => {
       });
       return;
     }
+    if (!formData.informed_consent || !formData.informed_consent_signature) {
+      toast({
+        title: "Falta el consentimiento informado",
+        description: "El paciente debe aceptar y firmar el consentimiento informado antes de guardar.",
+        status: "warning",
+        variant: "left-accent",
+        duration: 5000,
+        isClosable: true,
+        containerStyle: { borderRadius: "14px", overflow: "hidden" },
+      });
+      return;
+    }
 
     setIsSaving(true);
     const newFormData = { ...formData, created_at: new Date().toISOString() };
@@ -289,6 +307,32 @@ const MeasuresFinal = () => {
     try {
       const { data, error } = await supabase.from("rx_final").insert([newFormData]);
       if (error) throw error;
+
+      // Marcar al paciente como "atendido hoy" para que aparezca primero en
+      // la Lista de Pacientes — se actualiza tanto la fecha (date) como la
+      // marca de tiempo exacta. Si esto falla, ahora sí se avisa (antes
+      // fallaba en silencio y nadie se enteraba).
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const { error: patientUpdateError } = await supabase
+        .from("patients")
+        .update({
+          date: todayStr,
+          last_visit_at: new Date().toISOString(),
+        })
+        .eq("id", formData.patient_id);
+
+      if (patientUpdateError) {
+        console.error("Error actualizando la fecha del paciente:", patientUpdateError);
+        toast({
+          title: "Medida guardada, pero...",
+          description: "No se pudo actualizar la fecha del paciente en la lista. Avísale al soporte técnico.",
+          status: "warning",
+          variant: "left-accent",
+          duration: 6000,
+          isClosable: true,
+          containerStyle: { borderRadius: "14px", overflow: "hidden" },
+        });
+      }
 
       toast({
         title: "¡Medidas registradas!",
@@ -299,6 +343,11 @@ const MeasuresFinal = () => {
         isClosable: true,
         containerStyle: { borderRadius: "14px", overflow: "hidden" },
       });
+
+      // Se guarda aparte quién fue el paciente atendido, ANTES de limpiar el
+      // formulario — así "Realizar Venta" lo sigue teniendo disponible
+      // aunque el resto de los campos ya se hayan reiniciado.
+      setLastSavedPatientId(formData.patient_id);
 
       sessionStorage.removeItem(STORAGE_KEY);
       setFormData(defaultInitialState);
@@ -683,10 +732,90 @@ const MeasuresFinal = () => {
               </Box>
             </Box>
 
+            {/* --- Consentimiento Informado --- */}
+            <Box mb={8}>
+              <SectionTitle icon={ShieldCheck}>Consentimiento informado</SectionTitle>
+              <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`} mb={4}>
+                <Text fontSize="sm" color={subtitleColor} mb={3}>
+                  El paciente debe leer, aceptar y firmar antes de guardar el examen.
+                </Text>
+                <Box mb={3}>
+                  <Button
+                    size="xs"
+                    variant="link"
+                    colorScheme="teal"
+                    onClick={() => setShowConsentText((v) => !v)}
+                  >
+                    {showConsentText ? 'Ocultar detalle' : 'Leer el consentimiento completo'}
+                  </Button>
+                </Box>
+                <Collapse in={showConsentText} animateOpacity>
+                  <Box
+                    fontSize="xs"
+                    color={subtitleColor}
+                    bg={cardBg}
+                    border={`1px solid ${borderColor}`}
+                    borderRadius="10px"
+                    p={3}
+                    mb={3}
+                    maxH="160px"
+                    overflowY="auto"
+                  >
+                    Declaro que he sido informado(a) de manera clara sobre el procedimiento de
+                    evaluación optométrica que se me va a realizar (refracción, pruebas de agudeza
+                    visual y percepción de colores), sus objetivos y alcances. Entiendo que los
+                    resultados obtenidos servirán como base para una recomendación óptica y/o
+                    referencia médica si fuera necesario. He tenido la oportunidad de resolver mis
+                    dudas y otorgo mi consentimiento voluntario para la realización de este examen.
+                  </Box>
+                </Collapse>
+                <Checkbox
+                  mt={1}
+                  isChecked={formData.informed_consent}
+                  onChange={(e) => setFormData(prev => ({ ...prev, informed_consent: e.target.checked }))}
+                  colorScheme="teal"
+                  mb={3}
+                >
+                  He leído y acepto el consentimiento informado para este examen. *
+                </Checkbox>
+
+                <Text fontSize="xs" fontWeight="semibold" color={subtitleColor} mb={1}>
+                  Firma del paciente
+                </Text>
+                <SignaturePadComponent
+                  onSave={(signatureDataUrl) =>
+                    setFormData(prev => ({ ...prev, informed_consent_signature: signatureDataUrl }))
+                  }
+                />
+              </Box>
+
+              <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
+                <Checkbox
+                  isChecked={formData.clinical_history_consent}
+                  onChange={(e) => setFormData(prev => ({ ...prev, clinical_history_consent: e.target.checked }))}
+                  colorScheme="teal"
+                >
+                  Autorizo que mis medidas y resultados se registren en un historial clínico para futuras consultas.
+                </Checkbox>
+                <Text fontSize="xs" color={subtitleColor} mt={1}>
+                  Esta autorización es independiente del consentimiento del examen — es opcional, pero recomendada para dar mejor seguimiento a su salud visual.
+                </Text>
+              </Box>
+            </Box>
+
             <Stack direction={{ base: "column", sm: "row" }} spacing={3} justify="flex-end" pt={2} borderTop={`1px solid ${borderColor}`} mt={2}>
+              {!formData.patient_id && lastSavedPatientId && (
+                <Text fontSize="xs" color={subtitleColor} alignSelf="center" mr="auto">
+                  Continuar venta de: {(() => {
+                    const p = patients.find((pt) => String(pt.id) === String(lastSavedPatientId));
+                    return p ? `${p.pt_firstname} ${p.pt_lastname}` : 'paciente recién atendido';
+                  })()}
+                </Text>
+              )}
               <Button
                 variant="outline"
-                onClick={() => handleNavigate(`/sales/${formData.patient_id}`)}
+                onClick={() => handleNavigate(`/sales/${formData.patient_id || lastSavedPatientId}`)}
+                isDisabled={!formData.patient_id && !lastSavedPatientId}
                 size="lg"
                 borderRadius="12px"
                 px={8}

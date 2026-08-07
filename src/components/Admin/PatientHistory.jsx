@@ -188,10 +188,10 @@ const PatientHistory = () => {
                           </HStack>
                         </Td>
                         <Td textAlign="right" fontWeight="bold" color={ACCENT}>{formatMoney(sale.total)}</Td>
-                        <Td textAlign="right">{formatMoney(sale.credit)}</Td>
+                        <Td textAlign="right">{formatMoney(sale.balance)}</Td>
                         <Td textAlign="right">
-                          <Badge colorScheme={Number(sale.balance) > 0 ? 'orange' : 'teal'} borderRadius="full" px={2}>
-                            {formatMoney(sale.balance)}
+                          <Badge colorScheme={Number(sale.credit) > 0 ? 'orange' : 'teal'} borderRadius="full" px={2}>
+                            {formatMoney(sale.credit)}
                           </Badge>
                         </Td>
                         <Td onClick={(e) => e.stopPropagation()}>

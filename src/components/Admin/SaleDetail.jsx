@@ -141,7 +141,9 @@ const SaleDetail = () => {
   const handleSave = async () => {
     setIsSaving(true);
     const { total_p_frame, total_p_lens, total } = computeTotals();
-    const newBalance = Math.max(0, total - Number(sale.credit || 0));
+    // El saldo pendiente nuevo = el total nuevo menos lo que YA se pagó
+    // (sale.balance). El campo "credit" es el que guarda ese pendiente.
+    const newCredit = Math.max(0, total - Number(sale.balance || 0));
 
     const { error } = await supabase
       .from("sales")
@@ -153,7 +155,7 @@ const SaleDetail = () => {
         total_p_frame,
         total_p_lens,
         total,
-        balance: newBalance,
+        credit: newCredit,
       })
       .eq("id", saleId);
 
@@ -378,7 +380,7 @@ const SaleDetail = () => {
                         Nuevo total: {formatMoney(previewTotals.total)}
                       </Text>
                       <Text fontSize="xs" color={subtitleColor}>
-                        El saldo pendiente se recalcula automáticamente restando el abono ya registrado ({formatMoney(sale.credit)}).
+                        El saldo pendiente se recalcula automáticamente restando el abono ya registrado ({formatMoney(sale.balance)}).
                       </Text>
                     </Box>
                   )}
@@ -400,12 +402,12 @@ const SaleDetail = () => {
                 </Box>
                 <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`} textAlign="center">
                   <Text fontSize="xs" color={subtitleColor} mb={1}>Abono</Text>
-                  <Text fontWeight="bold" fontSize="lg">{formatMoney(sale.credit)}</Text>
+                  <Text fontWeight="bold" fontSize="lg">{formatMoney(sale.balance)}</Text>
                 </Box>
                 <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`} textAlign="center">
                   <Text fontSize="xs" color={subtitleColor} mb={1}>Saldo</Text>
-                  <Badge colorScheme={Number(sale.balance) > 0 ? "orange" : "teal"} borderRadius="full" px={2} fontSize="sm">
-                    {formatMoney(sale.balance)}
+                  <Badge colorScheme={Number(sale.credit) > 0 ? "orange" : "teal"} borderRadius="full" px={2} fontSize="sm">
+                    {formatMoney(sale.credit)}
                   </Badge>
                 </Box>
                 <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`} textAlign="center">

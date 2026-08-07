@@ -8,12 +8,14 @@ import {
   Divider,
   Button,
   useColorModeValue,
+  useBreakpointValue,
   Drawer,
   DrawerOverlay,
   DrawerContent,
   DrawerCloseButton,
   DrawerHeader,
   DrawerBody,
+  Portal,
 } from "@chakra-ui/react";
 import { FiUser, FiShoppingBag, FiTruck, FiPackage } from "react-icons/fi";
 
@@ -118,9 +120,15 @@ const SaleSummaryPanel = ({
   deliveryText,
   onSubmit,
   isSubmitting,
+  saleRegistered,
   missingLabel,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  // El Portal saca la barra del árbol normal del DOM, así que la regla
+  // responsive "display: none en desktop" de Chakra ya no la alcanza —
+  // por eso se detecta el tamaño real acá, en JS, y se decide si se
+  // renderiza el Portal o no.
+  const isMobile = useBreakpointValue({ base: true, lg: false });
 
   const cardBg = useColorModeValue("white", "gray.800");
   const border = useColorModeValue("1px solid rgba(0,0,0,0.08)", "1px solid rgba(255,255,255,0.08)");
@@ -162,15 +170,16 @@ const SaleSummaryPanel = ({
             mt={6}
             w="full"
             size="lg"
-            bg="#00A88E"
+            bg={saleRegistered ? "gray.400" : "#00A88E"}
             color="white"
-            _hover={{ bg: "#00967f" }}
+            _hover={{ bg: saleRegistered ? "gray.400" : "#00967f" }}
             borderRadius="12px"
             onClick={onSubmit}
             isLoading={isSubmitting}
+            isDisabled={saleRegistered}
             loadingText="Registrando..."
           >
-            Registrar Venta
+            {saleRegistered ? "Venta ya registrada ✓" : "Registrar Venta"}
           </Button>
           {missingLabel && (
             <Text fontSize="xs" color="orange.400" mt={2} textAlign="center">
@@ -182,38 +191,43 @@ const SaleSummaryPanel = ({
 
       {/* Móvil / tablet chica: barra fija abajo + drawer con el detalle */}
       <Box display={{ base: "block", lg: "none" }}>
-        <Flex
-          position="fixed"
-          bottom="0"
-          left="0"
-          right="0"
-          zIndex="1450"
-          bg={barBg}
-          backdropFilter="blur(10px)"
-          borderTop={border}
-          px={4}
-          py={3}
-          align="center"
-          justify="space-between"
-          gap={3}
-        >
-          <Box cursor="pointer" onClick={() => setIsOpen(true)} flex="1" minW={0}>
-            <Text fontSize="xs" color={subtitleColor}>Total</Text>
-            <Text fontWeight="bold" fontSize="lg" color="#00A88E">{formatMoney(total)}</Text>
-          </Box>
-          <Button
-            bg="#00A88E"
-            color="white"
-            _hover={{ bg: "#00967f" }}
-            borderRadius="12px"
-            onClick={onSubmit}
-            isLoading={isSubmitting}
-            loadingText="Registrando..."
-            flexShrink={0}
+        {isMobile && (
+          <Portal>
+            <Flex
+              position="fixed"
+              bottom="0"
+              left="0"
+              right="0"
+              zIndex="1450"
+              bg={barBg}
+              backdropFilter="blur(10px)"
+            borderTop={border}
+            px={4}
+            py={3}
+            align="center"
+            justify="space-between"
+            gap={3}
           >
-            Registrar Venta
-          </Button>
-        </Flex>
+            <Box cursor="pointer" onClick={() => setIsOpen(true)} flex="1" minW={0}>
+              <Text fontSize="xs" color={subtitleColor}>Total</Text>
+              <Text fontWeight="bold" fontSize="lg" color="#00A88E">{formatMoney(total)}</Text>
+            </Box>
+            <Button
+              bg={saleRegistered ? "gray.400" : "#00A88E"}
+              color="white"
+              _hover={{ bg: saleRegistered ? "gray.400" : "#00967f" }}
+              borderRadius="12px"
+              onClick={onSubmit}
+              isLoading={isSubmitting}
+              isDisabled={saleRegistered}
+              loadingText="Registrando..."
+              flexShrink={0}
+            >
+              {saleRegistered ? "Registrada ✓" : "Registrar Venta"}
+            </Button>
+          </Flex>
+        </Portal>
+        )}
         <Box h="76px" />
 
         <Drawer isOpen={isOpen} placement="bottom" onClose={() => setIsOpen(false)}>

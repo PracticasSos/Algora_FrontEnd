@@ -207,8 +207,8 @@ const HistoryClinic = () => {
                           <Td>{branchName(sale.branchs_id)}</Td>
                           <Td textAlign="right" fontWeight="semibold">{formatMoney(sale.total)}</Td>
                           <Td textAlign="right">
-                            <Badge colorScheme={Number(sale.balance) > 0 ? "orange" : "teal"} borderRadius="full" px={2}>
-                              {formatMoney(sale.balance)}
+                            <Badge colorScheme={Number(sale.credit) > 0 ? "orange" : "teal"} borderRadius="full" px={2}>
+                              {formatMoney(sale.credit)}
                             </Badge>
                           </Td>
                           <Td textAlign="right" onClick={(e) => e.stopPropagation()}>

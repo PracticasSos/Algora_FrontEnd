@@ -34,7 +34,7 @@ import ListSales from "../components/Admin/ListSales.jsx";
 import Sales from "../components/Admin/Sales/Sales.jsx";
 import Register from "../components/Admin/Register.jsx";
 import HistoryClinic from "../components/Admin/HistoryClinic.jsx";
-import SalesHistory from "../components/Admin/Sales/history/SalesHistory.jsx";
+import SaleDetail from "../components/Admin/SaleDetail.jsx";
 import PrintCertificate from "../components/Admin/certificate/PrintCertificate.jsx";
 import UploadLogo from "../components/Admin/certificate/UploadLogo.jsx";
 import SuperAdminDashBoard from "../components/optionsauth/OptionsSuperAdmin.jsx";
@@ -99,7 +99,7 @@ const AppRouter = () => {
             <Route path="/list-sales" element={<ListSales />}></Route>
             <Route path="/history-clinic" element={<HistoryClinic />} />
             <Route path="/history-clinic/patient-history/:patientId" element={<PatientHistory />} />
-            <Route path="/history-clinic/patient-history/:patientId/sales-history/:saleId" element={<SalesHistory />} />
+            <Route path="/history-clinic/patient-history/:patientId/sales-history/:saleId" element={<SaleDetail />} />
             <Route path="/print-certificate" element={<PrintCertificate />}></Route>
             <Route path="/upload-logo" element={<UploadLogo />}></Route>
             <Route path="/message-manager" element={<MessageManager />}></Route>

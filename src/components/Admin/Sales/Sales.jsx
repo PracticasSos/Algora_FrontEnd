@@ -315,7 +315,7 @@ const Sales = () => {
   };
 
   const handleSubmit = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting || saleRegistered) return; // ya se registró antes, no se puede duplicar
     setIsSubmitting(true);
 
     if (!mergedFormData.payment_in) {
@@ -654,6 +654,7 @@ const Sales = () => {
             deliveryText={deliveryText}
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
+            saleRegistered={saleRegistered}
             missingLabel={missingLabel}
           />
         </Flex>
@@ -662,8 +663,16 @@ const Sales = () => {
           <Pdf
             formData={pdfData}
             targetRef={salesRef}
-            onPdfUploaded={async (pdfUrl) => {
-              const { error } = await supabase.from("sales").update({ pdf_url: pdfUrl }).eq("id", saleId);
+            onPdfUploaded={async (result) => {
+              // Pdf.jsx manda el resultado completo {success, message,
+              // pdfUrl, fileName} — antes se guardaba ese objeto entero
+              // por error en vez de solo el link, dejando pdf_url corrupto.
+              const cleanUrl = typeof result === "string" ? result : result?.pdfUrl;
+              if (!cleanUrl) {
+                console.error("onPdfUploaded: no se recibió un pdfUrl válido", result);
+                return;
+              }
+              const { error } = await supabase.from("sales").update({ pdf_url: cleanUrl }).eq("id", saleId);
               if (error) console.error("Error actualizando pdf_url:", error);
             }}
           />

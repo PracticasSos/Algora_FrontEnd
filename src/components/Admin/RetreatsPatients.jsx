@@ -1,382 +1,354 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '../../api/supabase';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../../api/supabase";
 import {
-  Box,
-  Button,
-  Heading,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  VStack,
-  Textarea,
-  Text,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  ModalCloseButton,
-  useColorModeValue,
-  Spinner,
-  Card,
-  CardHeader,
-  CardBody,
+  Box, Container, Heading, Text, Table, Thead, Tbody, Tr, Th, Td, Input, Select,
+  Flex, HStack, VStack, Icon, Badge, IconButton, Spinner, useColorModeValue,
+  Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, ModalFooter,
+  Button, Textarea,
 } from "@chakra-ui/react";
-import { useNavigate, useLocation } from 'react-router-dom';
-import SearchBar from './SearchBar';
-import SmartHeader from '../header/SmartHeader';
+import {
+  PackageCheck, Search as SearchIcon, ChevronLeft, ChevronRight,
+  MessageCircle, Clock, Eye,
+} from "lucide-react";
+import SmartHeader from "../header/SmartHeader";
+
+const ACCENT = "#00A88E";
+const PAGE_SIZE = 10;
+const FETCH_CAP = 1000;
+
+const formatMoney = (value) => {
+  const n = parseFloat(value);
+  if (isNaN(n)) return "$0.00";
+  return `$${n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+// Estado del retiro según la fecha prometida de entrega
+const statusFor = (deliveryDatetime) => {
+  if (!deliveryDatetime) return { label: "Sin fecha", color: "gray" };
+  const diffMs = new Date(deliveryDatetime).getTime() - Date.now();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return { label: `Atrasado ${Math.abs(diffDays)}d`, color: "red" };
+  if (diffDays === 0) return { label: "Listo hoy", color: "orange" };
+  return { label: `En ${diffDays}d`, color: "teal" };
+};
 
 const RetreatsPatients = () => {
-  const [allPatients, setAllPatients] = useState([]); 
-  const [filteredPatients, setFilteredPatients] = useState([]);
+  const [allSales, setAllSales] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const [searchTermPatients, setSearchTermPatients] = useState("");
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [message, setMessage] = useState("");
-  const [showSearchSuggestions, setShowSearchSuggestions] = useState(true);
   const [branches, setBranches] = useState([]);
-  const [suggestions, setSuggestions] = useState([]);
   const [selectedBranch, setSelectedBranch] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+
+  const [isReminderOpen, setIsReminderOpen] = useState(false);
+  const [reminderText, setReminderText] = useState("");
+  const [reminderSale, setReminderSale] = useState(null);
 
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
-    fetchPatients({});
-    fetchBranchs();
+    fetchBranches();
+    fetchPending();
   }, []);
 
-  useEffect(() => {
-    const updatedSales = location.state?.updatedPendingSales;
-    if (updatedSales) {
-      setAllPatients(updatedSales);
-      setFilteredPatients(updatedSales);
-    }
-    if (location.state) {
-      navigate(location.pathname, { replace: true, state: null });
-    }
-  }, [location.state, navigate]);
-
-  useEffect(() => {
-    if (selectedBranch) {
-      fetchPatients({ branchId: selectedBranch });
-    }
-  }, [selectedBranch]);
-
-  const fetchBranchs = async () => {
+  const fetchBranches = async () => {
     const { data, error } = await supabase.from("branchs").select("id, name");
-    if (!error) {
-      setBranches(data);
-    }
+    if (!error) setBranches(data || []);
   };
 
-  const fetchPatients = async ({ branchId = null, saleId = null }) => {
+  const fetchPending = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from('sales')
+      const { data, error } = await supabase
+        .from("sales")
         .select(`
-          id,
-          patient_id,
-          date,
-          patients (
-            id,
-            pt_firstname,
-            pt_lastname,
-            pt_ci,
-            pt_phone
-          ),
-          inventario:inventario_id(brand),
-          lens:lens_id(lens_type),
-          total,
-          balance,
-          credit,
-          branchs:branchs_id(id, name),
-          is_refund
+          id, date, total, balance, credit, branchs_id, delivery_datetime,
+          patients (id, pt_firstname, pt_lastname, pt_ci, pt_phone),
+          branchs (name),
+          inventario:inventario_id (brand),
+          lens:lens_id (lens_type)
         `)
-        .eq('is_completed', false)
-        .eq("is_refund", false);
+        .eq("is_completed", false)
+        .eq("is_refund", false)
+        .order("date", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(FETCH_CAP);
 
-      if (branchId) query = query.eq('branchs_id', branchId);
-      if (saleId) query = query.eq('patient_id', saleId);
-
-      const { data, error } = await query;
       if (error) throw error;
-
-      const formattedData = data.map(sale => ({
-        sale_id: sale.id, 
-        patient_id: sale.patient_id,
-        pt_firstname: sale.patients?.pt_firstname || "N/A",
-        pt_lastname: sale.patients?.pt_lastname || "N/A",
-        pt_ci: sale.patients?.pt_ci || "N/A",
-        pt_phone: sale.patients?.pt_phone || "N/A",
-        date: sale.date,
-        brand: sale.inventario?.brand || "Sin marca",
-        lens_type: sale.lens?.lens_type || "N/A",
-        total: sale.total,
-        balance: sale.balance,
-        credit: sale.credit,
-        branch_id: sale.branchs?.id || null, 
-        branch: sale.branchs?.name || "N/A",
-      }));
-
-      setAllPatients(formattedData);
-      setFilteredPatients(formattedData);
-    } catch (error) {
-      console.error('Error fetching patients:', error);
+      setAllSales(data || []);
+    } catch (err) {
+      console.error("Error cargando retiros pendientes:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePatientSelect = (sale) => {
-    if (sale?.sale_id) {  
-      navigate(`/retreats-patients/retreats/${sale.sale_id}`, { 
-        state: { patientData: sale, selectedDate: sale.date } 
-      });
-    }
+  const filtered = allSales.filter((sale) => {
+    if (selectedBranch && String(sale.branchs_id) !== String(selectedBranch)) return false;
+    if (!search.trim()) return true;
+    const term = search.toLowerCase();
+    const p = sale.patients;
+    if (!p) return false;
+    return (
+      p.pt_firstname?.toLowerCase().includes(term) ||
+      p.pt_lastname?.toLowerCase().includes(term) ||
+      p.pt_ci?.toLowerCase().includes(term)
+    );
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const overdueCount = filtered.filter((s) => s.delivery_datetime && new Date(s.delivery_datetime) < new Date()).length;
+
+  const goToPickup = (sale) => {
+    navigate(`/retreats-patients/retreats/${sale.id}`, {
+      state: { patientData: sale.patients, selectedDate: sale.date },
+    });
   };
 
-  const filterPatients = ({ searchTerm = '', selectedPatientObj = null, suggestionName = '' } = {}) => {
-    let filtered = allPatients;
-    let suggestionsList = [];
-
-    if (searchTerm) {
-      filtered = filtered.filter((patient) => {
-        const fullName = `${patient.pt_firstname} ${patient.pt_lastname}`.toLowerCase();
-        return fullName.includes(searchTerm.toLowerCase());
-      });
-      suggestionsList = filtered.map((patient) => `${patient.pt_firstname} ${patient.pt_lastname}`);
-      setSuggestions(suggestionsList);
-      setSearchTermPatients(searchTerm);
-      setFilteredPatients(filtered);
-      return;
-    }
-
-    if (selectedPatientObj) {
-      setSelectedPatient(selectedPatientObj);
-      setSearchTermPatients(`${selectedPatientObj.pt_firstname} ${selectedPatientObj.pt_lastname}`);
-      setShowSearchSuggestions(false);
-      filtered = allPatients.filter(patient =>
-        patient.pt_firstname === selectedPatientObj.pt_firstname &&
-        patient.pt_lastname === selectedPatientObj.pt_lastname
-      );
-      setFilteredPatients(filtered);
-      return;
-    }
-
-    if (suggestionName) {
-      setSearchTermPatients(suggestionName);
-      setSuggestions([]);
-      const foundPatient = allPatients.find(
-        (patient) => `${patient.pt_firstname} ${patient.pt_lastname}`.toLowerCase() === suggestionName.toLowerCase()
-      );
-      if (foundPatient) {
-        setSelectedPatient(foundPatient);
-        filtered = allPatients.filter(
-          (patient) =>
-            patient.pt_firstname === foundPatient.pt_firstname &&
-            patient.pt_lastname === foundPatient.pt_lastname
-        );
-        setFilteredPatients(filtered);
-      }
-      return;
-    }
-
-    setFilteredPatients(filtered);
+  const buildReminderMessage = (sale) => {
+    const status = statusFor(sale.delivery_datetime);
+    const listo = status.color === "red" || status.color === "orange" ? "ya está listo" : "estará listo pronto";
+    return `Hola ${sale.patients?.pt_firstname} 👋, tu pedido en ${sale.branchs?.name || "nuestra óptica"} ${listo} para retirar. ${sale.credit > 0 ? `Recuerda que tienes un saldo pendiente de ${formatMoney(sale.credit)} para completar en el retiro.` : ""} ¡Te esperamos!`;
   };
 
-  // Obtiene el mensaje personalizado desde la base de datos según la ruta y branch_id
-  const fetchCustomMessage = async (branchId) => {
-    try {
-      const { data, error } = await supabase
-        .from("messages")
-        .select("content")
-        .eq("branch_id", branchId)
-        .eq("route", "/retreats-patients")
-        .single();
-      if (error || !data) return "";
-      return data.content;
-    } catch (err) {
-      return "";
-    }
+  const openReminder = (sale) => {
+    if (!sale.patients?.pt_phone) return;
+    setReminderSale(sale);
+    setReminderText(buildReminderMessage(sale));
+    setIsReminderOpen(true);
   };
 
-  // Modifica handleMessageClick para usar el mensaje de la base de datos
-  const handleMessageClick = async (e, patient) => {
-    e.stopPropagation();
-    setSelectedPatient(patient);
-    setIsFormOpen(true);
-    const customMessage = await fetchCustomMessage(patient.branch_id);
-    setMessage(customMessage || "");
+  const handleSendReminder = () => {
+    if (!reminderSale?.patients?.pt_phone) return;
+    const cleanPhone = reminderSale.patients.pt_phone.replace(/\D/g, "");
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(reminderText)}`, "_blank");
+    setIsReminderOpen(false);
   };
 
+  const cardBg = useColorModeValue("white", "gray.700");
+  const inputBg = useColorModeValue("gray.50", "gray.700");
+  const borderColor = useColorModeValue("gray.200", "gray.600");
+  const subtitleColor = useColorModeValue("gray.500", "gray.400");
+  const rowHoverBg = useColorModeValue("gray.50", "whiteAlpha.100");
 
-  const handleSendMessage = () => {
-    if (!selectedPatient || !message.trim()) return;
-    const whatsappUrl = `https://wa.me/${selectedPatient.pt_phone}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, "_blank");
-  };
-
-  const handleSearch = (e) => {
-    filterPatients({ searchTerm: e.target.value.toLowerCase() });
-  };
-
-  const handleSuggestionSelect = (selectedName) => {
-    filterPatients({ suggestionName: selectedName });
-  };
-
-  const sortedPatients = [...filteredPatients].sort((a, b) => {
-    if (!a.date) return 1;
-    if (!b.date) return -1;
-    return new Date(b.date) - new Date(a.date);
-  }); 
-    
-  const moduleSpecificButton = null;
-
-  const bgColor = useColorModeValue('white', 'gray.900');
-  const textColor = useColorModeValue('gray.800', 'white');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
-  const tableBg = useColorModeValue('white', 'gray.800');
-  const tableHoverBg = useColorModeValue('teal.50', 'teal.900');
-  const inputBg = useColorModeValue('gray.50', 'gray.800');
-  const selectBg = useColorModeValue('gray.50', 'gray.800');
-  const headerBg = useColorModeValue('teal.600', 'teal.400');
-  const headerText = useColorModeValue('white', 'gray.900');
-   
   return (
-    <Box p={{ base: 2, md: 8 }} minH="100vh" bg={useColorModeValue('gray.50', 'gray.900')}>
-      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-    <Box display="flex" flexDirection="column" alignItems="center" minHeight="100vh" p={6}>
-      
-      <Card w="100%" maxW="1500px" shadow="lg" borderRadius="xl">
-        <CardHeader borderBottom="1px solid" borderColor={borderColor}>
-          <Heading size="lg" fontWeight="700" color={useColorModeValue('teal.600', 'teal.300')}>
-            Retiros
-          </Heading>
-        </CardHeader>
+    <Box minHeight="100vh" bgGradient={useColorModeValue("linear(to-br, gray.50, teal.50)", "linear(to-br, gray.900, #0d1f1c)")}>
+      <SmartHeader moduleSpecificButton={null} />
 
-        <CardBody>
-          <Box w="100%" mx="auto" mb={6}>
-            <SearchBar 
-              searchPlaceholder="Buscar por nombre..."
-              searchValue={searchTermPatients}
-              onSearchChange={handleSearch}
-              suggestions={suggestions}
-              onSuggestionSelect={handleSuggestionSelect}
-              branches={branches}
-              selectedBranch={selectedBranch}
-              onBranchChange={(e) => setSelectedBranch(e.target.value)}
-              showBranchFilter={true}
-            />
-          </Box>
-          
-          {loading ? (
-            <Box display="flex" justifyContent="center" py={10}>
-              <Spinner size="xl" color="teal.500" />
-            </Box>
-          ) : (!selectedBranch && !searchTermPatients) ? (
-            <Text textAlign="center" color={useColorModeValue('gray.500', 'gray.400')} mt={6}>
-              Por favor, selecciona una sucursal o busca un nombre para mostrar los datos.
-            </Text>
-          ) : filteredPatients.length === 0 ? (
-            <Text textAlign="center" color={useColorModeValue('gray.500', 'gray.400')}>
-              No se encontraron registros de pacientes.
-            </Text>
-          ) : (
-            <Box width="100%" overflowX="auto">
-              <Table bg={tableBg} borderRadius="md" overflow="hidden">
-                <Thead>
-                  <Tr bg={useColorModeValue('gray.50', 'gray.600')}>
-                    <Th color={textColor}>Fecha</Th>
-                    <Th color={textColor}>Nombre</Th>
-                    <Th color={textColor}>Apellido</Th>
-                    <Th color={textColor}>Sucursal</Th>
-                    <Th color={textColor}>Armazón</Th>
-                    <Th color={textColor}>Luna</Th>
-                    <Th color={textColor}>Total</Th>
-                    <Th color={textColor}>Abono</Th>
-                    <Th color={textColor}>Saldo</Th>
-                    <Th color={textColor}>Telefono</Th>
-                    <Th color={textColor}>Acción</Th>
-                  </Tr>
-                </Thead>
-                <Tbody>
-                  {sortedPatients.map((patient) => (
-                    <Tr
-                      key={patient.sale_id}
-                      onClick={() => handlePatientSelect(patient)}
-                      cursor="pointer"
-                      _hover={{ bg: tableHoverBg }}
-                    >
-                      <Td>{patient.date}</Td>
-                      <Td>{patient.pt_firstname}</Td>
-                      <Td>{patient.pt_lastname}</Td>
-                      <Td>{patient.branch}</Td>
-                      <Td>{patient.brand}</Td>
-                      <Td>{patient.lens_type}</Td>
-                      <Td>{patient.total}</Td>
-                      <Td>{patient.balance}</Td>
-                      <Td>{patient.credit}</Td>
-                      <Td>{patient.pt_phone}</Td>
-                      <Td>
-                        <Button
-                          size="sm"
-                          colorScheme="green"
-                          onClick={(e) => handleMessageClick(e, patient)}
-                        >
-                          Enviar Mensaje
-                        </Button>
-                      </Td>
-                    </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            </Box>
+      <Container maxW="1150px" py={8} px={{ base: 3, md: 6 }}>
+        <Box
+          borderRadius="24px"
+          bg={cardBg}
+          border={`1px solid ${borderColor}`}
+          boxShadow={useColorModeValue(
+            "0 20px 45px -20px rgba(0,168,142,0.25)",
+            "0 20px 45px -20px rgba(0,168,142,0.35)"
           )}
-        </CardBody>
-      </Card>
+          overflow="hidden"
+        >
+          <Box h="5px" bgGradient="linear(to-r, #00A88E, #2DD4BF, #00A88E)" />
+          <Box p={{ base: 5, md: 8 }}>
+            <Flex justify="space-between" align="center" mb={6} flexWrap="wrap" gap={3}>
+              <HStack spacing={3}>
+                <Flex
+                  align="center" justify="center" boxSize="44px" borderRadius="14px"
+                  bgGradient="linear(to-br, #00A88E, #00786A)" color="white"
+                  boxShadow="0 6px 16px -4px rgba(0,168,142,0.5)"
+                >
+                  <Icon as={PackageCheck} boxSize="20px" />
+                </Flex>
+                <VStack align="start" spacing={0}>
+                  <Heading size="lg" fontWeight="800" color={useColorModeValue("gray.800", "white")} letterSpacing="tight">
+                    Retiros
+                  </Heading>
+                  <Text fontSize="xs" color={subtitleColor}>
+                    {filtered.length} pendiente{filtered.length !== 1 ? "s" : ""}
+                  </Text>
+                </VStack>
+              </HStack>
+              {overdueCount > 0 && (
+                <Badge colorScheme="red" borderRadius="full" px={3} py={1} fontSize="xs">
+                  {overdueCount} atrasado{overdueCount !== 1 ? "s" : ""}
+                </Badge>
+              )}
+            </Flex>
 
-      <Modal isOpen={isFormOpen} onClose={() => setIsFormOpen(false)} isCentered size="lg">
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Enviar mensaje por WhatsApp</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <VStack align="stretch" spacing={4}>
-              <Text fontSize="md">
-                Enviar mensaje a <strong>{selectedPatient?.pt_firstname} {selectedPatient?.pt_lastname}</strong> ({selectedPatient?.pt_phone})
+            <Flex gap={3} mb={5} flexWrap="wrap">
+              <Box position="relative" flex="1" minW="240px">
+                <Icon as={SearchIcon} position="absolute" left="14px" top="12px" color={subtitleColor} zIndex={1} />
+                <Input
+                  placeholder="Buscar por nombre, apellido o cédula..."
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  pl="40px"
+                  size="lg"
+                  borderRadius="12px"
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                />
+              </Box>
+              <Select
+                placeholder="Todas las sucursales"
+                value={selectedBranch}
+                onChange={(e) => { setSelectedBranch(e.target.value); setPage(1); }}
+                size="lg"
+                maxW="220px"
+                borderRadius="12px"
+                bg={inputBg}
+                borderColor={borderColor}
+                _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+              >
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </Select>
+            </Flex>
+
+            {loading ? (
+              <Flex justify="center" py={16}>
+                <Spinner color={ACCENT} />
+              </Flex>
+            ) : filtered.length === 0 ? (
+              <Text textAlign="center" color={subtitleColor} py={12}>
+                🎉 No hay retiros pendientes{search ? ` para "${search}"` : ""}.
               </Text>
-              <Textarea
-                placeholder="Escribe tu mensaje aquí..."
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-              />
-            </VStack>
+            ) : (
+              <>
+                <Box overflowX="auto" borderRadius="14px" border={`1px solid ${borderColor}`}>
+                  <Table variant="simple" size="sm">
+                    <Thead>
+                      <Tr>
+                        <Th color={subtitleColor}>Paciente</Th>
+                        <Th color={subtitleColor}>Producto</Th>
+                        <Th color={subtitleColor}>Sucursal</Th>
+                        <Th color={subtitleColor} textAlign="right">Saldo</Th>
+                        <Th color={subtitleColor}>Estado</Th>
+                        <Th color={subtitleColor} textAlign="right">Acciones</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {pageItems.map((sale) => {
+                        const status = statusFor(sale.delivery_datetime);
+                        return (
+                          <Tr key={sale.id} cursor="pointer" _hover={{ bg: rowHoverBg }} onClick={() => goToPickup(sale)}>
+                            <Td>
+                              <Text fontWeight="semibold">{sale.patients?.pt_firstname} {sale.patients?.pt_lastname}</Text>
+                              <Text fontSize="xs" color={subtitleColor}>{sale.patients?.pt_ci || "Sin C.I."}</Text>
+                            </Td>
+                            <Td fontSize="xs">{sale.inventario?.brand || "Sin marca"} · {sale.lens?.lens_type || "—"}</Td>
+                            <Td>{sale.branchs?.name || "—"}</Td>
+                            <Td textAlign="right">
+                              <Badge colorScheme={Number(sale.credit) > 0 ? "orange" : "teal"} borderRadius="full" px={2}>
+                                {formatMoney(sale.credit)}
+                              </Badge>
+                            </Td>
+                            <Td>
+                              <Badge colorScheme={status.color} borderRadius="full" px={2}>
+                                <HStack spacing={1}>
+                                  <Icon as={Clock} boxSize="10px" />
+                                  <Text>{status.label}</Text>
+                                </HStack>
+                              </Badge>
+                            </Td>
+                            <Td textAlign="right" onClick={(e) => e.stopPropagation()}>
+                              <HStack justify="flex-end" spacing={1}>
+                                {sale.patients?.pt_phone && (
+                                  <IconButton
+                                    icon={<MessageCircle size={15} />}
+                                    size="sm"
+                                    variant="ghost"
+                                    colorScheme="green"
+                                    aria-label="Avisar por WhatsApp"
+                                    title="Avisar por WhatsApp"
+                                    onClick={() => openReminder(sale)}
+                                  />
+                                )}
+                                <IconButton
+                                  icon={<Eye size={15} />}
+                                  size="sm"
+                                  variant="ghost"
+                                  colorScheme="teal"
+                                  aria-label="Completar retiro"
+                                  title="Completar retiro"
+                                  onClick={() => goToPickup(sale)}
+                                />
+                              </HStack>
+                            </Td>
+                          </Tr>
+                        );
+                      })}
+                    </Tbody>
+                  </Table>
+                </Box>
+
+                <Flex justify="space-between" align="center" mt={5} flexWrap="wrap" gap={3}>
+                  <Text fontSize="xs" color={subtitleColor}>
+                    Página {page} de {totalPages} · {filtered.length} en total
+                  </Text>
+                  <HStack>
+                    <IconButton
+                      icon={<ChevronLeft size={16} />}
+                      size="sm"
+                      variant="outline"
+                      borderRadius="full"
+                      isDisabled={page <= 1}
+                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      aria-label="Anterior"
+                    />
+                    <Text fontSize="sm" fontWeight="semibold" minW="30px" textAlign="center">{page}</Text>
+                    <IconButton
+                      icon={<ChevronRight size={16} />}
+                      size="sm"
+                      variant="outline"
+                      borderRadius="full"
+                      isDisabled={page >= totalPages}
+                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      aria-label="Siguiente"
+                    />
+                  </HStack>
+                </Flex>
+              </>
+            )}
+          </Box>
+        </Box>
+      </Container>
+
+      {/* Modal: recordatorio editable */}
+      <Modal isOpen={isReminderOpen} onClose={() => setIsReminderOpen(false)} isCentered size="md">
+        <ModalOverlay />
+        <ModalContent bg={cardBg} borderRadius="20px">
+          <ModalHeader fontSize="md">
+            <HStack>
+              <Icon as={MessageCircle} color="green.500" />
+              <Text>Avisar retiro disponible</Text>
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <Text fontSize="xs" color={subtitleColor} mb={2}>
+              Puedes editar el mensaje antes de enviarlo.
+            </Text>
+            <Textarea
+              value={reminderText}
+              onChange={(e) => setReminderText(e.target.value)}
+              minH="140px"
+              borderRadius="10px"
+              bg={inputBg}
+              borderColor={borderColor}
+              _focus={{ borderColor: "green.400", boxShadow: "0 0 0 1px #38A169" }}
+            />
           </ModalBody>
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={() => setIsFormOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              colorScheme="green"
-              onClick={() => {
-                handleSendMessage();
-                setIsFormOpen(false);
-              }}
-              isDisabled={!message.trim()}
-            >
-              Enviar
+          <ModalFooter gap={2}>
+            <Button variant="ghost" size="sm" onClick={() => setIsReminderOpen(false)}>Cancelar</Button>
+            <Button size="sm" colorScheme="green" leftIcon={<MessageCircle size={15} />} onClick={handleSendReminder}>
+              Enviar por WhatsApp
             </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
-    </Box>
     </Box>
   );
 };

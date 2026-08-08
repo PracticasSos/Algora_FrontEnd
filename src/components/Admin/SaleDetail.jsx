@@ -5,7 +5,7 @@ import {
   Box, Container, Heading, Text, Flex, HStack, VStack, Icon, Badge, Spinner,
   useColorModeValue, Button, SimpleGrid, Input, FormControl, FormLabel, useToast,
 } from "@chakra-ui/react";
-import { ArrowLeft, ShoppingBag, User, CreditCard, FileText, MessageCircle, Package, Pencil } from "lucide-react";
+import { ArrowLeft, ShoppingBag, User, CreditCard, FileText, MessageCircle, Package, Pencil, PackageCheck } from "lucide-react";
 import SmartHeader from "../header/SmartHeader";
 import { useAuth } from "../AuthContext";
 
@@ -466,6 +466,41 @@ const SaleDetail = () => {
                   Nota: si cambias el armazón o la luna, el PDF existente no se actualiza automáticamente — genera uno nuevo si el paciente lo necesita.
                 </Text>
               )}
+
+              <Box mt={6}>
+                <SectionTitle icon={PackageCheck}>Retiro</SectionTitle>
+                {sale.is_completed ? (
+                  <Box p={4} borderRadius="14px" bg={sectionIconBg}>
+                    <HStack spacing={2} mb={sale.pickup_receipt_url ? 3 : 0}>
+                      <Badge colorScheme="teal" borderRadius="full" px={3} py={1}>Retirado</Badge>
+                      {sale.pickup_completed_at && (
+                        <Text fontSize="xs" color={subtitleColor}>
+                          {new Date(sale.pickup_completed_at).toLocaleString("es-EC", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </Text>
+                      )}
+                    </HStack>
+                    {sale.pickup_receipt_url && (
+                      <Button
+                        as="a"
+                        href={sale.pickup_receipt_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        size="sm"
+                        variant="outline"
+                        colorScheme="teal"
+                        leftIcon={<FileText size={15} />}
+                      >
+                        Ver comprobante de retiro
+                      </Button>
+                    )}
+                  </Box>
+                ) : (
+                  <HStack p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
+                    <Badge colorScheme="orange" borderRadius="full" px={3} py={1}>Aún no retirado</Badge>
+                    <Text fontSize="xs" color={subtitleColor}>El producto todavía no ha salido de la óptica.</Text>
+                  </HStack>
+                )}
+              </Box>
             </Box>
           )}
         </Box>

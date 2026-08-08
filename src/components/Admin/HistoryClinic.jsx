@@ -4,6 +4,8 @@ import { supabase } from "../../api/supabase";
 import {
   Box, Container, Heading, Text, Table, Thead, Tbody, Tr, Th, Td, Input, Select,
   Flex, HStack, VStack, Icon, Badge, IconButton, Spinner, useColorModeValue,
+  Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, ModalFooter,
+  Button, Textarea,
 } from "@chakra-ui/react";
 import { Receipt, Search as SearchIcon, ChevronLeft, ChevronRight, Eye, MessageCircle } from "lucide-react";
 import SmartHeader from "../header/SmartHeader";
@@ -26,6 +28,9 @@ const HistoryClinic = () => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [messageTemplate, setMessageTemplate] = useState("Hola {nombre}, aquí está su comprobante de venta: {pdf_url}");
+  const [isReminderOpen, setIsReminderOpen] = useState(false);
+  const [reminderText, setReminderText] = useState("");
+  const [reminderRow, setReminderRow] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -76,22 +81,64 @@ const HistoryClinic = () => {
     );
   });
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // Se agrupa por paciente — antes salía una fila por cada venta, y un
+  // paciente con 3 compras aparecía 3 veces. Ahora sale una sola vez, con
+  // el resumen de todas sus compras; el detalle completo se ve al entrar.
+  const patientsMap = {};
+  filtered.forEach((sale) => {
+    const pid = sale.patients?.id;
+    if (!pid) return;
+    if (!patientsMap[pid]) {
+      patientsMap[pid] = {
+        patient: sale.patients,
+        salesCount: 0,
+        totalSpent: 0,
+        totalPending: 0,
+        lastDate: sale.date,
+        lastBranchId: sale.branchs_id,
+        lastPdfUrl: sale.pdf_url,
+      };
+    }
+    const p = patientsMap[pid];
+    p.salesCount += 1;
+    p.totalSpent += Number(sale.total) || 0;
+    p.totalPending += Number(sale.credit) || 0;
+    // filtered ya viene ordenado por fecha desc, así que la primera venta
+    // que se encuentra por paciente es la más reciente.
+  });
+
+  // JavaScript reordena solo las llaves de objeto que son numéricas (como
+  // el id del paciente), de menor a mayor — así que aunque la consulta ya
+  // venía ordenada por fecha, ese orden se perdía al agrupar. Se ordena
+  // de nuevo, explícitamente, por la venta más reciente de cada paciente.
+  const patientRows = Object.values(patientsMap).sort(
+    (a, b) => new Date(b.lastDate) - new Date(a.lastDate)
+  );
+
+  const totalPages = Math.max(1, Math.ceil(patientRows.length / PAGE_SIZE));
+  const pageItems = patientRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const branchName = (branchId) => branches.find((b) => String(b.id) === String(branchId))?.name || "—";
 
-  const handleViewSale = (sale) => {
-    if (!sale.patients?.id) return;
-    navigate(`/history-clinic/patient-history/${sale.patients.id}`, { state: { patientData: sale.patients } });
+  const handleViewPatient = (row) => {
+    if (!row.patient?.id) return;
+    navigate(`/history-clinic/patient-history/${row.patient.id}`, { state: { patientData: row.patient } });
   };
 
-  const handleSendWhatsApp = (sale) => {
-    if (!sale.pdf_url || !sale.patients?.pt_phone) return;
-    let mensaje = messageTemplate.replace("{nombre}", sale.patients.pt_firstname || "");
-    mensaje = mensaje.includes("{pdf_url}") ? mensaje.replace("{pdf_url}", sale.pdf_url) : `${mensaje} ${sale.pdf_url}`;
-    const url = `https://wa.me/${sale.patients.pt_phone}?text=${encodeURIComponent(mensaje)}`;
-    window.open(url, "_blank");
+  const openReminder = (row) => {
+    if (!row.lastPdfUrl || !row.patient?.pt_phone) return;
+    let mensaje = messageTemplate.replace("{nombre}", row.patient.pt_firstname || "");
+    mensaje = mensaje.includes("{pdf_url}") ? mensaje.replace("{pdf_url}", row.lastPdfUrl) : `${mensaje} ${row.lastPdfUrl}`;
+    setReminderRow(row);
+    setReminderText(mensaje);
+    setIsReminderOpen(true);
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!reminderRow?.patient?.pt_phone) return;
+    const cleanPhone = reminderRow.patient.pt_phone.replace(/\D/g, "");
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(reminderText)}`, "_blank");
+    setIsReminderOpen(false);
   };
 
   const cardBg = useColorModeValue("white", "gray.700");
@@ -130,7 +177,7 @@ const HistoryClinic = () => {
                   Historial de Venta
                 </Heading>
                 <Text fontSize="xs" color={subtitleColor}>
-                  {allSales.length} venta{allSales.length !== 1 ? "s" : ""} registrada{allSales.length !== 1 ? "s" : ""}
+                  {patientRows.length} paciente{patientRows.length !== 1 ? "s" : ""} · {allSales.length} venta{allSales.length !== 1 ? "s" : ""} en total
                 </Text>
               </VStack>
             </HStack>
@@ -171,9 +218,9 @@ const HistoryClinic = () => {
               <Flex justify="center" py={16}>
                 <Spinner color={ACCENT} />
               </Flex>
-            ) : filtered.length === 0 ? (
+            ) : patientRows.length === 0 ? (
               <Text textAlign="center" color={subtitleColor} py={12}>
-                No se encontraron ventas{search ? ` para "${search}"` : ""}.
+                No se encontraron pacientes{search ? ` para "${search}"` : ""}.
               </Text>
             ) : (
               <>
@@ -182,33 +229,37 @@ const HistoryClinic = () => {
                     <Thead>
                       <Tr>
                         <Th color={subtitleColor}>Paciente</Th>
-                        <Th color={subtitleColor}>Fecha</Th>
+                        <Th color={subtitleColor}>Última compra</Th>
                         <Th color={subtitleColor}>Sucursal</Th>
-                        <Th color={subtitleColor} textAlign="right">Total</Th>
+                        <Th color={subtitleColor} textAlign="center">Compras</Th>
+                        <Th color={subtitleColor} textAlign="right">Total gastado</Th>
                         <Th color={subtitleColor} textAlign="right">Saldo</Th>
                         <Th color={subtitleColor} textAlign="right">Acciones</Th>
                       </Tr>
                     </Thead>
                     <Tbody>
-                      {pageItems.map((sale) => (
+                      {pageItems.map((row) => (
                         <Tr
-                          key={sale.id}
+                          key={row.patient.id}
                           cursor="pointer"
                           _hover={{ bg: rowHoverBg }}
-                          onClick={() => handleViewSale(sale)}
+                          onClick={() => handleViewPatient(row)}
                         >
                           <Td>
                             <Text fontWeight="semibold">
-                              {sale.patients?.pt_firstname} {sale.patients?.pt_lastname}
+                              {row.patient?.pt_firstname} {row.patient?.pt_lastname}
                             </Text>
-                            <Text fontSize="xs" color={subtitleColor}>{sale.patients?.pt_ci || "Sin C.I."}</Text>
+                            <Text fontSize="xs" color={subtitleColor}>{row.patient?.pt_ci || "Sin C.I."}</Text>
                           </Td>
-                          <Td>{sale.date ? new Date(sale.date).toLocaleDateString("es-EC") : "—"}</Td>
-                          <Td>{branchName(sale.branchs_id)}</Td>
-                          <Td textAlign="right" fontWeight="semibold">{formatMoney(sale.total)}</Td>
+                          <Td>{row.lastDate ? new Date(row.lastDate).toLocaleDateString("es-EC") : "—"}</Td>
+                          <Td>{branchName(row.lastBranchId)}</Td>
+                          <Td textAlign="center">
+                            <Badge borderRadius="full" px={2}>{row.salesCount}</Badge>
+                          </Td>
+                          <Td textAlign="right" fontWeight="semibold">{formatMoney(row.totalSpent)}</Td>
                           <Td textAlign="right">
-                            <Badge colorScheme={Number(sale.credit) > 0 ? "orange" : "teal"} borderRadius="full" px={2}>
-                              {formatMoney(sale.credit)}
+                            <Badge colorScheme={row.totalPending > 0 ? "orange" : "teal"} borderRadius="full" px={2}>
+                              {formatMoney(row.totalPending)}
                             </Badge>
                           </Td>
                           <Td textAlign="right" onClick={(e) => e.stopPropagation()}>
@@ -218,10 +269,10 @@ const HistoryClinic = () => {
                                 size="sm"
                                 variant="ghost"
                                 colorScheme="teal"
-                                aria-label="Ver venta"
-                                onClick={() => handleViewSale(sale)}
+                                aria-label="Ver historial"
+                                onClick={() => handleViewPatient(row)}
                               />
-                              {sale.pdf_url && sale.patients?.pt_phone && (
+                              {row.lastPdfUrl && row.patient?.pt_phone && (
                                 <IconButton
                                   icon={<MessageCircle size={15} />}
                                   size="sm"
@@ -229,7 +280,7 @@ const HistoryClinic = () => {
                                   colorScheme="green"
                                   aria-label="Enviar por WhatsApp"
                                   title="Enviar por WhatsApp"
-                                  onClick={() => handleSendWhatsApp(sale)}
+                                  onClick={() => openReminder(row)}
                                 />
                               )}
                             </HStack>
@@ -242,7 +293,7 @@ const HistoryClinic = () => {
 
                 <Flex justify="space-between" align="center" mt={5} flexWrap="wrap" gap={3}>
                   <Text fontSize="xs" color={subtitleColor}>
-                    Página {page} de {totalPages} · {filtered.length} en total
+                    Página {page} de {totalPages} · {patientRows.length} paciente{patientRows.length !== 1 ? "s" : ""}
                   </Text>
                   <HStack>
                     <IconButton
@@ -271,6 +322,45 @@ const HistoryClinic = () => {
           </Box>
         </Box>
       </Container>
+
+      {/* Modal: mensaje editable antes de enviar */}
+      <Modal isOpen={isReminderOpen} onClose={() => setIsReminderOpen(false)} isCentered size="md">
+        <ModalOverlay />
+        <ModalContent bg={cardBg} borderRadius="20px">
+          <ModalHeader fontSize="md">
+            <HStack>
+              <Icon as={MessageCircle} color="green.500" />
+              <Text>Enviar comprobante</Text>
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            {reminderRow && (
+              <Text fontSize="sm" fontWeight="semibold" mb={3}>
+                {reminderRow.patient?.pt_firstname} {reminderRow.patient?.pt_lastname}
+              </Text>
+            )}
+            <Text fontSize="xs" color={subtitleColor} mb={2}>
+              Puedes editar el mensaje antes de enviarlo. Se abrirá WhatsApp con este texto ya listo.
+            </Text>
+            <Textarea
+              value={reminderText}
+              onChange={(e) => setReminderText(e.target.value)}
+              minH="140px"
+              borderRadius="10px"
+              bg={inputBg}
+              borderColor={borderColor}
+              _focus={{ borderColor: "green.400", boxShadow: "0 0 0 1px #38A169" }}
+            />
+          </ModalBody>
+          <ModalFooter gap={2}>
+            <Button variant="ghost" size="sm" onClick={() => setIsReminderOpen(false)}>Cancelar</Button>
+            <Button size="sm" colorScheme="green" leftIcon={<MessageCircle size={15} />} onClick={handleSendWhatsApp}>
+              Enviar por WhatsApp
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };

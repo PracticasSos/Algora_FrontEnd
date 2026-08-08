@@ -1,481 +1,312 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../../api/supabase";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { 
-  Box, Heading, Button, FormControl, FormLabel, Input, 
-  Table, Thead, Tbody, Tr, Th, Td, HStack, Select, 
-  SimpleGrid, Text, useColorModeValue, useToast 
+import { supabase } from "../../api/supabase";
+import {
+  Box, Container, Heading, Text, Flex, HStack, VStack, Icon, Badge, Spinner,
+  useColorModeValue, Button, SimpleGrid, useToast, Table, Thead, Tbody, Tr, Th, Td,
 } from "@chakra-ui/react";
+import { ArrowLeft, PackageCheck, User, Package, CreditCard, Eye, MessageCircle, PenTool } from "lucide-react";
 import SmartHeader from "../header/SmartHeader";
-import { FaEye } from 'react-icons/fa';
+import SignaturePadComponent from "./Sales/SignaturePadComponent";
+import { generatePickupReceiptPDF } from "./receipts/pickupReceiptGenerator.js";
+
+const ACCENT = "#00A88E";
+
+const formatMoney = (value) => {
+  const n = parseFloat(value);
+  if (isNaN(n)) return "$0.00";
+  return `$${n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const measureFields = [
+  { label: "Esfera", key: "sphere" },
+  { label: "Cilindro", key: "cylinder" },
+  { label: "Eje", key: "axis" },
+  { label: "Prisma", key: "prism" },
+  { label: "ADD", key: "add" },
+  { label: "AV VL", key: "av_vl" },
+  { label: "AV VP", key: "av_vp" },
+  { label: "DNP", key: "dnp" },
+  { label: "ALT", key: "alt" },
+];
 
 const Retreats = () => {
   const { saleId } = useParams();
-  const location = useLocation();
-  const [salesData, setSalesData] = useState(null);
-  const [patientData, setPatientData] = useState(location.state?.patientData || null);
-  const [patientsList, setPatientsList] = useState([]);
-  const [isTyping, setIsTyping] = useState(false);
-  const [pendingSales, setPendingSales] = useState([]);
-  const [message, setMessage] = useState("");
-  const [paymentBalance, setPaymentBalance] = useState("");
   const navigate = useNavigate();
   const toast = useToast();
 
-  const handleNavigate = (route = null) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (route) {
-      navigate(route);
-      return;
-    }
-    if (!user || !user.role_id) {
-      navigate('/LoginForm');
-      return;
-    }
-    switch (user.role_id) {
-      case 1:
-        navigate('/Admin');
-        break;
-      case 2:
-        navigate('/Optometra');
-        break;
-      case 3:
-        navigate('/Vendedor');
-        break;
-      case 4:
-        navigate('/SuperAdmin');
-        break;
-      default:
-        navigate('/');
-    }
-  };
+  const [salesData, setSalesData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [signature, setSignature] = useState(null);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [receiptResult, setReceiptResult] = useState(null);
 
   useEffect(() => {
-    if (saleId) {
-      fetchPatientData();
-    } else {
-      console.error("Sale is undefined or invalid.");
-      toast({
-        title: "Error",
-        description: "El ID de la venta no está disponible.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
-    }
+    if (saleId) fetchSale();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saleId]);
 
-  const fetchPatientData = async () => {
+  const fetchSale = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from("sales")
         .select(`
           *,
-          patients (
-            id,
-            pt_firstname,
-            pt_lastname,
-            pt_ci,
-            pt_phone
-          ),
+          patients (id, pt_firstname, pt_lastname, pt_ci, pt_phone),
           rx_final:measure_id (*),
-          inventario:inventario_id(brand),
-          lens:lens_id(lens_type)
+          inventario:inventario_id (brand),
+          lens:lens_id (lens_type),
+          branchs:branchs_id (name)
         `)
         .eq("id", saleId)
         .single();
-
       if (error) throw error;
-
-      setPatientData(data.patients); 
-      setSalesData(data); 
-    } catch (error) {
-      console.error("Error fetching patient data:", error);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los datos de la venta.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+      setSalesData(data);
+    } catch (err) {
+      console.error("Error cargando la venta:", err);
+      toast({ title: "Error", description: "No se pudo cargar la venta.", status: "error", duration: 4000, isClosable: true });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSendWhatsApp = async () => {
-    if (!salesData || !patientData) {
-      toast({
-        title: "Datos incompletos",
-        description: "Faltan datos para completar la operación.",
-        status: "warning",
-        duration: 5000,
-        isClosable: true,
-      });
+  const handleCompletePickup = async () => {
+    if (!salesData) return;
+
+    setIsCompleting(true);
+
+    // Retirar el producto y liquidar el saldo son cosas independientes —
+    // el saldo pendiente se sigue manejando aparte en Créditos. Aquí solo
+    // se marca que el lente ya salió de la óptica, sin tocar credit/balance.
+    const { error } = await supabase
+      .from("sales")
+      .update({ is_completed: true })
+      .eq("id", salesData.id);
+
+    if (error) {
+      setIsCompleting(false);
+      toast({ title: "Error", description: "No se pudo completar el retiro.", status: "error", duration: 4000, isClosable: true });
       return;
     }
 
+    toast({ title: "Retiro completado", status: "success", duration: 3000, isClosable: true });
+    setCompleted(true);
+
     try {
-      const phoneNumber = patientData.pt_phone;
-      const formattedMessage = message || "Pedido listo para retiro.";
-      const currentCredit = salesData.credit || 0;
-      const updatedBalance = (salesData.balance || 0) + currentCredit;
-      const updatedCredit = 0; 
-
-      const { error: updateSalesError } = await supabase
-        .from('sales')
-        .update({ 
-          is_completed: true,
-          credit: updatedCredit,  
-          balance: updatedBalance, 
-          payment_balance: paymentBalance 
-        })
-        .eq('id', salesData.id);
-
-      if (updateSalesError) {
-        console.error('Error actualizando la venta:', updateSalesError);
-        throw updateSalesError;
-      }
-
-      sendWhatsAppMessage(phoneNumber, formattedMessage);
-      
-      setPendingSales(prevSales => 
-        prevSales.filter(sale => sale.id !== salesData.id)
-      );
-
-      navigate("/RetreatsPatients", { 
-        state: { 
-          updatedPendingSales: pendingSales.filter(sale => sale.id !== salesData.id) 
-        } 
+      const { pdfUrl } = await generatePickupReceiptPDF({
+        saleId: salesData.id,
+        patientName: `${salesData.patients?.pt_firstname || ""} ${salesData.patients?.pt_lastname || ""}`.trim(),
+        patientCi: salesData.patients?.pt_ci,
+        branchName: salesData.branchs?.name,
+        frameName: salesData.inventario?.brand,
+        lensName: salesData.lens?.lens_type,
+        saleTotal: salesData.total,
+        paidSoFar: salesData.balance,
+        pendingBalance: salesData.credit,
+        signatureDataUrl: signature,
       });
+      setReceiptResult({ pdfUrl });
 
-      toast({
-        title: "Operación completada",
-        description: "Mensaje enviado, retiro marcado como completado y saldo actualizado.",
-        status: "success",
-        duration: 5000,
-        isClosable: true,
-      });
+      // Se guarda el comprobante en la venta misma, para que quede visible
+      // desde el Historial de Venta más adelante, no solo aquí.
+      await supabase
+        .from("sales")
+        .update({ pickup_receipt_url: pdfUrl, pickup_completed_at: new Date().toISOString() })
+        .eq("id", salesData.id);
     } catch (err) {
-      console.error("Error al procesar la venta:", err);
+      console.error("Error generando comprobante de retiro:", err);
       toast({
-        title: "Error",
-        description: "Hubo un problema al completar la operación.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
-    }
-  };
-
-  const sendWhatsAppMessage = (phoneNumber, message) => {
-    if (!phoneNumber) {
-      toast({
-        title: "Teléfono no disponible",
-        description: "El número de teléfono no está disponible.",
+        title: "El retiro se completó, pero el comprobante falló",
+        description: "El retiro ya quedó registrado con normalidad.",
         status: "warning",
-        duration: 5000,
+        duration: 6000,
         isClosable: true,
       });
-      return;
-    }
-
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
-
-    window.open(whatsappUrl, "_blank");
-  };
-
-  const handleWhatsAppClick = async () => {
-    try {
-      const pdfUrl = await generateAndUploadPDF(formData);
-      const message = formData.message || "Aquí tienes el documento solicitado.";
-      const phoneNumber = formData.pt_phone;
-
-      sendWhatsAppMessage(phoneNumber, `${message} ${pdfUrl}`);
-    } catch (err) {
-      console.error("Error enviando mensaje por WhatsApp:", err);
-      toast({
-        title: "Error",
-        description: "Hubo un problema al enviar el mensaje.",
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+    } finally {
+      setIsCompleting(false);
     }
   };
 
-  const moduleSpecificButton = (
-    <Button 
-      onClick={() => handleNavigate('/retreats-patients')} 
-      bg={useColorModeValue(
-        'rgba(255, 255, 255, 0.8)', 
-        'rgba(255, 255, 255, 0.1)'
-      )}
-      backdropFilter="blur(10px)"
-      border="1px solid"
-      borderColor={useColorModeValue(
-        'rgba(56, 178, 172, 0.3)', 
-        'rgba(56, 178, 172, 0.5)'
-      )}
-      color={useColorModeValue('teal.600', 'teal.300')}
-      size="sm"
-      borderRadius="15px"
-      px={4}
-      _hover={{
-        bg: useColorModeValue(
-          'rgba(56, 178, 172, 0.1)', 
-          'rgba(56, 178, 172, 0.2)'
-        ),
-        borderColor: 'teal.400',
-        transform: 'translateY(-1px)',
-      }}
-      transition="all 0.2s"
-    >
-      <HStack spacing={2} align="center" justify="center">
-        <FaEye size="14px" />
-        <Text fontWeight="600" lineHeight="1" m={0}>
-          Lista de Retiros
-        </Text>
-      </HStack>
-    </Button>
+  const handleSendReceipt = () => {
+    if (!receiptResult?.pdfUrl || !salesData?.patients?.pt_phone) return;
+    const cleanPhone = salesData.patients.pt_phone.replace(/\D/g, "");
+    const mensaje = `Hola ${salesData.patients.pt_firstname}, gracias por retirar tu pedido 🎉. Aquí está tu comprobante de retiro:\n\n${receiptResult.pdfUrl}`;
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(mensaje)}`, "_blank");
+  };
+
+  const cardBg = useColorModeValue("white", "gray.700");
+  const inputBg = useColorModeValue("gray.50", "gray.700");
+  const borderColor = useColorModeValue("gray.200", "gray.600");
+  const subtitleColor = useColorModeValue("gray.500", "gray.400");
+  const sectionIconBg = useColorModeValue("#E6FBF6", "rgba(0,168,142,0.15)");
+
+  const SectionTitle = ({ icon, children }) => (
+    <Flex align="center" gap={3} mb={4}>
+      <Flex align="center" justify="center" boxSize="30px" borderRadius="10px" bg={sectionIconBg} color={ACCENT} flexShrink={0}>
+        <Icon as={icon} boxSize="15px" />
+      </Flex>
+      <Text fontWeight="bold" fontSize="sm" letterSpacing="wide" textTransform="uppercase" color={ACCENT} whiteSpace="nowrap">
+        {children}
+      </Text>
+      <Box flex="1" h="1px" bgGradient={`linear(to-r, ${sectionIconBg}, transparent)`} />
+    </Flex>
   );
 
-    return (
-        <Box className="sales-form" display="flex" flexDirection="column" alignItems="center" minHeight="100vh">
-        <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-        <Box w="100%" maxW= "1000px" mb={4}>
-                    <Heading 
-                        mb={4} 
-                        textAlign="left" 
-                        size="md"
-                        fontWeight="700"
-                        color={useColorModeValue('teal.600', 'teal.300')}
-                        pb={2}
-                    >
-                        Retiros
-                    </Heading>
-                    </Box>
-        <Box as="form" width="100%" maxWidth="1000px" padding={4} boxShadow="lg" borderRadius="md">
-           
-        {patientData && (
-        <Box mb={6} p={4} borderWidth="1px" borderRadius="lg" boxShadow="md">
-          <Text fontSize="lg">
-            <strong>Nombre:</strong> {patientData.pt_firstname} {patientData.pt_lastname}
-          </Text>
-          <Text fontSize="lg">
-            <strong>Cédula:</strong> {patientData.pt_ci}
-          </Text>
-          <Text fontSize="lg">
-            <strong>Teléfono:</strong> {patientData.pt_phone || "No disponible"}
-          </Text>
-        </Box>
-      )}
-            <Box mt={4}>
-                <Table variant="simple">
-                    <Thead>
-                        <Tr>
-                            <Th>Rx Final</Th>
-                            <Th>Esfera</Th>
-                            <Th>Cilindro</Th>
-                            <Th>Eje</Th>
-                            <Th>Prisma</Th>
-                            <Th>ADD</Th>
-                            <Th>AV VL</Th>
-                            <Th>AV VP</Th>
-                            <Th>DNP</Th>
-                            <Th>ALT</Th>
-                        </Tr>
-                    </Thead>
-                    <Tbody>
-                        {[
-                            { side: "OD", prefix: "right" },
-                            { side: "OI", prefix: "left" },
-                        ].map(({ side, prefix }) => (
-                            <Tr key={prefix}>
-                                <Td>{side}</Td>
-                                {[
-                                    "sphere",
-                                    "cylinder",
-                                    "axis",
-                                    "prism",
-                                    "add",
-                                    "av_vl",
-                                    "av_vp",
-                                    "dnp",
-                                    "alt",
-                                ].map((field) => (
-                                    <Td key={field}>
-                                        <Input
-                                            name={`${field}_${prefix}`}
-                                            value={
-                                                 salesData?.rx_final?.[`${field}_${prefix}`] || ""
-                                            }
-                                            isReadOnly
-                                        />
-                                    </Td>
-                                ))}
-                            </Tr>
-                        ))}
-                    </Tbody>
-                </Table>
-            </Box>
-            <Box p={5} maxWidth="800px" mx="auto">
-                    <SimpleGrid columns={[1, 2]} spacing={4}>
-                        <SimpleGrid columns={[1, 1]}>
-                            <FormControl mb={4}>
-                                <FormLabel>Armazón</FormLabel>
-                                <Input
-                                    type="text"
-                                    value={salesData?.inventario?.brand ?? "Sin marca"}
-                                    isReadOnly
-                                    width="auto"
-                                    maxWidth="300px"
-                                />
-                            </FormControl>
-                            
-                            <FormControl mb={4}>
-                                <FormLabel>Lunas</FormLabel>
-                                <Input
-                                    type="text"
-                                    value={salesData?.lens?.lens_type ?? ""}
-                                    isReadOnly
-                                    width="auto"
-                                    maxWidth="300px"
-                                />
-                            </FormControl>
-                            <FormControl mb={4}>
-                                <FormLabel>Tiempo de entrega</FormLabel>
-                                <Input
-                                    type="text"
-                                    value={salesData?.delivery_time || ""}
-                                    isReadOnly
-                                    width="auto"
-                                    maxWidth="300px"
-                                />
-                            </FormControl>
-                            <FormControl>
-                                <FormLabel>Mensaje</FormLabel>
-                                <Input 
-                                    type="text"
-                                    width="50%" 
-                                    maxWidth="100px"  
-                                    minWidth="250px"  
-                                    height="100px"
-                                    value={message}
-                                    onChange={(e) => setMessage(e.target.value)} 
-                                />
-                            </FormControl>
-                            <Button colorScheme="teal" minWidth="250px" width="50%" maxWidth="100px" mt={4} onClick={handleSendWhatsApp}>Enviar</Button>
-                        </SimpleGrid>
-                        <SimpleGrid columns={[1, 1]} >
-                            <FormControl mb={4}>
-                                <FormLabel>Precio Armazón</FormLabel>
-                                <Input
-                                    type="number"
-                                    value={salesData?.p_frame || ""}
-                                    isReadOnly
-                                    width="auto"
-                                    maxWidth="300px"
-                                />
-                            </FormControl>
-                            <FormControl mb={4}>
-                                <FormLabel>Precio Lunas</FormLabel>
-                                <Input
-                                    type="number"
-                                    value={salesData?.p_lens || ""}
-                                    isReadOnly
-                                    width="auto"
-                                    maxWidth="300px"
-                                />
-                            </FormControl>
-                            <FormControl mb={4}>
-                                <FormLabel>Precio Sugerido</FormLabel>
-                                <Input
-                                    type="number"
-                                    value={salesData?.price || ""}
-                                    isReadOnly
-                                    width="auto"
-                                    maxWidth="300px"
-                                />
-                            </FormControl>
-                            <FormControl mb={4}>
-                                <FormLabel>Descuento Armazón</FormLabel>
-                                <Input 
-                                    type="number" 
-                                    value={salesData?.discount_frame ?? ""} 
-                                    isReadOnly 
-                                    width="auto" 
-                                    maxWidth="300px" />
-                            </FormControl>
-                            <FormControl mb={4}>
-                                <FormLabel>Descuento.L</FormLabel>
-                                <Input
-                                    type="number"
-                                    value={salesData?.discount_lens || ""}
-                                    isReadOnly
-                                    width="auto"
-                                    maxWidth="300px"
-                                />
-                            </FormControl>
-                            <FormControl mb={4}>
-                                <FormLabel>Precio Total</FormLabel>
-                                <Input
-                                    type="number"
-                                    value={salesData?.total || ""}
-                                    isReadOnly
-                                    width="auto"
-                                    maxWidth="300px"
-                                />
-                            </FormControl>
-                            <FormControl mb={4}>
-                                <FormLabel>Abono</FormLabel>
-                                <Input
-                                    type="number"
-                                    value={salesData?.balance || ""}
-                                    isReadOnly
-                                    width="auto"
-                                    maxWidth="300px"
-                                />
-                            </FormControl>
-                            <FormControl mb={4}>
-                                <FormLabel>Saldo</FormLabel>
-                                <Input
-                                    type="number"
-                                    value={salesData?.credit || ""}
-                                    isReadOnly
-                                    width="auto"
-                                    maxWidth="300px"
-                                />
-                            </FormControl>
-                            <FormControl mb={4}>
-                                <FormLabel>Pago en</FormLabel>
-                                <Input
-                                    type="text"
-                                    value={salesData?.payment_in || ""}
-                                    isReadOnly
-                                    width="auto"
-                                    maxWidth="300px"
-                                />
-                            </FormControl>
-                            <FormControl mb={4}>
-                                <FormLabel>Pago en</FormLabel>
-                                <Select
-                                    value={paymentBalance}
-                                    onChange={(e) => setPaymentBalance(e.target.value)}
-                                    width="auto"
-                                    maxWidth="300px"
-                                >
-                                    <option value="">Seleccione</option>
-                                    <option value="efectivo">Efectivo</option>
-                                    <option value="datafast">Datafast</option>
-                                    <option value="transferencia">Transferencia</option>
-                                </Select>
-                            </FormControl>
-                        </SimpleGrid>
-                    </SimpleGrid>
-                </Box>
-        </Box>
+  const InfoRow = ({ label, value }) => (
+    <Box>
+      <Text fontSize="xs" color={subtitleColor} mb={1}>{label}</Text>
+      <Text fontSize="sm" fontWeight="medium">{value ?? "—"}</Text>
     </Box>
-    );
+  );
+
+  return (
+    <Box minHeight="100vh" bgGradient={useColorModeValue("linear(to-br, gray.50, teal.50)", "linear(to-br, gray.900, #0d1f1c)")}>
+      <SmartHeader moduleSpecificButton={null} />
+
+      <Container maxW="1050px" py={8} px={{ base: 3, md: 6 }}>
+        <Button size="sm" variant="ghost" leftIcon={<ArrowLeft size={16} />} mb={3} onClick={() => navigate("/retreats-patients")}>
+          Volver a Retiros
+        </Button>
+
+        <Box
+          borderRadius="24px"
+          bg={cardBg}
+          border={`1px solid ${borderColor}`}
+          boxShadow={useColorModeValue("0 20px 45px -20px rgba(0,168,142,0.25)", "0 20px 45px -20px rgba(0,168,142,0.35)")}
+          overflow="hidden"
+        >
+          <Box h="5px" bgGradient="linear(to-r, #00A88E, #2DD4BF, #00A88E)" />
+
+          {loading ? (
+            <Flex justify="center" py={16}><Spinner color={ACCENT} /></Flex>
+          ) : !salesData ? (
+            <Box p={8}><Text textAlign="center" color={subtitleColor}>No se encontró esta venta.</Text></Box>
+          ) : (
+            <Box p={{ base: 5, md: 8 }}>
+              <HStack spacing={3} mb={6}>
+                <Flex align="center" justify="center" boxSize="44px" borderRadius="14px" bgGradient="linear(to-br, #00A88E, #00786A)" color="white" boxShadow="0 6px 16px -4px rgba(0,168,142,0.5)">
+                  <Icon as={PackageCheck} boxSize="20px" />
+                </Flex>
+                <VStack align="start" spacing={0}>
+                  <Heading size="lg" fontWeight="800" color={useColorModeValue("gray.800", "white")} letterSpacing="tight">
+                    {salesData.patients?.pt_firstname} {salesData.patients?.pt_lastname}
+                  </Heading>
+                  <Text fontSize="xs" color={subtitleColor}>Venta #{salesData.id} · {salesData.branchs?.name}</Text>
+                </VStack>
+                {salesData.is_completed && (
+                  <Badge colorScheme="teal" borderRadius="full" px={3} py={1} ml="auto">Ya retirado</Badge>
+                )}
+              </HStack>
+
+              <SectionTitle icon={Package}>Producto</SectionTitle>
+              <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4} mb={6}>
+                <InfoRow label="Armazón" value={salesData.inventario?.brand} />
+                <InfoRow label="Luna" value={salesData.lens?.lens_type} />
+              </SimpleGrid>
+
+              {salesData.rx_final && (
+                <>
+                  <SectionTitle icon={Eye}>Rx Final</SectionTitle>
+                  <Box overflowX="auto" mb={6}>
+                    <Table size="sm" variant="simple" minW="700px">
+                      <Thead>
+                        <Tr>
+                          <Th></Th>
+                          {measureFields.map(({ label, key }) => <Th key={key} textAlign="center" whiteSpace="nowrap">{label}</Th>)}
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {["OD", "OI"].map((eye) => (
+                          <Tr key={eye}>
+                            <Td fontWeight="bold" color={ACCENT}>{eye}</Td>
+                            {measureFields.map(({ key }) => (
+                              <Td key={key} textAlign="center">
+                                {salesData.rx_final[`${key}_${eye === "OD" ? "right" : "left"}`] || "—"}
+                              </Td>
+                            ))}
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  </Box>
+                </>
+              )}
+
+              <SectionTitle icon={CreditCard}>Pago</SectionTitle>
+              <SimpleGrid columns={{ base: 2, sm: 3 }} spacing={4} mb={6}>
+                <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`} textAlign="center">
+                  <Text fontSize="xs" color={subtitleColor} mb={1}>Total</Text>
+                  <Text fontWeight="bold" color={ACCENT} fontSize="lg">{formatMoney(salesData.total)}</Text>
+                </Box>
+                <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`} textAlign="center">
+                  <Text fontSize="xs" color={subtitleColor} mb={1}>Abonado</Text>
+                  <Text fontWeight="bold" fontSize="lg">{formatMoney(salesData.balance)}</Text>
+                </Box>
+                <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`} textAlign="center">
+                  <Text fontSize="xs" color={subtitleColor} mb={1}>Saldo pendiente</Text>
+                  <Badge colorScheme={Number(salesData.credit) > 0 ? "orange" : "teal"} borderRadius="full" px={2} fontSize="sm">
+                    {formatMoney(salesData.credit)}
+                  </Badge>
+                </Box>
+              </SimpleGrid>
+
+              {!salesData.is_completed && !completed && (
+                <>
+                  {Number(salesData.credit) > 0 && (
+                    <Box mb={6} p={3} borderRadius="10px" bg="orange.50" border="1px solid" borderColor="orange.200">
+                      <Text fontSize="xs" color="orange.700">
+                        Este paciente todavía debe {formatMoney(salesData.credit)}. Puede retirar igual — el saldo se sigue gestionando aparte en <b>Créditos</b>, esto no lo bloquea.
+                      </Text>
+                    </Box>
+                  )}
+
+                  <SectionTitle icon={PenTool}>Firma de conformidad (opcional)</SectionTitle>
+                  <Box mb={6} maxW="360px">
+                    <SignaturePadComponent onSave={(dataUrl) => setSignature(dataUrl)} />
+                  </Box>
+
+                  <Button
+                    bg={ACCENT}
+                    color="white"
+                    _hover={{ bg: "#00967f" }}
+                    size="lg"
+                    borderRadius="12px"
+                    w="full"
+                    onClick={handleCompletePickup}
+                    isLoading={isCompleting}
+                    loadingText="Completando..."
+                  >
+                    Marcar como retirado y generar comprobante
+                  </Button>
+                </>
+              )}
+
+              {(completed || salesData.is_completed) && (
+                <Box p={4} borderRadius="14px" bg={sectionIconBg} textAlign="center">
+                  <Icon as={PackageCheck} boxSize="24px" color={ACCENT} mb={1} />
+                  <Text fontWeight="bold" color={ACCENT}>Producto entregado</Text>
+                  {receiptResult?.pdfUrl && (
+                    <VStack spacing={2} mt={3}>
+                      <Button as="a" href={receiptResult.pdfUrl} target="_blank" rel="noopener noreferrer" size="sm" variant="outline" colorScheme="teal" w="full" maxW="280px">
+                        Ver comprobante
+                      </Button>
+                      {salesData.patients?.pt_phone && (
+                        <Button size="sm" colorScheme="green" leftIcon={<MessageCircle size={15} />} w="full" maxW="280px" onClick={handleSendReceipt}>
+                          Enviar comprobante por WhatsApp
+                        </Button>
+                      )}
+                    </VStack>
+                  )}
+                </Box>
+              )}
+            </Box>
+          )}
+        </Box>
+      </Container>
+    </Box>
+  );
 };
 
 export default Retreats;

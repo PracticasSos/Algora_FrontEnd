@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../../api/supabase";
-import { useNavigate } from "react-router-dom";
 import {
-  Box, Heading, Table, Thead, Tbody, Tr, Th, Td,
+  Box, Container, Heading, Table, Thead, Tbody, Tr, Th, Td,
   Select, Button, Badge, SimpleGrid, Input,
-  useColorModeValue, useToast, Flex, Stack, Divider, Icon
+  useColorModeValue, useToast, Flex, HStack, VStack, Icon, Text, Spinner,
 } from "@chakra-ui/react";
-import { AddIcon } from "@chakra-ui/icons";
+import { TrendingDown, Plus } from "lucide-react";
 import SmartHeader from "../header/SmartHeader";
+
+const ACCENT = "#00A88E";
+const todayStr = () => new Date().toLocaleDateString("en-CA");
 
 const Egresos = () => {
   const [records, setRecords] = useState([]);
@@ -15,7 +17,8 @@ const Egresos = () => {
   const [selectedBranch, setSelectedBranch] = useState("");
   const [users, setUsers] = useState([]);
   const [labs, setLabs] = useState([]);
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const toast = useToast();
 
   const [newEgreso, setNewEgreso] = useState({
@@ -25,7 +28,7 @@ const Egresos = () => {
     value: 0,
     payment_in: "",
     specification: "",
-    branchs_id: ""
+    branchs_id: "",
   });
 
   useEffect(() => {
@@ -40,44 +43,34 @@ const Egresos = () => {
 
   const fetchBranches = async () => {
     const { data, error } = await supabase.from("branchs").select("id, name");
-    if (error) {
-      console.error("Error fetching branches:", error);
-      return;
-    }
-    setBranches(data || []);
+    if (!error) setBranches(data || []);
   };
 
   const fetchUsers = async () => {
     const { data, error } = await supabase.from("users").select("id, firstname");
-    if (error) {
-      console.error("Error fetching users:", error);
-      return;
-    }
-    setUsers(data || []);
+    if (!error) setUsers(data || []);
   };
 
   const fetchLabs = async () => {
     const { data, error } = await supabase.from("labs").select("id, name");
-    if (error) {
-      console.error("Error fetching labs:", error);
-      return;
-    }
-    setLabs(data || []);
+    if (!error) setLabs(data || []);
   };
 
   const fetchEgresos = async () => {
-    const today = new Date().toLocaleDateString("en-CA");
+    setLoading(true);
     const { data, error } = await supabase
       .from("egresos")
       .select(`id, records, date, value, specification, payment_in, users (firstname), labs (name), branchs (name)`)
-      .eq("date", today)
-      .eq("branchs_id", selectedBranch);
+      .eq("date", todayStr())
+      .eq("branchs_id", selectedBranch)
+      .order("id", { ascending: false });
 
     if (error) {
       console.error("Error fetching egresos:", error);
-      return;
+    } else {
+      setRecords(data || []);
     }
-    setRecords(data || []);
+    setLoading(false);
   };
 
   const handleInputChange = (field, value) => {
@@ -86,371 +79,238 @@ const Egresos = () => {
 
   const handleSaveEgreso = async () => {
     if (!newEgreso.branchs_id) {
-      toast({
-        title: "Sucursal requerida",
-        description: "Por favor, seleccione una sucursal para guardar el egreso.",
-        status: "warning",
-        duration: 5000,
-        isClosable: true,
-      });
+      toast({ title: "Sucursal requerida", description: "Selecciona una sucursal para guardar el egreso.", status: "warning", duration: 4000, isClosable: true });
+      return;
+    }
+    if (!newEgreso.value || Number(newEgreso.value) <= 0) {
+      toast({ title: "Valor inválido", description: "El monto del egreso debe ser mayor a 0.", status: "warning", duration: 4000, isClosable: true });
+      return;
+    }
+    if (!newEgreso.payment_in) {
+      toast({ title: "Falta el método de pago", status: "warning", duration: 4000, isClosable: true });
       return;
     }
 
-    const today = new Date().toLocaleDateString("en-CA");
-    const { data, error } = await supabase.from("egresos").insert({
-      ...newEgreso,
-      date: today,
-    });
+    setIsSaving(true);
+    const { error } = await supabase.from("egresos").insert({ ...newEgreso, date: todayStr() });
+    setIsSaving(false);
 
     if (error) {
-      console.error("Error saving egreso:", error);
-      toast({
-        title: "Error",
-        description: "No se pudo registrar el egreso: " + error.message,
-        status: "error",
-        duration: 5000,
-        isClosable: true,
-      });
+      toast({ title: "Error", description: "No se pudo registrar el egreso: " + error.message, status: "error", duration: 5000, isClosable: true });
       return;
-    } else {
-      toast({
-        title: "Éxito",
-        description: "¡Egreso registrado con éxito!",
-        status: "success",
-        duration: 5000,
-        isClosable: true,
-      });
     }
 
-    setNewEgreso({
-      user_id: "",
-      records: "",
-      lab_id: "",
-      branchs_id: "",
-      value: 0,
-      payment_in: "",
-      specification: "",
-    });
+    toast({ title: "Egreso registrado", status: "success", duration: 3000, isClosable: true });
+    setNewEgreso({ user_id: "", records: "", lab_id: "", branchs_id: newEgreso.branchs_id, value: 0, payment_in: "", specification: "" });
     fetchEgresos();
   };
 
-  
-  const bgColor = useColorModeValue('gray.50', 'gray.900');
-  const cardBg = useColorModeValue('white', 'gray.800');
-  const textColor = useColorModeValue('gray.800', 'white');
-  const borderColor = useColorModeValue('gray.200', 'gray.700');
-  const selectBg = useColorModeValue('white', 'gray.700');
-  const shadow = useColorModeValue('md', 'dark-lg');
+  const cardBg = useColorModeValue("white", "gray.700");
+  const inputBg = useColorModeValue("gray.50", "gray.700");
+  const borderColor = useColorModeValue("gray.200", "gray.600");
+  const subtitleColor = useColorModeValue("gray.500", "gray.400");
+  const sectionIconBg = useColorModeValue("#E6FBF6", "rgba(0,168,142,0.15)");
+  const rowHoverBg = useColorModeValue("gray.50", "whiteAlpha.100");
 
-  const moduleSpecificButton = null;
+  const SectionTitle = ({ icon, children }) => (
+    <Flex align="center" gap={3} mb={4}>
+      <Flex align="center" justify="center" boxSize="30px" borderRadius="10px" bg={sectionIconBg} color={ACCENT} flexShrink={0}>
+        <Icon as={icon} boxSize="15px" />
+      </Flex>
+      <Text fontWeight="bold" fontSize="sm" letterSpacing="wide" textTransform="uppercase" color={ACCENT} whiteSpace="nowrap">
+        {children}
+      </Text>
+      <Box flex="1" h="1px" bgGradient={`linear(to-r, ${sectionIconBg}, transparent)`} />
+    </Flex>
+  );
+
+  const totalHoy = records.reduce((sum, r) => sum + (Number(r.value) || 0), 0);
 
   return (
-    <Box p={{ base: 2, md: 8 }} minH="100vh" bg={bgColor} color={textColor}>
-      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-      <Box
-        p={[2, 4, 6]}
-        maxW="1300px"
-        mx="auto"
-        boxShadow={shadow}
-        borderRadius="2xl"
-        bg={cardBg}
-      >
-        <Flex
-          mb={6}
-          align="center"
-          justify="space-between"
-          direction={{ base: "column", md: "row" }}
-          gap={4}
-        >
-          <Heading
-            textAlign="left"
-            size="lg"
-            fontWeight="800"
-            color={useColorModeValue("teal.700", "teal.200")}
-            letterSpacing="tight"
-          >
-            Egresos
-          </Heading>
-          <Select
-            placeholder="Seleccione una sucursal"
-            value={selectedBranch}
-            onChange={(e) => setSelectedBranch(e.target.value)}
-            bg={selectBg}
-            borderColor={borderColor}
-            color={textColor}
-            maxW={{ base: "100%", md: "300px" }}
-            boxShadow="sm"
-            _hover={{
-              borderColor: useColorModeValue("gray.300", "gray.500"),
-            }}
-            _focus={{
-              borderColor: useColorModeValue("blue.500", "blue.300"),
-              boxShadow: useColorModeValue(
-                "0 0 0 1px blue.500",
-                "0 0 0 1px blue.300"
-              ),
-            }}
-          >
-            {branches.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.name}
-              </option>
-            ))}
-          </Select>
-        </Flex>
+    <Box minHeight="100vh" bgGradient={useColorModeValue("linear(to-br, gray.50, teal.50)", "linear(to-br, gray.900, #0d1f1c)")}>
+      <SmartHeader moduleSpecificButton={null} />
 
+      <Container maxW="1150px" py={8} px={{ base: 3, md: 6 }}>
         <Box
-          overflowX="auto"
-          borderRadius="lg"
-          boxShadow="base"
-          bg={useColorModeValue("gray.50", "gray.800")}
-          mb={8}
+          borderRadius="24px"
+          bg={cardBg}
+          border={`1px solid ${borderColor}`}
+          boxShadow={useColorModeValue("0 20px 45px -20px rgba(0,168,142,0.25)", "0 20px 45px -20px rgba(0,168,142,0.35)")}
+          overflow="hidden"
         >
-          <Table variant="simple" size="md" width="100%">
-            <Thead bg={useColorModeValue("teal.50", "teal.900")}>
-              <Tr>
-                <Th>Orden</Th>
-                <Th>Fecha</Th>
-                <Th>Encargado</Th>
-                <Th>Laboratorio</Th>
-                <Th>Valor</Th>
-                <Th>Especificación</Th>
-                <Th>Sucursal</Th>
-                <Th>Pago</Th>
-              </Tr>
-            </Thead>
-            <Tbody>
-              {records.length === 0 ? (
-                <Tr>
-                  <Td colSpan={8} textAlign="center" py={8} color="gray.400">
-                    No hay egresos registrados para hoy.
-                  </Td>
-                </Tr>
-              ) : (
-                records.map((record) => (
-                  <Tr key={record.id} _hover={{ bg: useColorModeValue("gray.100", "gray.700") }}>
-                    <Td fontWeight="bold">{record.id}</Td>
-                    <Td>{record.date}</Td>
-                    <Td>{record.users?.firstname || "Sin encargado"}</Td>
-                    <Td>{record.labs?.name || "Sin laboratorio"}</Td>
-                    <Td>
-                      <Badge colorScheme="purple" fontSize="1em" px={2}>
-                        ${record.value}
-                      </Badge>
-                    </Td>
-                    <Td>{record.specification}</Td>
-                    <Td>{record.branchs?.name || "Sin Sucursal"}</Td>
-                    <Td>
-                      <Badge
-                        colorScheme={
-                          record.payment_in === "efectivo"
-                            ? "green"
-                            : record.payment_in === "transferencia"
-                            ? "blue"
-                            : "orange"
-                        }
-                        px={2}
-                        fontSize="1em"
-                      >
-                        {record.payment_in}
-                      </Badge>
-                    </Td>
-                  </Tr>
-                ))
-              )}
-            </Tbody>
-          </Table>
-        </Box>
-
-        <Divider mb={8} />
-
-        <Box
-          bg={useColorModeValue("gray.50", "gray.800")}
-          p={[4, 6]}
-          borderRadius="xl"
-          boxShadow="md"
-          mx="auto"
-        >
-          <Flex align="center" mb={4} gap={2}>
-            <Icon as={AddIcon} color="teal.400" />
-            <Heading size="md" color="teal.600" fontWeight="700">
-              Agregar Nuevo Egreso
-            </Heading>
-          </Flex>
-
-          <Stack
-            direction={{ base: "column", md: "row" }}
-            spacing={6}
-            align="flex-start"
-            justify="space-between"
-            width="100%"
-          >
-            <SimpleGrid
-              columns={{ base: 1, md: 2 }}
-              spacing={4}
-              flex="1"
-              width="100%"
-            >
-              <Select
-                placeholder="Seleccione Encargado"
-                value={newEgreso.user_id}
-                onChange={(e) => handleInputChange("user_id", e.target.value)}
-                bg={selectBg}
-                borderColor={borderColor}
-                color={textColor}
-                width="100%"
-                _hover={{
-                  borderColor: useColorModeValue("gray.300", "gray.500"),
-                }}
-                _focus={{
-                  borderColor: useColorModeValue("blue.500", "blue.300"),
-                  boxShadow: useColorModeValue(
-                    "0 0 0 1px blue.500",
-                    "0 0 0 1px blue.300"
-                  ),
-                }}
-              >
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.firstname}
-                  </option>
-                ))}
-              </Select>
-
-              <Select
-                placeholder="Seleccione Laboratorio"
-                value={newEgreso.lab_id}
-                onChange={(e) => handleInputChange("lab_id", e.target.value)}
-                bg={selectBg}
-                borderColor={borderColor}
-                color={textColor}
-                width="100%"
-                _hover={{
-                  borderColor: useColorModeValue("gray.300", "gray.500"),
-                }}
-                _focus={{
-                  borderColor: useColorModeValue("blue.500", "blue.300"),
-                  boxShadow: useColorModeValue(
-                    "0 0 0 1px blue.500",
-                    "0 0 0 1px blue.300"
-                  ),
-                }}
-              >
-                {labs.map((lab) => (
-                  <option key={lab.id} value={lab.id}>
-                    {lab.name}
-                  </option>
-                ))}
-              </Select>
-
+          <Box h="5px" bgGradient="linear(to-r, #00A88E, #2DD4BF, #00A88E)" />
+          <Box p={{ base: 5, md: 8 }}>
+            <Flex justify="space-between" align="center" mb={6} flexWrap="wrap" gap={3}>
+              <HStack spacing={3}>
+                <Flex align="center" justify="center" boxSize="44px" borderRadius="14px" bgGradient="linear(to-br, #00A88E, #00786A)" color="white" boxShadow="0 6px 16px -4px rgba(0,168,142,0.5)">
+                  <Icon as={TrendingDown} boxSize="20px" />
+                </Flex>
+                <VStack align="start" spacing={0}>
+                  <Heading size="lg" fontWeight="800" color={useColorModeValue("gray.800", "white")} letterSpacing="tight">
+                    Egresos
+                  </Heading>
+                  <Text fontSize="xs" color={subtitleColor}>Salidas de dinero registradas hoy</Text>
+                </VStack>
+              </HStack>
               <Select
                 placeholder="Seleccione una sucursal"
-                value={newEgreso.branchs_id}
-                onChange={(e) => handleInputChange("branchs_id", e.target.value)}
-                bg={selectBg}
+                value={selectedBranch}
+                onChange={(e) => setSelectedBranch(e.target.value)}
+                maxW="240px"
+                borderRadius="12px"
+                bg={inputBg}
                 borderColor={borderColor}
-                color={textColor}
-                width="100%"
-                _hover={{
-                  borderColor: useColorModeValue("gray.300", "gray.500"),
-                }}
-                _focus={{
-                  borderColor: useColorModeValue("blue.500", "blue.300"),
-                  boxShadow: useColorModeValue(
-                    "0 0 0 1px blue.500",
-                    "0 0 0 1px blue.300"
-                  ),
-                }}
+                _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
               >
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
               </Select>
+            </Flex>
 
-              <Input
-                placeholder="Valor"
-                type="number"
-                value={newEgreso.value === 0 ? "" : newEgreso.value}
-                onChange={(e) => handleInputChange("value", e.target.value)}
-                bg={selectBg}
-                borderColor={borderColor}
-                color={textColor}
-                width="100%"
-                _hover={{
-                  borderColor: useColorModeValue("gray.300", "gray.500"),
-                }}
-                _focus={{
-                  borderColor: useColorModeValue("blue.500", "blue.300"),
-                  boxShadow: useColorModeValue(
-                    "0 0 0 1px blue.500",
-                    "0 0 0 1px blue.300"
-                  ),
-                }}
-              />
+            {!selectedBranch ? (
+              <Text textAlign="center" color={subtitleColor} py={12}>
+                Selecciona una sucursal para ver y registrar egresos.
+              </Text>
+            ) : (
+              <>
+                <SectionTitle icon={TrendingDown}>Egresos de hoy</SectionTitle>
+                {loading ? (
+                  <Flex justify="center" py={10}><Spinner color={ACCENT} /></Flex>
+                ) : (
+                  <>
+                    <Box overflowX="auto" borderRadius="14px" border={`1px solid ${borderColor}`} mb={2}>
+                      <Table variant="simple" size="sm">
+                        <Thead>
+                          <Tr>
+                            <Th color={subtitleColor}>Encargado</Th>
+                            <Th color={subtitleColor}>Laboratorio</Th>
+                            <Th color={subtitleColor}>Especificación</Th>
+                            <Th color={subtitleColor}>Método</Th>
+                            <Th color={subtitleColor} textAlign="right">Valor</Th>
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          {records.length === 0 ? (
+                            <Tr><Td colSpan={5} textAlign="center" py={8} color={subtitleColor}>No hay egresos registrados hoy.</Td></Tr>
+                          ) : (
+                            records.map((r) => (
+                              <Tr key={r.id} _hover={{ bg: rowHoverBg }}>
+                                <Td>{r.users?.firstname || "—"}</Td>
+                                <Td>{r.labs?.name || "—"}</Td>
+                                <Td>{r.specification || "—"}</Td>
+                                <Td>
+                                  <Badge colorScheme={r.payment_in === "efectivo" ? "teal" : r.payment_in === "transferencia" ? "blue" : "purple"} borderRadius="full" px={2} textTransform="capitalize">
+                                    {r.payment_in}
+                                  </Badge>
+                                </Td>
+                                <Td textAlign="right" fontWeight="semibold">${Number(r.value).toFixed(2)}</Td>
+                              </Tr>
+                            ))
+                          )}
+                        </Tbody>
+                      </Table>
+                    </Box>
+                    {records.length > 0 && (
+                      <Text fontSize="xs" color={subtitleColor} textAlign="right" mb={8}>
+                        Total del día: <Text as="span" fontWeight="bold" color="red.400">${totalHoy.toFixed(2)}</Text>
+                      </Text>
+                    )}
+                  </>
+                )}
 
-              <Select
-                placeholder="Método de Pago"
-                value={newEgreso.payment_in}
-                onChange={(e) => handleInputChange("payment_in", e.target.value)}
-                bg={selectBg}
-                borderColor={borderColor}
-                color={textColor}
-                width="100%"
-                _hover={{
-                  borderColor: useColorModeValue("gray.300", "gray.500"),
-                }}
-                _focus={{
-                  borderColor: useColorModeValue("blue.500", "blue.300"),
-                  boxShadow: useColorModeValue(
-                    "0 0 0 1px blue.500",
-                    "0 0 0 1px blue.300"
-                  ),
-                }}
-              >
-                <option value="efectivo">Efectivo</option>
-                <option value="datafast">Datafast</option>
-                <option value="transferencia">Transferencia</option>
-              </Select>
+                <SectionTitle icon={Plus}>Agregar nuevo egreso</SectionTitle>
+                <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
+                  <Select
+                    placeholder="Encargado"
+                    value={newEgreso.user_id}
+                    onChange={(e) => handleInputChange("user_id", e.target.value)}
+                    borderRadius="10px"
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                  >
+                    {users.map((u) => <option key={u.id} value={u.id}>{u.firstname}</option>)}
+                  </Select>
 
-              <Input
-                placeholder="Especificación"
-                value={newEgreso.specification}
-                onChange={(e) => handleInputChange("specification", e.target.value)}
-                bg={selectBg}
-                borderColor={borderColor}
-                color={textColor}
-                width="100%"
-                _hover={{
-                  borderColor: useColorModeValue("gray.300", "gray.500"),
-                }}
-                _focus={{
-                  borderColor: useColorModeValue("blue.500", "blue.300"),
-                  boxShadow: useColorModeValue(
-                    "0 0 0 1px blue.500",
-                    "0 0 0 1px blue.300"
-                  ),
-                }}
-              />
-            </SimpleGrid>
-            <Button
-              colorScheme="teal"
-              size="lg"
-              alignSelf={{ base: "stretch", md: "flex-end" }}
-              leftIcon={<AddIcon />}
-              mt={[4, 0]}
-              px={8}
-              fontWeight="bold"
-              boxShadow="md"
-              onClick={handleSaveEgreso}
-              _hover={{ bg: "teal.600" }}
-            >
-              Guardar Egreso
-            </Button>
-          </Stack>
+                  <Select
+                    placeholder="Laboratorio (opcional)"
+                    value={newEgreso.lab_id}
+                    onChange={(e) => handleInputChange("lab_id", e.target.value)}
+                    borderRadius="10px"
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                  >
+                    {labs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  </Select>
+
+                  <Select
+                    placeholder="Sucursal del egreso"
+                    value={newEgreso.branchs_id}
+                    onChange={(e) => handleInputChange("branchs_id", e.target.value)}
+                    borderRadius="10px"
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                  >
+                    {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </Select>
+
+                  <Input
+                    placeholder="Valor"
+                    type="number"
+                    value={newEgreso.value === 0 ? "" : newEgreso.value}
+                    onChange={(e) => handleInputChange("value", e.target.value)}
+                    borderRadius="10px"
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                  />
+
+                  <Select
+                    placeholder="Método de pago"
+                    value={newEgreso.payment_in}
+                    onChange={(e) => handleInputChange("payment_in", e.target.value)}
+                    borderRadius="10px"
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                  >
+                    <option value="efectivo">Efectivo</option>
+                    <option value="datafast">Datafast</option>
+                    <option value="transferencia">Transferencia</option>
+                  </Select>
+
+                  <Input
+                    placeholder="Especificación"
+                    value={newEgreso.specification}
+                    onChange={(e) => handleInputChange("specification", e.target.value)}
+                    borderRadius="10px"
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                  />
+                </SimpleGrid>
+
+                <Button
+                  bg={ACCENT}
+                  color="white"
+                  _hover={{ bg: "#00967f" }}
+                  size="lg"
+                  borderRadius="12px"
+                  leftIcon={<Plus size={16} />}
+                  onClick={handleSaveEgreso}
+                  isLoading={isSaving}
+                  w={{ base: "100%", md: "auto" }}
+                >
+                  Guardar Egreso
+                </Button>
+              </>
+            )}
+          </Box>
         </Box>
-      </Box>
+      </Container>
     </Box>
   );
 };

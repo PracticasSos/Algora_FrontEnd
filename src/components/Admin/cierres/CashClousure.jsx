@@ -60,7 +60,10 @@ const CashClousure = () => {
 
   const fetchBranches = async () => {
     const { data, error } = await supabase.from("branchs").select("id, name");
-    if (!error) setBranches(data || []);
+    if (!error) {
+      setBranches(data || []);
+      if (data && data.length > 0) setSelectedBranch(data[0].id);
+    }
   };
 
   const handleMonthChange = (value) => {

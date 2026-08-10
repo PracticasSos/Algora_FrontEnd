@@ -1,7 +1,10 @@
 import { useState } from "react";
-import { Box, Button, Spinner, Text, useToast } from "@chakra-ui/react";
+import { Box, Button, Spinner, Text, useToast, HStack, VStack, Icon } from "@chakra-ui/react";
+import { FileText, MessageCircle, CheckCircle2 } from "lucide-react";
 import { generateContractPDF } from "./pdf/pdfGenerator.js";
 import { supabase } from "../../../api/supabase"; // <-- 1. IMPORTAR SUPABASE
+
+const ACCENT = "#00A88E";
 
 // --- ACEPTAR LAS NUEVAS PROPS: onSave y isSaving ---
 const PdfLaboratory = ({
@@ -14,6 +17,10 @@ const PdfLaboratory = ({
 }) => {
   const toast = useToast();
   const [generating, setGenerating] = useState(false);
+  // Se guarda el link del PDF ya generado, para poder mostrarlo con un
+  // botón "Ver PDF" — antes solo se descargaba solo, sin dejar ningún
+  // acceso visible en pantalla para abrirlo de nuevo.
+  const [generatedPdfUrl, setGeneratedPdfUrl] = useState(null);
 
   /**
    * Lógica centralizada para generar el PDF.
@@ -66,6 +73,8 @@ const PdfLaboratory = ({
           }
         }
         // --- FIN DEL UPDATE ---
+
+        setGeneratedPdfUrl(result.pdfUrl);
 
         toast({
           title: "✅ PDF Generado",
@@ -168,8 +177,9 @@ const PdfLaboratory = ({
           loadingText={isSaving ? "Guardando..." : "Generando..."}
           colorScheme="blue"
           size="md"
+          isDisabled={!!generatedPdfUrl}
         >
-          Guardar y Generar PDF
+          {generatedPdfUrl ? "PDF Generado ✓" : "Guardar y Generar PDF"}
         </Button>
 
         {/* BOTON POR SI EN UN FUTURO QUEREMOS MANDAR LA ORDEN DIRECTAMNETE */}
@@ -196,6 +206,46 @@ const PdfLaboratory = ({
               : "Generando PDF, por favor espera..."}
           </Text>
         </Box>
+      )}
+
+      {generatedPdfUrl && !generating && (
+        <VStack mt={5} spacing={3} p={4} borderRadius="14px" bg="rgba(0,168,142,0.08)">
+          <HStack spacing={2} color={ACCENT}>
+            <Icon as={CheckCircle2} boxSize="18px" />
+            <Text fontWeight="bold" fontSize="sm">El PDF ya se descargó a tu computadora</Text>
+          </HStack>
+          <Text fontSize="xs" color="gray.500" textAlign="center">
+            Revisa tu carpeta de Descargas, o ábrelo aquí directo para imprimirlo:
+          </Text>
+          <HStack spacing={3} flexWrap="wrap" justify="center">
+            <Button
+              as="a"
+              href={generatedPdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              size="sm"
+              bg={ACCENT}
+              color="white"
+              _hover={{ bg: "#00967f" }}
+              leftIcon={<Icon as={FileText} boxSize="14px" />}
+            >
+              Ver PDF / Imprimir
+            </Button>
+            {branchPhone && (
+              <Button
+                as="a"
+                href={`https://wa.me/${branchPhone.replace(/\D/g, "")}?text=${encodeURIComponent(`Aquí está el PDF de la orden: ${generatedPdfUrl}`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                size="sm"
+                colorScheme="green"
+                leftIcon={<Icon as={MessageCircle} boxSize="14px" />}
+              >
+                Enviar por WhatsApp
+              </Button>
+            )}
+          </HStack>
+        </VStack>
       )}
     </Box>
   );

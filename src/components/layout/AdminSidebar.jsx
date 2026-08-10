@@ -15,8 +15,27 @@ const AdminSidebar = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
 
+  // Si el admin le asignó permisos específicos a este usuario
+  // (user.allowed_routes), el menú solo muestra esas rutas — las secciones
+  // que se quedan sin ítems visibles simplemente no aparecen. Si no tiene
+  // nada asignado (null/vacío), ve todo como siempre.
+  const hasCustomPermissions = Array.isArray(user?.allowed_routes) && user.allowed_routes.length > 0;
+  const filteredSections = hasCustomPermissions
+    ? adminNavSections
+        .map((section) => ({
+          ...section,
+          items: section.items.filter((item) => user.allowed_routes.includes(item.path)),
+        }))
+        .filter((section) => section.items.length > 0)
+    : adminNavSections;
+
+  // Seguro: si el filtrado deja el menú completamente vacío (por ejemplo,
+  // permisos guardados que ya no coinciden con ninguna ruta actual), se
+  // muestra todo en vez de dejar a alguien bloqueado sin poder navegar.
+  const visibleNavSections = filteredSections.length > 0 ? filteredSections : adminNavSections;
+
   // Sección que contiene la ruta activa: se abre sola al entrar
-  const activeSectionId = adminNavSections.find((s) => s.items.some((i) => i.path === location.pathname))?.id;
+  const activeSectionId = visibleNavSections.find((s) => s.items.some((i) => i.path === location.pathname))?.id;
   const [openSection, setOpenSection] = useState(activeSectionId || null);
 
   useEffect(() => {
@@ -125,7 +144,7 @@ const AdminSidebar = () => {
         </Box>
 
         <VStack align="stretch" spacing={0.5} mt={3}>
-          {adminNavSections.map((section) => {
+          {visibleNavSections.map((section) => {
             const isOpen = openSection === section.id;
             const hasActiveChild = section.items.some((i) => isActive(i.path));
             const SectionIcon = section.items[0]?.icon || FiHome;

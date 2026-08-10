@@ -5,7 +5,7 @@ import {
   Box, Container, Heading, Text, Flex, HStack, VStack, Icon, Badge, Spinner,
   useColorModeValue, Button, SimpleGrid, Input, FormControl, FormLabel, useToast,
 } from "@chakra-ui/react";
-import { ArrowLeft, ShoppingBag, User, CreditCard, FileText, MessageCircle, Package, Pencil, PackageCheck } from "lucide-react";
+import { ArrowLeft, ShoppingBag, User, CreditCard, FileText, MessageCircle, Package, Pencil, PackageCheck, FlaskConical } from "lucide-react";
 import SmartHeader from "../header/SmartHeader";
 import { useAuth } from "../AuthContext";
 
@@ -260,6 +260,15 @@ const SaleDetail = () => {
                 </HStack>
                 <HStack>
                   {sale.is_refund && <Badge colorScheme="red" borderRadius="full" px={3} py={1}>Reembolsada</Badge>}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    colorScheme="purple"
+                    leftIcon={<FlaskConical size={14} />}
+                    onClick={() => navigate(`/order-laboratory-list/laboratory-order/${sale.patient_id}/${sale.id}`, { state: { patientData: sale.patients } })}
+                  >
+                    Crear Orden de Laboratorio
+                  </Button>
                   {isAdmin && !isEditing && (
                     <Button size="sm" variant="outline" colorScheme="teal" leftIcon={<Pencil size={14} />} onClick={startEditing}>
                       Editar venta

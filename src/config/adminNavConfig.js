@@ -83,6 +83,7 @@ export const adminNavSections = [
       { label: "Cierre Diario", path: "/patient-records", icon: FiDollarSign },
       { label: "Consultar Cierre", path: "/cash-closure", icon: FiFileText },
       { label: "Egresos", path: "/egresos", icon: FiUpload },
+      { label: "Conciliación Datafast", path: "/datafast-reconciliation", icon: FiCreditCard },
     ],
   },
   {
@@ -101,6 +102,8 @@ export const adminNavSections = [
       { label: "Usuarios", path: "/register", icon: FiUsers },
       { label: "Mensajes", path: "/message-manager", icon: FiMessageSquare },
       { label: "Configuración de Retiros", path: "/delivery-settings", icon: FiClock },
+      { label: "Registrar Usuario", path: "/register", icon: FiUserPlus },
+      { label: "Configuración de Usuarios", path: "/user-management", icon: FiUsers },
       { label: "Optómetras", path: "/optometrist-settings", icon: FiUsers },
     ],
   },

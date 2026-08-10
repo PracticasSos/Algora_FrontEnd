@@ -18,6 +18,8 @@ import RegisterLens from "../components/Admin/RegisterLens.jsx";
 import MeasuresFinal from "../components/Admin/MeasuresFinal.jsx"
 import PatientRecords from "../components/Admin/CierreDiario/PatientRecords.jsx"
 import Egresos from "../components/Admin/Egresos.jsx"
+import DatafastReconciliation from "../components/Admin/DatafastReconciliation.jsx"
+import UserManagement from "../components/Admin/UserManagement.jsx"
 import PatientHistory from "../components/Admin/PatientHistory.jsx"
 import LaboratoryOrder from "../components/Admin/OrderLaboratory/LaboratoryOrder.jsx"
 import OrderLaboratoryList from "../components/Admin/OrderLaboratory/OrderLaboratoryList.jsx"
@@ -62,6 +64,7 @@ const AppRouter = () => {
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/terms-manager" element={<TermsManager />} />
             <Route path="/delivery-settings" element={<DeliverySettings />} />
+            <Route path="/user-management" element={<UserManagement />} />
             <Route path="/optometrist-settings" element={<OptometristSettings />} />
             <Route path="/inventory" element={<Inventario />}></Route>
             <Route path="/login-form" element={<LoginForm />} />
@@ -90,6 +93,7 @@ const AppRouter = () => {
             <Route path="/history-measure-list" element={<HistoryMeasureList />}> </Route>
             <Route path="/history-measure-list/history-measures/:patientId" element={<HistoryMeasures />}></Route>
             <Route path="/egresos" element={<Egresos />}> </Route>
+            <Route path="/datafast-reconciliation" element={<DatafastReconciliation />}> </Route>
             <Route path="/balances-patient" element={<BalancesPatient />}></Route>
             <Route path="/retreats-patients" element={<RetreatsPatients />}></Route>
             <Route path="/retreats-patients/retreats/:saleId" element={<Retreats />}></Route>

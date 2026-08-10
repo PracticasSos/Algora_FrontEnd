@@ -37,8 +37,6 @@ const PatientRecords = () => {
   const [abonos, setAbonos] = useState([]);
   const [egresos, setEgresos] = useState([]);
   const [settlement, setSettlement] = useState(null); // conciliación de datafast ya guardada, si existe
-  const [netInput, setNetInput] = useState("");
-  const [isSavingSettlement, setIsSavingSettlement] = useState(false);
 
   const toast = useToast();
   const today = todayStr();
@@ -54,7 +52,12 @@ const PatientRecords = () => {
 
   const fetchBranches = async () => {
     const { data, error } = await supabase.from("branchs").select("id, name");
-    if (!error) setBranches(data || []);
+    if (!error) {
+      setBranches(data || []);
+      // Se selecciona sola la primera sucursal, así ya aparece algo de
+      // entrada sin tener que filtrar manualmente primero.
+      if (data && data.length > 0) setSelectedBranch(data[0].id);
+    }
   };
 
   const fetchAll = useCallback(async () => {
@@ -89,7 +92,6 @@ const PatientRecords = () => {
       setAbonos(abonosRes.data || []);
       setEgresos(egresosRes.data || []);
       setSettlement(settlementRes.data || null);
-      setNetInput(settlementRes.data ? String(settlementRes.data.net_amount) : "");
     } catch (err) {
       console.error("Error cargando el cierre diario:", err);
       toast({ title: "Error", description: "No se pudo cargar el cierre del día.", status: "error", duration: 4000, isClosable: true });
@@ -131,40 +133,6 @@ const PatientRecords = () => {
   const totalIngresos = ingresosPorMetodo.efectivo + ingresosPorMetodo.transferencia + ingresosPorMetodo.datafast;
   const totalAbonos = abonosPorMetodo.efectivo + abonosPorMetodo.transferencia + abonosPorMetodo.datafast;
   const totalEgresos = egresosPorMetodo.efectivo + egresosPorMetodo.transferencia + egresosPorMetodo.datafast;
-
-  // --- Guardar conciliación de Datafast ---
-  const handleSaveSettlement = async () => {
-    const net = parseFloat(netInput);
-    if (isNaN(net) || net < 0) {
-      toast({ title: "Monto inválido", description: "Escribe el monto real que llegó a la cuenta.", status: "warning", duration: 4000, isClosable: true });
-      return;
-    }
-
-    setIsSavingSettlement(true);
-    const payload = {
-      branchs_id: selectedBranch,
-      settlement_date: today,
-      gross_amount: datafastGross,
-      net_amount: net,
-      updated_at: new Date().toISOString(),
-    };
-
-    const { data, error } = await supabase
-      .from("datafast_settlements")
-      .upsert(payload, { onConflict: "branchs_id,settlement_date,tenant_id" })
-      .select()
-      .maybeSingle();
-
-    setIsSavingSettlement(false);
-
-    if (error) {
-      console.error("Error guardando conciliación:", error);
-      toast({ title: "Error", description: "No se pudo guardar la conciliación de Datafast.", status: "error", duration: 5000, isClosable: true });
-    } else {
-      setSettlement(data);
-      toast({ title: "Conciliación guardada", description: "Ya queda registrado el monto real que llegó a la cuenta.", status: "success", duration: 4000, isClosable: true });
-    }
-  };
 
   const cardBg = useColorModeValue("white", "gray.700");
   const inputBg = useColorModeValue("gray.50", "gray.700");
@@ -305,52 +273,50 @@ const PatientRecords = () => {
                   />
                 </SimpleGrid>
 
-                {/* Conciliación de Datafast */}
-                <SectionTitle icon={CreditCard}>Conciliación de Datafast</SectionTitle>
-                <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`} mb={4}>
-                  <Text fontSize="xs" color={subtitleColor} mb={3}>
-                    El banco no deposita el mismo monto que muestran las ventas — se descuenta una comisión. Registra aquí cuánto <b>llegó realmente</b> a la cuenta hoy, para que quede el dato correcto en Consultar Cierre.
-                  </Text>
-                  <SimpleGrid columns={{ base: 1, sm: 3 }} spacing={4} alignItems="flex-end">
-                    <Box>
-                      <Text fontSize="xs" color={subtitleColor} mb={1}>Ventas Datafast (bruto)</Text>
-                      <Text fontWeight="bold" fontSize="lg">{formatMoney(datafastGross)}</Text>
-                    </Box>
-                    <Box>
-                      <Text fontSize="xs" color={subtitleColor} mb={1}>Monto real depositado</Text>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={netInput}
-                        onChange={(e) => setNetInput(e.target.value)}
-                        borderRadius="10px"
-                        bg={cardBg}
-                        borderColor={borderColor}
-                        _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
-                      />
-                    </Box>
-                    <Button
-                      bg={ACCENT}
-                      color="white"
-                      _hover={{ bg: "#00967f" }}
-                      borderRadius="10px"
-                      onClick={handleSaveSettlement}
-                      isLoading={isSavingSettlement}
+                {/* Estado de Datafast — la conciliación real puede tardar días o meses,
+                    así que aquí solo se informa el estado; el registro del monto
+                    real se hace en su propia pantalla, sin apuro de "hoy mismo". */}
+                {ingresosPorMetodo.datafast + abonosPorMetodo.datafast > 0 && (
+                  <>
+                    <SectionTitle icon={CreditCard}>Estado de Datafast</SectionTitle>
+                    <Flex
+                      p={4}
+                      borderRadius="14px"
+                      bg={inputBg}
+                      border={`1px solid ${borderColor}`}
+                      mb={8}
+                      justify="space-between"
+                      align="center"
+                      flexWrap="wrap"
+                      gap={3}
                     >
-                      {settlement ? "Actualizar conciliación" : "Guardar conciliación"}
-                    </Button>
-                  </SimpleGrid>
-                  {settlement && (
-                    <HStack spacing={2} mt={4}>
-                      <Icon as={CheckCircle2} color={ACCENT} boxSize="16px" />
-                      <Text fontSize="xs" color={subtitleColor}>
-                        Conciliado — comisión del banco: <b>{formatMoney(datafastFee)}</b>
-                        {datafastGross > 0 && ` (${((datafastFee / datafastGross) * 100).toFixed(1)}%)`}
-                      </Text>
-                    </HStack>
-                  )}
-                </Box>
+                      <HStack spacing={3}>
+                        {settlement ? (
+                          <Badge colorScheme="teal" borderRadius="full" px={3} py={1}>
+                            <HStack spacing={1}><Icon as={CheckCircle2} boxSize="12px" /><Text>Conciliado</Text></HStack>
+                          </Badge>
+                        ) : (
+                          <Badge colorScheme="orange" borderRadius="full" px={3} py={1}>Pendiente de conciliar</Badge>
+                        )}
+                        <Text fontSize="xs" color={subtitleColor}>
+                          {settlement
+                            ? `Llegaron ${formatMoney(datafastNet)} de ${formatMoney(datafastGross)} en ventas.`
+                            : `${formatMoney(datafastGross)} en ventas todavía sin confirmar cuánto llegó al banco.`}
+                        </Text>
+                      </HStack>
+                      <Button
+                        as="a"
+                        href="/datafast-reconciliation"
+                        size="sm"
+                        variant="outline"
+                        colorScheme="purple"
+                        borderRadius="10px"
+                      >
+                        Ir a Conciliación de Datafast
+                      </Button>
+                    </Flex>
+                  </>
+                )}
 
                 {/* Detalle de egresos del día */}
                 {egresos.length > 0 && (

@@ -5,50 +5,46 @@ import {
   Select, Button, Badge, SimpleGrid, Input,
   useColorModeValue, useToast, Flex, HStack, VStack, Icon, Text, Spinner,
 } from "@chakra-ui/react";
-import { TrendingDown, Plus } from "lucide-react";
+import { TrendingDown, Plus, User, MapPin } from "lucide-react";
 import SmartHeader from "../header/SmartHeader";
+import { useAuth } from "../AuthContext";
 
 const ACCENT = "#00A88E";
 const todayStr = () => new Date().toLocaleDateString("en-CA");
 
 const Egresos = () => {
+  const { user } = useAuth();
   const [records, setRecords] = useState([]);
   const [branches, setBranches] = useState([]);
-  const [selectedBranch, setSelectedBranch] = useState("");
-  const [users, setUsers] = useState([]);
   const [labs, setLabs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const toast = useToast();
 
+  // La sucursal y el encargado ya no se preguntan — se toman directo de
+  // la sesión de quien inició sesión, así no hay margen de error.
+  const myBranchId = user?.branch_id || "";
+
   const [newEgreso, setNewEgreso] = useState({
-    user_id: "",
-    records: "",
     lab_id: "",
     value: 0,
     payment_in: "",
     specification: "",
-    branchs_id: "",
   });
 
   useEffect(() => {
     fetchBranches();
-    fetchUsers();
     fetchLabs();
   }, []);
 
   useEffect(() => {
-    if (selectedBranch) fetchEgresos();
-  }, [selectedBranch]);
+    if (myBranchId) fetchEgresos();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myBranchId]);
 
   const fetchBranches = async () => {
     const { data, error } = await supabase.from("branchs").select("id, name");
     if (!error) setBranches(data || []);
-  };
-
-  const fetchUsers = async () => {
-    const { data, error } = await supabase.from("users").select("id, firstname");
-    if (!error) setUsers(data || []);
   };
 
   const fetchLabs = async () => {
@@ -62,7 +58,7 @@ const Egresos = () => {
       .from("egresos")
       .select(`id, records, date, value, specification, payment_in, users (firstname), labs (name), branchs (name)`)
       .eq("date", todayStr())
-      .eq("branchs_id", selectedBranch)
+      .eq("branchs_id", myBranchId)
       .order("id", { ascending: false });
 
     if (error) {
@@ -78,8 +74,8 @@ const Egresos = () => {
   };
 
   const handleSaveEgreso = async () => {
-    if (!newEgreso.branchs_id) {
-      toast({ title: "Sucursal requerida", description: "Selecciona una sucursal para guardar el egreso.", status: "warning", duration: 4000, isClosable: true });
+    if (!myBranchId) {
+      toast({ title: "Sin sucursal asignada", description: "Tu usuario no tiene una sucursal asignada — pídele al admin que te la asigne en Configuración de Usuarios.", status: "warning", duration: 6000, isClosable: true });
       return;
     }
     if (!newEgreso.value || Number(newEgreso.value) <= 0) {
@@ -92,7 +88,12 @@ const Egresos = () => {
     }
 
     setIsSaving(true);
-    const { error } = await supabase.from("egresos").insert({ ...newEgreso, date: todayStr() });
+    const { error } = await supabase.from("egresos").insert({
+      ...newEgreso,
+      user_id: user.id,
+      branchs_id: myBranchId,
+      date: todayStr(),
+    });
     setIsSaving(false);
 
     if (error) {
@@ -101,7 +102,7 @@ const Egresos = () => {
     }
 
     toast({ title: "Egreso registrado", status: "success", duration: 3000, isClosable: true });
-    setNewEgreso({ user_id: "", records: "", lab_id: "", branchs_id: newEgreso.branchs_id, value: 0, payment_in: "", specification: "" });
+    setNewEgreso({ lab_id: "", value: 0, payment_in: "", specification: "" });
     fetchEgresos();
   };
 
@@ -152,25 +153,21 @@ const Egresos = () => {
                   <Text fontSize="xs" color={subtitleColor}>Salidas de dinero registradas hoy</Text>
                 </VStack>
               </HStack>
-              <Select
-                placeholder="Seleccione una sucursal"
-                value={selectedBranch}
-                onChange={(e) => setSelectedBranch(e.target.value)}
-                maxW="240px"
-                borderRadius="12px"
-                bg={inputBg}
-                borderColor={borderColor}
-                _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
-              >
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </Select>
+              <VStack align="end" spacing={0}>
+                <HStack spacing={1} fontSize="xs" color={subtitleColor}>
+                  <Icon as={MapPin} boxSize="12px" />
+                  <Text>{branches.find((b) => String(b.id) === String(myBranchId))?.name || "Sin sucursal asignada"}</Text>
+                </HStack>
+                <HStack spacing={1} fontSize="xs" color={subtitleColor}>
+                  <Icon as={User} boxSize="12px" />
+                  <Text>{user?.firstname || user?.email}</Text>
+                </HStack>
+              </VStack>
             </Flex>
 
-            {!selectedBranch ? (
+            {!myBranchId ? (
               <Text textAlign="center" color={subtitleColor} py={12}>
-                Selecciona una sucursal para ver y registrar egresos.
+                Tu usuario no tiene una sucursal asignada. Pídele a un administrador que te la asigne en Configuración de Usuarios.
               </Text>
             ) : (
               <>
@@ -222,18 +219,6 @@ const Egresos = () => {
                 <SectionTitle icon={Plus}>Agregar nuevo egreso</SectionTitle>
                 <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4} mb={4}>
                   <Select
-                    placeholder="Encargado"
-                    value={newEgreso.user_id}
-                    onChange={(e) => handleInputChange("user_id", e.target.value)}
-                    borderRadius="10px"
-                    bg={inputBg}
-                    borderColor={borderColor}
-                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
-                  >
-                    {users.map((u) => <option key={u.id} value={u.id}>{u.firstname}</option>)}
-                  </Select>
-
-                  <Select
                     placeholder="Laboratorio (opcional)"
                     value={newEgreso.lab_id}
                     onChange={(e) => handleInputChange("lab_id", e.target.value)}
@@ -243,18 +228,6 @@ const Egresos = () => {
                     _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
                   >
                     {labs.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-                  </Select>
-
-                  <Select
-                    placeholder="Sucursal del egreso"
-                    value={newEgreso.branchs_id}
-                    onChange={(e) => handleInputChange("branchs_id", e.target.value)}
-                    borderRadius="10px"
-                    bg={inputBg}
-                    borderColor={borderColor}
-                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
-                  >
-                    {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </Select>
 
                   <Input

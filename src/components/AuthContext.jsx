@@ -89,8 +89,24 @@ export const AuthProvider = ({ children }) => {
         }
       }
 
-      // 4) Guardar usuario fusionado
-      const fullUserData = { ...authUser, ...dbUser };
+      // 4) Cargar permisos personalizados (si el admin le asignó alguno
+      // específico en Configuración de Usuarios). Si no tiene ninguno, el
+      // arreglo queda vacío y el resto del sistema usa los permisos por
+      // defecto de su rol, sin cambios de comportamiento.
+      let allowedRoutes = [];
+      const { data: permsData, error: permsError } = await supabase
+        .from('user_permissions')
+        .select('route')
+        .eq('user_id', dbUser.id);
+
+      if (permsError) {
+        console.error("Error cargando permisos del usuario:", permsError);
+      } else {
+        allowedRoutes = (permsData || []).map((p) => p.route);
+      }
+
+      // 5) Guardar usuario fusionado
+      const fullUserData = { ...authUser, ...dbUser, allowed_routes: allowedRoutes };
       setUser(fullUserData);
       localStorage.setItem('user', JSON.stringify(fullUserData));
 

@@ -7,6 +7,13 @@ const SalesDetailsStep = ({
   accessories,
   setAccessories,
   onOpenAddMore,
+  treatmentsCatalog,
+  selectedTreatmentIds,
+  setSelectedTreatmentIds,
+  treatmentPriceOverrides,
+  setTreatmentPriceOverrides,
+  treatmentsSubtotal,
+  treatmentsTotal,
 }) => (
   <SalesDetails
     formData={formData}
@@ -15,6 +22,13 @@ const SalesDetailsStep = ({
     accessories={accessories}
     setAccessories={setAccessories}
     onOpenAddMore={onOpenAddMore}
+    treatmentsCatalog={treatmentsCatalog}
+    selectedTreatmentIds={selectedTreatmentIds}
+    setSelectedTreatmentIds={setSelectedTreatmentIds}
+    treatmentPriceOverrides={treatmentPriceOverrides}
+    setTreatmentPriceOverrides={setTreatmentPriceOverrides}
+    treatmentsSubtotal={treatmentsSubtotal}
+    treatmentsTotal={treatmentsTotal}
   />
 );
 

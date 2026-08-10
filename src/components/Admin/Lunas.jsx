@@ -5,7 +5,6 @@ import {
   Flex, HStack, VStack, Icon, IconButton, Spinner, useColorModeValue,
   useToast, Button,
 } from "@chakra-ui/react";
-import { useNavigate } from "react-router-dom";
 import { Search as SearchIcon, Plus, Pencil, Trash2, Check, X, Aperture, ChevronLeft, ChevronRight } from "lucide-react";
 import ConfirmDialog from "../UI/ConfirmDialog";
 import SmartHeader from "../header/SmartHeader";
@@ -19,7 +18,7 @@ const formatMoney = (value) => {
   return `$${n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-const ListLens = () => {
+const Lunas = () => {
   const [lens, setLens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -30,8 +29,11 @@ const ListLens = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
+  const [newType, setNewType] = useState("");
+  const [newPrice, setNewPrice] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+
   const toast = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchLens();
@@ -46,6 +48,30 @@ const ListLens = () => {
       setLens(data || []);
     }
     setLoading(false);
+  };
+
+  const handleAdd = async () => {
+    if (!newType.trim()) {
+      toast({ title: "Falta el tipo de luna", status: "warning", duration: 4000, isClosable: true });
+      return;
+    }
+    if (!newPrice || Number(newPrice) <= 0) {
+      toast({ title: "Precio inválido", description: "Ingresa un precio mayor a 0.", status: "warning", duration: 4000, isClosable: true });
+      return;
+    }
+
+    setIsAdding(true);
+    const { error } = await supabase.from("lens").insert([{ lens_type: newType.trim(), lens_price: Number(newPrice) }]);
+    setIsAdding(false);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, status: "error", duration: 5000, isClosable: true });
+    } else {
+      toast({ title: "Luna agregada", status: "success", duration: 3000, isClosable: true });
+      setNewType("");
+      setNewPrice("");
+      fetchLens();
+    }
   };
 
   const handleEdit = (item) => {
@@ -100,28 +126,25 @@ const ListLens = () => {
   const borderColor = useColorModeValue("gray.200", "gray.600");
   const subtitleColor = useColorModeValue("gray.500", "gray.400");
   const rowHoverBg = useColorModeValue("gray.50", "whiteAlpha.100");
+  const sectionIconBg = useColorModeValue("#E6FBF6", "rgba(0,168,142,0.15)");
 
-  const moduleSpecificButton = (
-    <Button
-      onClick={() => navigate("/register-lens")}
-      bg={ACCENT}
-      color="white"
-      size="sm"
-      borderRadius="full"
-      px={5}
-      fontWeight="bold"
-      leftIcon={<Plus size={14} />}
-      _hover={{ bg: "#00967f" }}
-    >
-      Registrar Luna
-    </Button>
+  const SectionTitle = ({ icon, children }) => (
+    <Flex align="center" gap={3} mb={4}>
+      <Flex align="center" justify="center" boxSize="30px" borderRadius="10px" bg={sectionIconBg} color={ACCENT} flexShrink={0}>
+        <Icon as={icon} boxSize="15px" />
+      </Flex>
+      <Text fontWeight="bold" fontSize="sm" letterSpacing="wide" textTransform="uppercase" color={ACCENT} whiteSpace="nowrap">
+        {children}
+      </Text>
+      <Box flex="1" h="1px" bgGradient={`linear(to-r, ${sectionIconBg}, transparent)`} />
+    </Flex>
   );
 
   return (
     <Box minHeight="100vh" bgGradient={useColorModeValue("linear(to-br, gray.50, teal.50)", "linear(to-br, gray.900, #0d1f1c)")}>
-      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
+      <SmartHeader moduleSpecificButton={null} />
 
-      <Container maxW="900px" py={8} px={{ base: 3, md: 6 }}>
+      <Container maxW="950px" py={8} px={{ base: 3, md: 6 }}>
         <Box
           borderRadius="24px"
           bg={cardBg}
@@ -137,12 +160,45 @@ const ListLens = () => {
               </Flex>
               <VStack align="start" spacing={0}>
                 <Heading size="lg" fontWeight="800" color={useColorModeValue("gray.800", "white")} letterSpacing="tight">
-                  Listar Lunas
+                  Lunas
                 </Heading>
                 <Text fontSize="xs" color={subtitleColor}>{lens.length} tipo{lens.length !== 1 ? "s" : ""} registrado{lens.length !== 1 ? "s" : ""}</Text>
               </VStack>
             </HStack>
 
+            <SectionTitle icon={Plus}>Agregar luna</SectionTitle>
+            <HStack spacing={3} mb={8} align="flex-end" flexWrap="wrap">
+              <Box flex="1" minW="220px">
+                <Text fontSize="xs" color={subtitleColor} mb={1}>Tipo de luna</Text>
+                <Input
+                  value={newType}
+                  onChange={(e) => setNewType(e.target.value)}
+                  placeholder="Ej. Monofocal CR39 Antireflejo"
+                  borderRadius="10px"
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                />
+              </Box>
+              <Box minW="120px">
+                <Text fontSize="xs" color={subtitleColor} mb={1}>Precio</Text>
+                <Input
+                  type="number"
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  placeholder="0.00"
+                  borderRadius="10px"
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                />
+              </Box>
+              <Button bg={ACCENT} color="white" _hover={{ bg: "#00967f" }} borderRadius="10px" onClick={handleAdd} isLoading={isAdding} leftIcon={<Plus size={16} />}>
+                Agregar
+              </Button>
+            </HStack>
+
+            <SectionTitle icon={Aperture}>Catálogo</SectionTitle>
             <Flex position="relative" mb={5}>
               <Icon as={SearchIcon} position="absolute" left="14px" top="12px" color={subtitleColor} zIndex={1} />
               <Input
@@ -178,32 +234,14 @@ const ListLens = () => {
                         <Tr key={item.id} _hover={{ bg: rowHoverBg }}>
                           <Td>
                             {editingId === item.id ? (
-                              <Input
-                                name="lens_type"
-                                value={editableData.lens_type || ""}
-                                onChange={handleChange}
-                                size="sm"
-                                borderRadius="8px"
-                                bg={inputBg}
-                                borderColor={borderColor}
-                              />
+                              <Input name="lens_type" value={editableData.lens_type || ""} onChange={handleChange} size="sm" borderRadius="8px" bg={inputBg} borderColor={borderColor} />
                             ) : (
                               <Text fontWeight="medium">{item.lens_type}</Text>
                             )}
                           </Td>
                           <Td textAlign="right">
                             {editingId === item.id ? (
-                              <Input
-                                name="lens_price"
-                                type="number"
-                                value={editableData.lens_price ?? ""}
-                                onChange={handleChange}
-                                size="sm"
-                                borderRadius="8px"
-                                bg={inputBg}
-                                borderColor={borderColor}
-                                textAlign="right"
-                              />
+                              <Input name="lens_price" type="number" value={editableData.lens_price ?? ""} onChange={handleChange} size="sm" borderRadius="8px" bg={inputBg} borderColor={borderColor} textAlign="right" />
                             ) : (
                               <Text fontWeight="bold" color={ACCENT}>{formatMoney(item.lens_price)}</Text>
                             )}
@@ -252,4 +290,4 @@ const ListLens = () => {
   );
 };
 
-export default ListLens;
+export default Lunas;

@@ -71,8 +71,9 @@ export const adminNavSections = [
     id: "inventario",
     title: "Inventario",
     items: [
-      { label: "Inventario", path: "/inventory", icon: FiPackage },
-      { label: "Registrar Lunas", path: "/register-lens", icon: FiEye },
+      { label: "Armazones", path: "/inventory", icon: FiPackage },
+      { label: "Lunas", path: "/list-lens", icon: FiEye },
+      { label: "Tratamientos", path: "/treatments", icon: FiTool },
       { label: "Sucursal", path: "/branch", icon: FiMapPin },
     ],
   },

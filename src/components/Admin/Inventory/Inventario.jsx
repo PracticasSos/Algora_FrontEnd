@@ -1,319 +1,163 @@
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { supabase } from "../../../api/supabase";
 import {
-  Box,
-  Button,
-  FormControl,
-  FormLabel,
-  Input,
-  Heading,
-  VStack,
-  useToast,
-  Select,
-  useColorModeValue,
-  Text,
-  HStack,
-  Divider,
-  Flex,
+  Box, Button, Container, Heading, Text, FormControl, FormLabel, Input,
+  Flex, HStack, VStack, Icon, useColorModeValue, useToast,
 } from "@chakra-ui/react";
-import { useState, useEffect } from "react";
-import { supabase } from "../../../api/supabase.js";
-import { FaEye } from 'react-icons/fa';
-import SmartHeader from "../../header/SmartHeader.jsx";
+import { useNavigate } from "react-router-dom";
+import { List, Plus, Glasses } from "lucide-react";
+import SmartHeader from "../../header/SmartHeader";
+
+const ACCENT = "#00A88E";
 
 const Inventario = () => {
   const navigate = useNavigate();
   const toast = useToast();
-  const [branches, setBranches] = useState([]);
-  const [formData, setFormData] = useState({
-    brand: "",
-    quantity: 0,
-    price: 0,
-    branchs_id: "",
-  });
-
-  useEffect(() => {
-    const fetchBranches = async () => {
-      const { data, error } = await supabase.from("branchs").select("id, name");
-      if (error) {
-        console.error("Error fetching branches:", error);
-      } else {
-        setBranches(data);
-      }
-    };
-    fetchBranches();
-  }, []);
+  const [formData, setFormData] = useState({ brand: "", price: "", quantity: "" });
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
+  const handleReset = () => setFormData({ brand: "", price: "", quantity: "" });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { data, error } = await supabase.from("inventario").insert([formData]);
+    if (!formData.brand.trim()) {
+      toast({ title: "Falta la marca/modelo", status: "warning", duration: 4000, isClosable: true });
+      return;
+    }
+    if (!formData.price || Number(formData.price) <= 0) {
+      toast({ title: "Precio inválido", description: "Ingresa un precio mayor a 0.", status: "warning", duration: 4000, isClosable: true });
+      return;
+    }
+    if (formData.quantity === "" || Number(formData.quantity) < 0) {
+      toast({ title: "Cantidad inválida", status: "warning", duration: 4000, isClosable: true });
+      return;
+    }
+
+    setIsSaving(true);
+    const { error } = await supabase.from("inventario").insert([{
+      brand: formData.brand.trim(),
+      price: Number(formData.price),
+      quantity: Number(formData.quantity),
+    }]);
+    setIsSaving(false);
 
     if (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo registrar el inventario.",
-        status: "error",
-        duration: 3000,
-        isClosable: true,
-      });
-      console.error("Error:", error);
+      toast({ title: "Error", description: "Ocurrió un error: " + error.message, status: "error", duration: 5000, isClosable: true });
     } else {
-      toast({
-        title: "Éxito",
-        description: "Inventario registrado correctamente.",
-        status: "success",
-        duration: 3000,
-        isClosable: true,
-      });
-      setFormData({
-        brand: "",
-        quantity: 0,
-        price: 0,
-        branchs_id: "",
-      });
+      toast({ title: "Armazón registrado", description: "Se guardó correctamente.", status: "success", duration: 4000, isClosable: true });
+      handleReset();
     }
   };
 
-  const handleNavigate = (route = null) => {
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (route) {
-        navigate(route);
-        return;
-    }
-    if (!user || !user.role_id) {
-        navigate('/LoginForm');
-        return;
-    }
-    switch (user.role_id) {
-        case 1:
-            navigate('/Admin');
-            break;
-        case 2:
-            navigate('/Optometra');
-            break;
-        case 3:
-            navigate('/Vendedor');
-            break;
-        case 4:
-            navigate('/SuperAdmin');
-            break;
-        default:
-            navigate('/');
-    }
-  };
+  const cardBg = useColorModeValue("white", "gray.700");
+  const inputBg = useColorModeValue("gray.50", "gray.700");
+  const borderColor = useColorModeValue("gray.200", "gray.600");
+  const subtitleColor = useColorModeValue("gray.500", "gray.400");
+
   const moduleSpecificButton = (
-    <Button 
-      onClick={() => handleNavigate('/list-inventory')} 
-      bg={useColorModeValue(
-        'rgba(255, 255, 255, 0.8)', 
-        'rgba(255, 255, 255, 0.1)'
-      )}
-      backdropFilter="blur(10px)"
-      border="1px solid"
-      borderColor={useColorModeValue(
-        'rgba(56, 178, 172, 0.3)', 
-        'rgba(56, 178, 172, 0.5)'
-      )}
-      color={useColorModeValue('teal.600', 'teal.300')}
+    <Button
+      onClick={() => navigate("/list-inventory")}
+      bg={ACCENT}
+      color="white"
       size="sm"
-      borderRadius="15px"
-      px={4}
-      _hover={{
-        bg: useColorModeValue(
-          'rgba(56, 178, 172, 0.1)', 
-          'rgba(56, 178, 172, 0.2)'
-        ),
-        borderColor: 'teal.400',
-        transform: 'translateY(-1px)',
-      }}
-      transition="all 0.2s"
+      borderRadius="full"
+      px={5}
+      fontWeight="bold"
+      leftIcon={<List size={14} />}
+      _hover={{ bg: "#00967f" }}
     >
-      <HStack spacing={2} align="center" justify="center">
-        <FaEye size="14px" />
-        <Text fontWeight="600" lineHeight="1" m={0}>
-          Listar Inventario
-        </Text>
-      </HStack>
+      Listar Inventario
     </Button>
   );
 
-  const textColor = useColorModeValue('gray.800', 'white');
-  const borderColor = useColorModeValue('gray.200', 'gray.600');
-  const selectBg = useColorModeValue('white', 'gray.700');
-
   return (
-    <Box
-      className="signup-form"
-      display="flex"
-      flexDirection="column"
-      justifyContent="flex-start"
-      alignItems="center"
-      minHeight="100vh"
-      pt={8}
-      bg={useColorModeValue('gray.50', 'gray.900')}
-    >
+    <Box minHeight="100vh" bgGradient={useColorModeValue("linear(to-br, gray.50, teal.50)", "linear(to-br, gray.900, #0d1f1c)")}>
       <SmartHeader moduleSpecificButton={moduleSpecificButton} />
 
-      <Box
-        width="100%"
-        maxWidth="480px"
-        p={{ base: 4, md: 8 }}
-        borderRadius="2xl"
-        boxShadow="2xl"
-        bg={useColorModeValue('white', 'gray.800')}
-        mt={6}
-      >
-        <Heading
-          mb={2}
-          textAlign="center"
-          size="lg"
-          fontWeight="800"
-          color={useColorModeValue('teal.600', 'teal.300')}
-          letterSpacing="tight"
-        >
-          Inventario
-        </Heading>
-        <Text
-          mb={4}
-          textAlign="center"
-          color={useColorModeValue('gray.500', 'gray.400')}
-          fontSize="md"
-        >
-          Registra un nuevo producto en el inventario.
-        </Text>
-        <Divider mb={6} />
-
+      <Container maxW="520px" py={8} px={{ base: 3, md: 6 }}>
         <Box
-          as="form"
-          onSubmit={handleSubmit}
+          borderRadius="24px"
+          bg={cardBg}
+          border={`1px solid ${borderColor}`}
+          boxShadow={useColorModeValue("0 20px 45px -20px rgba(0,168,142,0.25)", "0 20px 45px -20px rgba(0,168,142,0.35)")}
+          overflow="hidden"
         >
-          <VStack spacing={5}>
-            <FormControl isRequired>
-              <FormLabel color={useColorModeValue('gray.700', 'gray.200')}>Marca</FormLabel>
-              <Input
-                type="text"
-                name="brand"
-                value={formData.brand}
-                onChange={handleChange}
-                placeholder="Ingrese la marca"
-                borderColor={borderColor}
-                bg={useColorModeValue('gray.100', 'gray.700')}
-                _focus={{ borderColor: "teal.500", bg: useColorModeValue('white', 'gray.800') }}
-                _hover={{
-                  borderColor: useColorModeValue('teal.400', 'teal.300'),
-                  bg: useColorModeValue('white', 'gray.800')
-                }}
-                size="lg"
-                borderRadius="md"
-              />
-            </FormControl>
+          <Box h="5px" bgGradient="linear(to-r, #00A88E, #2DD4BF, #00A88E)" />
+          <Box p={{ base: 5, md: 8 }}>
+            <HStack spacing={3} mb={6}>
+              <Flex align="center" justify="center" boxSize="44px" borderRadius="14px" bgGradient="linear(to-br, #00A88E, #00786A)" color="white" boxShadow="0 6px 16px -4px rgba(0,168,142,0.5)">
+                <Icon as={Glasses} boxSize="20px" />
+              </Flex>
+              <VStack align="start" spacing={0}>
+                <Heading size="lg" fontWeight="800" color={useColorModeValue("gray.800", "white")} letterSpacing="tight">
+                  Registrar Armazón
+                </Heading>
+                <Text fontSize="xs" color={subtitleColor}>Agrega un nuevo armazón al inventario</Text>
+              </VStack>
+            </HStack>
 
-            <FormControl isRequired>
-              <FormLabel color={useColorModeValue('gray.700', 'gray.200')}>Cantidad</FormLabel>
-              <Input
-                type="number"
-                name="quantity"
-                value={formData.quantity}
-                onChange={handleChange}
-                placeholder="Ingrese la cantidad"
-                borderColor={borderColor}
-                bg={useColorModeValue('gray.100', 'gray.700')}
-                _focus={{ borderColor: "teal.500", bg: useColorModeValue('white', 'gray.800') }}
-                _hover={{
-                  borderColor: useColorModeValue('teal.400', 'teal.300'),
-                  bg: useColorModeValue('white', 'gray.800')
-                }}
-                size="lg"
-                borderRadius="md"
-                min={0}
-              />
-            </FormControl>
+            <Box as="form" onSubmit={handleSubmit}>
+              <VStack spacing={4} align="stretch" mb={6}>
+                <FormControl isRequired>
+                  <FormLabel fontSize="xs" color={subtitleColor}>Marca / Modelo</FormLabel>
+                  <Input
+                    name="brand"
+                    value={formData.brand}
+                    onChange={handleChange}
+                    placeholder="Ej. Ray-Ban Aviador Clásico"
+                    borderRadius="10px"
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                  />
+                </FormControl>
+                <FormControl isRequired>
+                  <FormLabel fontSize="xs" color={subtitleColor}>Precio</FormLabel>
+                  <Input
+                    name="price"
+                    type="number"
+                    value={formData.price}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    borderRadius="10px"
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                  />
+                </FormControl>
+                <FormControl isRequired>
+                  <FormLabel fontSize="xs" color={subtitleColor}>Cantidad en stock</FormLabel>
+                  <Input
+                    name="quantity"
+                    type="number"
+                    value={formData.quantity}
+                    onChange={handleChange}
+                    placeholder="0"
+                    borderRadius="10px"
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                  />
+                </FormControl>
+              </VStack>
 
-            <FormControl isRequired>
-              <FormLabel color={useColorModeValue('gray.700', 'gray.200')}>Precio</FormLabel>
-              <Input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleChange}
-                placeholder="Ingrese el precio"
-                borderColor={borderColor}
-                bg={useColorModeValue('gray.100', 'gray.700')}
-                _focus={{ borderColor: "teal.500", bg: useColorModeValue('white', 'gray.800') }}
-                _hover={{
-                  borderColor: useColorModeValue('teal.400', 'teal.300'),
-                  bg: useColorModeValue('white', 'gray.800')
-                }}
-                size="lg"
-                borderRadius="md"
-                min={0}
-              />
-            </FormControl>
-
-            <FormControl isRequired>
-              <FormLabel color={useColorModeValue('gray.700', 'gray.200')}>Sucursal</FormLabel>
-              <Select
-                name="branchs_id"
-                value={formData.branchs_id}
-                onChange={handleChange}
-                placeholder="Seleccione una sucursal"
-                bg={selectBg}
-                borderColor={borderColor}
-                color={textColor}
-                size="lg"
-                borderRadius="md"
-                _hover={{
-                  borderColor: useColorModeValue('teal.400', 'teal.300'),
-                  bg: useColorModeValue('white', 'gray.800')
-                }}
-                _focus={{
-                  borderColor: useColorModeValue('teal.500', 'teal.300'),
-                  boxShadow: useColorModeValue('0 0 0 1px teal.500', '0 0 0 1px teal.300')
-                }}
-              >
-                {branches.map((branch) => (
-                  <option
-                    key={branch.id}
-                    value={branch.id}
-                    style={{
-                      backgroundColor: useColorModeValue('white', '#2D3748'),
-                      color: useColorModeValue('black', 'white')
-                    }}
-                  >
-                    {branch.name}
-                  </option>
-                ))}
-              </Select>
-            </FormControl>
-          </VStack>
-
-          <Flex justify="center" mt={8}>
-            <Button
-              type="submit"
-              width="60%"
-              bgGradient="linear(to-r, teal.400, teal.600)"
-              color="white"
-              fontWeight="bold"
-              fontSize="lg"
-              _hover={{
-                bgGradient: "linear(to-r, teal.500, teal.700)",
-                boxShadow: "md"
-              }}
-              borderRadius="xl"
-              boxShadow="sm"
-              onClick={handleSubmit}
-              py={6}
-            >
-              Registrar Inventario
-            </Button>
-          </Flex>
+              <Flex justify="flex-end" gap={3}>
+                <Button variant="ghost" onClick={handleReset}>Limpiar</Button>
+                <Button type="submit" bg={ACCENT} color="white" _hover={{ bg: "#00967f" }} borderRadius="12px" px={8} isLoading={isSaving}>
+                  Guardar
+                </Button>
+              </Flex>
+            </Box>
+          </Box>
         </Box>
-      </Box>
+      </Container>
     </Box>
   );
 };
+
 export default Inventario;

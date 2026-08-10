@@ -17,7 +17,7 @@ import {
   DrawerBody,
   Portal,
 } from "@chakra-ui/react";
-import { FiUser, FiShoppingBag, FiTruck, FiPackage } from "react-icons/fi";
+import { FiUser, FiShoppingBag, FiTruck, FiPackage, FiTool } from "react-icons/fi";
 
 const formatMoney = (value) => {
   const n = parseFloat(value);
@@ -30,6 +30,7 @@ const SummaryBody = ({
   frameName,
   lensName,
   accessories,
+  treatments,
   total,
   discountTotal,
   downPayment,
@@ -67,6 +68,20 @@ const SummaryBody = ({
               {a.name}{a.quantity > 1 ? ` x${a.quantity}` : ""}
             </Text>
             <Text color={textColor}>{formatMoney(a.unit_price * a.quantity)}</Text>
+          </HStack>
+        ))}
+      </VStack>
+    )}
+
+    {treatments && treatments.length > 0 && (
+      <VStack align="stretch" spacing={1}>
+        <HStack color={subtitleColor} fontSize="xs" fontWeight="bold" textTransform="uppercase">
+          <FiTool /> <Text>Tratamientos</Text>
+        </HStack>
+        {treatments.map((t) => (
+          <HStack key={t.id} justify="space-between" fontSize="sm">
+            <Text color={textColor} noOfLines={1}>{t.name}</Text>
+            <Text color={textColor}>{formatMoney(t.price)}</Text>
           </HStack>
         ))}
       </VStack>
@@ -113,6 +128,7 @@ const SaleSummaryPanel = ({
   frameName,
   lensName,
   accessories,
+  treatments,
   total,
   discountTotal,
   downPayment,
@@ -141,6 +157,7 @@ const SaleSummaryPanel = ({
     frameName,
     lensName,
     accessories,
+    treatments,
     total,
     discountTotal,
     downPayment,

@@ -3,11 +3,12 @@ import { supabase } from "../../../api/supabase";
 import {
   Box, Container, Heading, Text, Table, Thead, Tbody, Tr, Th, Td, Input,
   Flex, HStack, VStack, Icon, IconButton, Spinner, useColorModeValue,
-  useToast, Button, Badge,
+  useToast, Button, Badge, Select,
 } from "@chakra-ui/react";
-import { useNavigate } from "react-router-dom";
-import { Search as SearchIcon, Plus, Pencil, Trash2, Check, X, Glasses, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
+import { Search as SearchIcon, Plus, Pencil, Trash2, Check, X, Glasses, ChevronLeft, ChevronRight, AlertTriangle, History } from "lucide-react";
 import ConfirmDialog from "../../UI/ConfirmDialog";
+import { useAuth } from "../../AuthContext";
+import { useNavigate } from "react-router-dom";
 import SmartHeader from "../../header/SmartHeader";
 
 const ACCENT = "#00A88E";
@@ -20,7 +21,9 @@ const formatMoney = (value) => {
   return `$${n.toLocaleString("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-const InventarioList = () => {
+const Armazones = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -30,13 +33,47 @@ const InventarioList = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
+
+  const [newBrand, setNewBrand] = useState("");
+  const [newPrice, setNewPrice] = useState("");
+  const [newQuantity, setNewQuantity] = useState("");
+  const [newBranchId, setNewBranchId] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+
+  const [branches, setBranches] = useState([]);
+  const [branchFilter, setBranchFilter] = useState("");
 
   const toast = useToast();
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchInventory();
+    fetchBranches();
   }, []);
+
+  const fetchBranches = async () => {
+    const { data, error } = await supabase.from("branchs").select("id, name");
+    if (!error) setBranches(data || []);
+  };
+
+  const branchName = (id) => branches.find((b) => String(b.id) === String(id))?.name || "Sin asignar";
+
+  // Registra cada movimiento (crear/editar/eliminar) con quién y cuándo,
+  // para tener control absoluto de lo que pasa en el inventario.
+  const logMovement = async (action, oldData, newData, brand) => {
+    const userName = user ? `${user.firstname || ""} ${user.lastname || ""}`.trim() || user.email : "Desconocido";
+    const { error } = await supabase.from("inventory_movements").insert([{
+      inventario_id: newData?.id || oldData?.id || null,
+      brand: brand || newData?.brand || oldData?.brand || "—",
+      branch_name: branchName((newData || oldData)?.branchs_id),
+      action,
+      old_data: oldData || null,
+      new_data: newData || null,
+      user_id: user?.id || null,
+      user_name: userName,
+    }]);
+    if (error) console.error("Error registrando movimiento de inventario:", error);
+  };
 
   const fetchInventory = async () => {
     setLoading(true);
@@ -49,9 +86,53 @@ const InventarioList = () => {
     setLoading(false);
   };
 
+  const handleAdd = async () => {
+    if (!newBrand.trim()) {
+      toast({ title: "Falta la marca/modelo", status: "warning", duration: 4000, isClosable: true });
+      return;
+    }
+    if (!newPrice || Number(newPrice) <= 0) {
+      toast({ title: "Precio inválido", status: "warning", duration: 4000, isClosable: true });
+      return;
+    }
+    if (newQuantity === "" || Number(newQuantity) < 0) {
+      toast({ title: "Cantidad inválida", status: "warning", duration: 4000, isClosable: true });
+      return;
+    }
+    if (!newBranchId) {
+      toast({ title: "Falta la sucursal", description: "Indica en qué sucursal está este armazón.", status: "warning", duration: 4000, isClosable: true });
+      return;
+    }
+
+    setIsAdding(true);
+    const { data, error } = await supabase.from("inventario").insert([{
+      brand: newBrand.trim(),
+      price: Number(newPrice),
+      quantity: Number(newQuantity),
+      branchs_id: Number(newBranchId),
+      category: "armazon",
+    }]).select().single();
+    setIsAdding(false);
+
+    if (error) {
+      toast({ title: "Error", description: error.message, status: "error", duration: 5000, isClosable: true });
+    } else {
+      await logMovement("creado", null, data, data.brand);
+      toast({ title: "Armazón agregado", status: "success", duration: 3000, isClosable: true });
+      setNewBrand("");
+      setNewPrice("");
+      setNewQuantity("");
+      setNewBranchId("");
+      fetchInventory();
+    }
+  };
+
+  const [originalItem, setOriginalItem] = useState(null);
+
   const handleEdit = (item) => {
     setEditingId(item.id);
     setEditableData(item);
+    setOriginalItem(item);
   };
 
   const handleChange = (e) => {
@@ -61,23 +142,31 @@ const InventarioList = () => {
 
   const handleSave = async (id) => {
     setIsSaving(true);
+    const updatedData = {
+      brand: editableData.brand,
+      price: Number(editableData.price),
+      quantity: Number(editableData.quantity),
+      branchs_id: editableData.branchs_id ? Number(editableData.branchs_id) : null,
+    };
     const { error } = await supabase
       .from("inventario")
-      .update({ brand: editableData.brand, price: Number(editableData.price), quantity: Number(editableData.quantity) })
+      .update(updatedData)
       .eq("id", id);
     setIsSaving(false);
 
     if (error) {
       toast({ title: "Error", description: "No se pudo actualizar.", status: "error", duration: 5000, isClosable: true });
     } else {
+      await logMovement("editado", originalItem, { id, ...updatedData }, updatedData.brand);
       toast({ title: "Actualizado", status: "success", duration: 3000, isClosable: true });
       setEditingId(null);
       fetchInventory();
     }
   };
 
-  const openConfirm = (id) => {
-    setSelectedId(id);
+  const openConfirm = (item) => {
+    setSelectedId(item.id);
+    setItemToDelete(item);
     setIsOpen(true);
   };
 
@@ -87,12 +176,16 @@ const InventarioList = () => {
     if (error) {
       toast({ title: "Error", description: "No se pudo eliminar.", status: "error", duration: 5000, isClosable: true });
     } else {
+      await logMovement("eliminado", itemToDelete, null, itemToDelete?.brand);
       toast({ title: "Eliminado", status: "success", duration: 3000, isClosable: true });
       fetchInventory();
     }
   };
 
-  const filtered = items.filter((item) => item.brand?.toLowerCase().includes(search.toLowerCase()));
+  const filtered = items.filter((item) => {
+    if (branchFilter && String(item.branchs_id) !== String(branchFilter)) return false;
+    return item.brand?.toLowerCase().includes(search.toLowerCase());
+  });
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const lowStockCount = items.filter((i) => Number(i.quantity) <= LOW_STOCK_THRESHOLD).length;
@@ -102,26 +195,39 @@ const InventarioList = () => {
   const borderColor = useColorModeValue("gray.200", "gray.600");
   const subtitleColor = useColorModeValue("gray.500", "gray.400");
   const rowHoverBg = useColorModeValue("gray.50", "whiteAlpha.100");
+  const sectionIconBg = useColorModeValue("#E6FBF6", "rgba(0,168,142,0.15)");
 
-  const moduleSpecificButton = (
-    <Button
-      onClick={() => navigate("/inventory")}
-      bg={ACCENT}
-      color="white"
-      size="sm"
-      borderRadius="full"
-      px={5}
-      fontWeight="bold"
-      leftIcon={<Plus size={14} />}
-      _hover={{ bg: "#00967f" }}
-    >
-      Registrar Armazón
-    </Button>
+  const SectionTitle = ({ icon, children }) => (
+    <Flex align="center" gap={3} mb={4}>
+      <Flex align="center" justify="center" boxSize="30px" borderRadius="10px" bg={sectionIconBg} color={ACCENT} flexShrink={0}>
+        <Icon as={icon} boxSize="15px" />
+      </Flex>
+      <Text fontWeight="bold" fontSize="sm" letterSpacing="wide" textTransform="uppercase" color={ACCENT} whiteSpace="nowrap">
+        {children}
+      </Text>
+      <Box flex="1" h="1px" bgGradient={`linear(to-r, ${sectionIconBg}, transparent)`} />
+    </Flex>
   );
 
   return (
     <Box minHeight="100vh" bgGradient={useColorModeValue("linear(to-br, gray.50, teal.50)", "linear(to-br, gray.900, #0d1f1c)")}>
-      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
+      <SmartHeader
+        moduleSpecificButton={
+          <Button
+            onClick={() => navigate("/inventory-history")}
+            bg="whiteAlpha.200"
+            color="white"
+            size="sm"
+            borderRadius="full"
+            px={5}
+            fontWeight="bold"
+            leftIcon={<History size={14} />}
+            _hover={{ bg: "whiteAlpha.300" }}
+          >
+            Ver Historial
+          </Button>
+        }
+      />
 
       <Container maxW="950px" py={8} px={{ base: 3, md: 6 }}>
         <Box
@@ -154,6 +260,80 @@ const InventarioList = () => {
               </HStack>
             )}
 
+            <SectionTitle icon={Plus}>Agregar armazón</SectionTitle>
+            <HStack spacing={3} mb={8} align="flex-end" flexWrap="wrap">
+              <Box flex="1" minW="220px">
+                <Text fontSize="xs" color={subtitleColor} mb={1}>Marca / Modelo</Text>
+                <Input
+                  value={newBrand}
+                  onChange={(e) => setNewBrand(e.target.value)}
+                  placeholder="Ej. Ray-Ban Aviador Clásico"
+                  borderRadius="10px"
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                />
+              </Box>
+              <Box minW="110px">
+                <Text fontSize="xs" color={subtitleColor} mb={1}>Precio</Text>
+                <Input
+                  type="number"
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  placeholder="0.00"
+                  borderRadius="10px"
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                />
+              </Box>
+              <Box minW="100px">
+                <Text fontSize="xs" color={subtitleColor} mb={1}>Stock</Text>
+                <Input
+                  type="number"
+                  value={newQuantity}
+                  onChange={(e) => setNewQuantity(e.target.value)}
+                  placeholder="0"
+                  borderRadius="10px"
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                />
+              </Box>
+              <Box minW="160px">
+                <Text fontSize="xs" color={subtitleColor} mb={1}>Sucursal</Text>
+                <Select
+                  placeholder="Seleccione"
+                  value={newBranchId}
+                  onChange={(e) => setNewBranchId(e.target.value)}
+                  borderRadius="10px"
+                  bg={inputBg}
+                  borderColor={borderColor}
+                  _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                >
+                  {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </Select>
+              </Box>
+              <Button bg={ACCENT} color="white" _hover={{ bg: "#00967f" }} borderRadius="10px" onClick={handleAdd} isLoading={isAdding} leftIcon={<Plus size={16} />}>
+                Agregar
+              </Button>
+            </HStack>
+
+            <Flex justify="space-between" align="center" mb={4} flexWrap="wrap" gap={3}>
+              <SectionTitle icon={Glasses}>Catálogo</SectionTitle>
+              <Select
+                placeholder="Todas las sucursales"
+                value={branchFilter}
+                onChange={(e) => { setBranchFilter(e.target.value); setPage(1); }}
+                size="sm"
+                maxW="220px"
+                borderRadius="10px"
+                bg={inputBg}
+                borderColor={borderColor}
+              >
+                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </Select>
+            </Flex>
             <Flex position="relative" mb={5}>
               <Icon as={SearchIcon} position="absolute" left="14px" top="12px" color={subtitleColor} zIndex={1} />
               <Input
@@ -180,6 +360,7 @@ const InventarioList = () => {
                     <Thead>
                       <Tr>
                         <Th color={subtitleColor}>Marca / Modelo</Th>
+                        <Th color={subtitleColor}>Sucursal</Th>
                         <Th color={subtitleColor} textAlign="right">Precio</Th>
                         <Th color={subtitleColor} textAlign="center">Stock</Th>
                         <Th color={subtitleColor} textAlign="right">Acciones</Th>
@@ -193,6 +374,15 @@ const InventarioList = () => {
                               <Input name="brand" value={editableData.brand || ""} onChange={handleChange} size="sm" borderRadius="8px" bg={inputBg} borderColor={borderColor} />
                             ) : (
                               <Text fontWeight="medium">{item.brand}</Text>
+                            )}
+                          </Td>
+                          <Td>
+                            {editingId === item.id ? (
+                              <Select name="branchs_id" value={editableData.branchs_id || ""} onChange={handleChange} size="sm" borderRadius="8px" bg={inputBg} borderColor={borderColor}>
+                                {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                              </Select>
+                            ) : (
+                              <Text fontSize="sm">{branchName(item.branchs_id)}</Text>
                             )}
                           </Td>
                           <Td textAlign="right">
@@ -220,7 +410,7 @@ const InventarioList = () => {
                             ) : (
                               <HStack justify="flex-end" spacing={1}>
                                 <IconButton icon={<Pencil size={15} />} size="sm" variant="ghost" colorScheme="teal" aria-label="Editar" onClick={() => handleEdit(item)} />
-                                <IconButton icon={<Trash2 size={15} />} size="sm" variant="ghost" colorScheme="red" aria-label="Eliminar" onClick={() => openConfirm(item.id)} />
+                                <IconButton icon={<Trash2 size={15} />} size="sm" variant="ghost" colorScheme="red" aria-label="Eliminar" onClick={() => openConfirm(item)} />
                               </HStack>
                             )}
                           </Td>
@@ -255,4 +445,4 @@ const InventarioList = () => {
   );
 };
 
-export default InventarioList;
+export default Armazones;

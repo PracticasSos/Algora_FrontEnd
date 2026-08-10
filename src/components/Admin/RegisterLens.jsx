@@ -1,221 +1,141 @@
 import { useState } from "react";
 import { supabase } from "../../api/supabase";
 import {
-    Box,
-    Button,
-    FormControl,
-    FormLabel,
-    Input,
-    Heading,
-    SimpleGrid,
-    useColorModeValue,
-    Text,
-    HStack,
-    useToast,
-    VStack,
-    Divider,
-} from '@chakra-ui/react';
+  Box, Button, Container, Heading, Text, FormControl, FormLabel, Input,
+  Flex, HStack, VStack, Icon, useColorModeValue, useToast,
+} from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
-import { FaEye } from 'react-icons/fa';
+import { Eye, List, Aperture } from "lucide-react";
 import SmartHeader from "../header/SmartHeader";
 
+const ACCENT = "#00A88E";
+
 const RegisterLens = () => {
-    const navigate = useNavigate();
-    const toast = useToast();
+  const navigate = useNavigate();
+  const toast = useToast();
+  const [formData, setFormData] = useState({ lens_type: "", lens_price: "" });
+  const [isSaving, setIsSaving] = useState(false);
 
-    const [formData, setFormData] = useState({
-        lens_type: '',
-        lens_price: 0
-    });
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData({ ...formData, [name]: value });
-    };
+  const handleReset = () => setFormData({ lens_type: "", lens_price: "" });
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        const { data, error } = await supabase
-            .from('lens')
-            .insert([formData]);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.lens_type.trim()) {
+      toast({ title: "Falta el nombre de la luna", status: "warning", duration: 4000, isClosable: true });
+      return;
+    }
+    if (!formData.lens_price || Number(formData.lens_price) <= 0) {
+      toast({ title: "Precio inválido", description: "Ingresa un precio mayor a 0.", status: "warning", duration: 4000, isClosable: true });
+      return;
+    }
 
-        if (error) {
-            console.error('Error:', error.message);
-            toast({
-                title: 'Error',
-                description: "Ocurrió un error: " + error.message,
-                status: 'error',
-                duration: 5000,
-                isClosable: true,
-            });
-        } else {
-            console.log('Lens registered:', data);
-            toast({
-                title: 'Éxito',
-                description: 'Lente registrado correctamente.',
-                status: 'success',
-                duration: 5000,
-                isClosable: true,
-            });
-            handleReset();
-        }
-    };
+    setIsSaving(true);
+    const { error } = await supabase.from("lens").insert([{ lens_type: formData.lens_type.trim(), lens_price: Number(formData.lens_price) }]);
+    setIsSaving(false);
 
-    const handleReset = () => {
-        setFormData({
-            lens_type: '',
-            lens_price: 0
-        });
-    };
+    if (error) {
+      toast({ title: "Error", description: "Ocurrió un error: " + error.message, status: "error", duration: 5000, isClosable: true });
+    } else {
+      toast({ title: "Luna registrada", description: "Se guardó correctamente.", status: "success", duration: 4000, isClosable: true });
+      handleReset();
+    }
+  };
 
-    const renderInputField = (label, name, type, required) => {
-        return (
-            <FormControl isRequired={required} mb={4}>
-                <FormLabel htmlFor={name} fontWeight="600" color={useColorModeValue('teal.700', 'teal.200')}>
-                    {label}
-                </FormLabel>
-                <Input
-                    id={name}
-                    name={name}
-                    type={type}
-                    value={formData[name]}
-                    onChange={handleChange}
-                    borderRadius="12px"
-                    bg={useColorModeValue('white', 'gray.800')}
-                    boxShadow={useColorModeValue('sm', 'md')}
-                    _focus={{
-                        borderColor: 'teal.400',
-                        boxShadow: '0 0 0 1px #38B2AC',
-                    }}
-                />
-            </FormControl>
-        );
-    };
+  const cardBg = useColorModeValue("white", "gray.700");
+  const inputBg = useColorModeValue("gray.50", "gray.700");
+  const borderColor = useColorModeValue("gray.200", "gray.600");
+  const subtitleColor = useColorModeValue("gray.500", "gray.400");
 
-    const handleNavigate = (route = null) => {
-        const user = JSON.parse(localStorage.getItem('user'));
-        if (route) {
-            navigate(route);
-            return;
-        }
-        if (!user || !user.role_id) {
-            navigate('/LoginForm');
-            return;
-        }
-        switch (user.role_id) {
-            case 1:
-                navigate('/Admin');
-                break;
-            case 2:
-                navigate('/Optometra');
-                break;
-            case 3:
-                navigate('/Vendedor');
-                break;
-            case 4:
-                navigate('/SuperAdmin');
-                break;
-            default:
-                navigate('/');
-        }
-    };
+  const moduleSpecificButton = (
+    <Button
+      onClick={() => navigate("/list-lens")}
+      bg={ACCENT}
+      color="white"
+      size="sm"
+      borderRadius="full"
+      px={5}
+      fontWeight="bold"
+      leftIcon={<List size={14} />}
+      _hover={{ bg: "#00967f" }}
+    >
+      Listar Lunas
+    </Button>
+  );
 
-    const moduleSpecificButton = (
-        <Button
-            onClick={() => handleNavigate('/list-lens')}
-            bg={useColorModeValue('whiteAlpha.800', 'whiteAlpha.100')}
-            backdropFilter="blur(10px)"
-            border="1px solid"
-            borderColor={useColorModeValue('teal.200', 'teal.500')}
-            color={useColorModeValue('teal.600', 'teal.300')}
-            size="sm"
-            borderRadius="15px"
-            px={4}
-            _hover={{
-                bg: useColorModeValue('teal.50', 'teal.900'),
-                borderColor: 'teal.400',
-                transform: 'scale(1.05)',
-            }}
-            transition="all 0.2s"
-        >
-            <HStack spacing={2} align="center" justify="center">
-                <FaEye size="14px" />
-                <Text fontWeight="600" lineHeight="1" m={0}>
-                    Listar Lunas
-                </Text>
-            </HStack>
-        </Button>
-    );
+  return (
+    <Box minHeight="100vh" bgGradient={useColorModeValue("linear(to-br, gray.50, teal.50)", "linear(to-br, gray.900, #0d1f1c)")}>
+      <SmartHeader moduleSpecificButton={moduleSpecificButton} />
 
-    return (
+      <Container maxW="520px" py={8} px={{ base: 3, md: 6 }}>
         <Box
-            className="register-lens-form"
-            minH="100vh"
-            bg={useColorModeValue('gray.50', 'gray.900')}
-            display="flex"
-            flexDirection="column"
-            alignItems="center"
-            pt={10}
+          borderRadius="24px"
+          bg={cardBg}
+          border={`1px solid ${borderColor}`}
+          boxShadow={useColorModeValue("0 20px 45px -20px rgba(0,168,142,0.25)", "0 20px 45px -20px rgba(0,168,142,0.35)")}
+          overflow="hidden"
         >
-            <SmartHeader moduleSpecificButton={moduleSpecificButton} />
-
-            <Box
-                as="form"
-                onSubmit={handleSubmit}
-                width="100%"
-                maxWidth="420px"
-                padding={8}
-                boxShadow="2xl"
-                borderRadius="2xl"
-                bg={useColorModeValue('white', 'gray.800')}
-                mt={8}
-            >
-                <Heading
-                    mb={2}
-                    textAlign="center"
-                    size="lg"
-                    fontWeight="800"
-                    color={useColorModeValue('teal.600', 'teal.300')}
-                    pb={2}
-                >
-                    Registrar Lunas
+          <Box h="5px" bgGradient="linear(to-r, #00A88E, #2DD4BF, #00A88E)" />
+          <Box p={{ base: 5, md: 8 }}>
+            <HStack spacing={3} mb={6}>
+              <Flex align="center" justify="center" boxSize="44px" borderRadius="14px" bgGradient="linear(to-br, #00A88E, #00786A)" color="white" boxShadow="0 6px 16px -4px rgba(0,168,142,0.5)">
+                <Icon as={Aperture} boxSize="20px" />
+              </Flex>
+              <VStack align="start" spacing={0}>
+                <Heading size="lg" fontWeight="800" color={useColorModeValue("gray.800", "white")} letterSpacing="tight">
+                  Registrar Luna
                 </Heading>
-                <Divider mb={6} />
-                <VStack spacing={2} align="stretch">
-                    {renderInputField('Lunas', 'lens_type', 'text', true)}
-                    {renderInputField('Precio', 'lens_price', 'number', true)}
-                </VStack>
-                <Box display="flex" justifyContent="space-between" mt={8}>
-                    <Button
-                        type="submit"
-                        colorScheme="teal"
-                        borderRadius="12px"
-                        fontWeight="700"
-                        px={8}
-                        _hover={{
-                            bg: 'teal.500',
-                            transform: 'scale(1.04)',
-                        }}
-                    >
-                        Guardar
-                    </Button>
-                    <Button
-                        onClick={handleReset}
-                        colorScheme="gray"
-                        borderRadius="12px"
-                        fontWeight="700"
-                        px={8}
-                        _hover={{
-                            bg: 'gray.300',
-                            transform: 'scale(1.04)',
-                        }}
-                    >
-                        Limpiar
-                    </Button>
-                </Box>
+                <Text fontSize="xs" color={subtitleColor}>Agrega un nuevo tipo de luna al catálogo</Text>
+              </VStack>
+            </HStack>
+
+            <Box as="form" onSubmit={handleSubmit}>
+              <VStack spacing={4} align="stretch" mb={6}>
+                <FormControl isRequired>
+                  <FormLabel fontSize="xs" color={subtitleColor}>Tipo de luna</FormLabel>
+                  <Input
+                    name="lens_type"
+                    value={formData.lens_type}
+                    onChange={handleChange}
+                    placeholder="Ej. Monofocal CR39 Antireflejo"
+                    borderRadius="10px"
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                  />
+                </FormControl>
+                <FormControl isRequired>
+                  <FormLabel fontSize="xs" color={subtitleColor}>Precio</FormLabel>
+                  <Input
+                    name="lens_price"
+                    type="number"
+                    value={formData.lens_price}
+                    onChange={handleChange}
+                    placeholder="0.00"
+                    borderRadius="10px"
+                    bg={inputBg}
+                    borderColor={borderColor}
+                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                  />
+                </FormControl>
+              </VStack>
+
+              <Flex justify="flex-end" gap={3}>
+                <Button variant="ghost" onClick={handleReset}>Limpiar</Button>
+                <Button type="submit" bg={ACCENT} color="white" _hover={{ bg: "#00967f" }} borderRadius="12px" px={8} isLoading={isSaving}>
+                  Guardar
+                </Button>
+              </Flex>
             </Box>
+          </Box>
         </Box>
-    );
+      </Container>
+    </Box>
+  );
 };
 
 export default RegisterLens;

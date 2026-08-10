@@ -14,6 +14,10 @@ import {
   useBreakpointValue,
   Button,
   Badge,
+  Checkbox,
+  Input,
+  Icon,
+  IconButton,
 } from "@chakra-ui/react";
 import {
   FiUser,
@@ -21,12 +25,15 @@ import {
   FiCreditCard,
   FiFileText,
   FiCheckCircle,
+  FiTool,
+  FiX,
 } from "react-icons/fi";
 import { Eye as EyeIcon } from "lucide-react";
 import Pdf from "./Pdf";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "@chakra-ui/react";
 import SmartHeader from "../../header/SmartHeader";
+import { useAuth } from "../../AuthContext";
 import SalesDetailsStep from "./SalesDetailsStep";
 import TotalStep from "./TotalStep";
 import DeliveryStep from "./DeliveryStep";
@@ -39,6 +46,7 @@ import AccessoriesModal from "./AccessoriesModal";
 import PaymentModal from "./PaymentModal";
 
 const Sales = () => {
+  const { user } = useAuth();
   const [saleData, setSaleData] = useState({
     patient_id: "",
     branchs_id: "",
@@ -51,6 +59,25 @@ const Sales = () => {
     p_frame: 0,
     p_lens: 0,
   });
+
+  // La sucursal y la fecha de la venta se detectan solas — no hace falta
+  // que el usuario las elija a mano. La sucursal viene de la sesión
+  // (branch_id del usuario), y la fecha siempre es la de hoy.
+  useEffect(() => {
+    setSaleData((prev) => ({
+      ...prev,
+      branchs_id: prev.branchs_id || (user?.branch_id ? String(user.branch_id) : ""),
+      date: prev.date || new Date().toLocaleDateString("en-CA"),
+    }));
+  }, [user]);
+
+  useEffect(() => {
+    const fetchTreatments = async () => {
+      const { data, error } = await supabase.from("treatments").select("*").eq("active", true).order("name");
+      if (!error) setTreatmentsCatalog(data || []);
+    };
+    fetchTreatments();
+  }, []);
 
   useEffect(() => {
     const setContext = async () => {
@@ -90,6 +117,9 @@ const Sales = () => {
   const [patientMeasures, setPatientMeasures] = useState([]);
   const [filteredMeasures, setFilteredMeasures] = useState([]);
   const [accessories, setAccessories] = useState([]);
+  const [treatmentsCatalog, setTreatmentsCatalog] = useState([]);
+  const [selectedTreatmentIds, setSelectedTreatmentIds] = useState([]);
+  const [treatmentPriceOverrides, setTreatmentPriceOverrides] = useState({});
   const [saleRegistered, setSaleRegistered] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saleId, setSaleId] = useState(null);
@@ -343,6 +373,21 @@ const Sales = () => {
       p_cantidad: 1,
     });
 
+    // Registrar la salida en el historial de inventario, para que quede
+    // igual de rastreada que las entradas y ediciones manuales.
+    if (mergedFormData.brand_id) {
+      const userName = user ? `${user.firstname || ""} ${user.lastname || ""}`.trim() || user.email : "Desconocido";
+      await supabase.from("inventory_movements").insert([{
+        inventario_id: mergedFormData.brand_id,
+        brand: totals.frameName || "Armazón",
+        action: "salida por venta",
+        old_data: null,
+        new_data: { cantidad_vendida: 1 },
+        user_id: user?.id || null,
+        user_name: userName,
+      }]);
+    }
+
     const saleDataToSave = {
       date: mergedFormData.date,
       delivery_time: mergedFormData.delivery_time,
@@ -408,6 +453,33 @@ const Sales = () => {
                 });
               }
             }
+          }
+        }
+
+        // Guardar los tratamientos marcados en esta venta
+        if (selectedTreatmentIds.length > 0) {
+          const treatmentRows = selectedTreatmentIds.map((tId) => {
+            const t = treatmentsCatalog.find((tr) => tr.id === tId);
+            const basePrice = Number(t?.price) || 0;
+            const override = treatmentPriceOverrides[tId];
+            const finalPrice = override !== undefined && override !== "" ? Number(override) : basePrice;
+            return {
+              sale_id: newSaleId,
+              treatment_id: tId,
+              treatment_name: t?.name || "Tratamiento",
+              price: Math.max(0, finalPrice),
+            };
+          });
+          const { error: treatmentsError } = await supabase.from("sale_treatments").insert(treatmentRows);
+          if (treatmentsError) {
+            console.error("Error guardando tratamientos:", treatmentsError);
+            toast({
+              title: "Venta registrada, pero los tratamientos no se guardaron",
+              description: "Revisa la tabla sale_treatments en Supabase.",
+              status: "warning",
+              duration: 6000,
+              isClosable: true,
+            });
           }
         }
 
@@ -495,7 +567,19 @@ const Sales = () => {
       : 0;
   const discountTotal = frameDiscountAmount + lensDiscountAmount;
   const accessoriesTotal = accessories.reduce((sum, a) => sum + a.unit_price * a.quantity, 0);
-  const grandTotal = (Number(formData.total) || 0) + accessoriesTotal;
+  const treatmentsSubtotal = selectedTreatmentIds.reduce((sum, id) => {
+    const t = treatmentsCatalog.find((tr) => tr.id === id);
+    return sum + (t ? Number(t.price) : 0);
+  }, 0);
+  // Cada tratamiento puede tener su propio precio final editado a mano —
+  // si no se tocó, se usa el precio de catálogo tal cual.
+  const treatmentsTotal = selectedTreatmentIds.reduce((sum, id) => {
+    const t = treatmentsCatalog.find((tr) => tr.id === id);
+    if (!t) return sum;
+    const override = treatmentPriceOverrides[id];
+    return sum + (override !== undefined && override !== "" ? Number(override) : Number(t.price));
+  }, 0);
+  const grandTotal = (Number(formData.total) || 0) + accessoriesTotal + treatmentsTotal;
   const downPayment = Number(formData.balance) || 0;
   const pendingBalance = Math.max(0, grandTotal - downPayment);
 
@@ -551,7 +635,7 @@ const Sales = () => {
         ? `${totals.frameName || "Armazón"} · ${totals.lensName || "Luna"} · $${Number(formData.total || 0).toFixed(2)}`
         : "Elige el armazón, la luna y revisa el precio",
       content: (
-        <VStack spacing={5} w="full" align="stretch">
+        <>
           <TotalStep formData={formData} onFormDataChange={handleFormDataChange} />
           <SalesDetailsStep
             formData={formData}
@@ -560,8 +644,15 @@ const Sales = () => {
             accessories={accessories}
             setAccessories={setAccessories}
             onOpenAddMore={() => setIsAccessoriesModalOpen(true)}
+            treatmentsCatalog={treatmentsCatalog}
+            selectedTreatmentIds={selectedTreatmentIds}
+            setSelectedTreatmentIds={setSelectedTreatmentIds}
+            treatmentPriceOverrides={treatmentPriceOverrides}
+            setTreatmentPriceOverrides={setTreatmentPriceOverrides}
+            treatmentsSubtotal={treatmentsSubtotal}
+            treatmentsTotal={treatmentsTotal}
           />
-        </VStack>
+        </>
       ),
     },
     {
@@ -647,6 +738,13 @@ const Sales = () => {
             frameName={totals.frameName}
             lensName={totals.lensName}
             accessories={accessories}
+            treatments={selectedTreatmentIds.map((id) => {
+              const t = treatmentsCatalog.find((tr) => tr.id === id);
+              if (!t) return null;
+              const override = treatmentPriceOverrides[id];
+              const price = override !== undefined && override !== "" ? Number(override) : Number(t.price);
+              return { id, name: t.name, price };
+            }).filter(Boolean)}
             total={grandTotal}
             discountTotal={discountTotal}
             downPayment={downPayment}

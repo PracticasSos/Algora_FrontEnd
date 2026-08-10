@@ -7,14 +7,15 @@ import RegisterPatientForm from "../components/Optometra/RegisterPatient";
 import OptometraDashBoard from "../components/optionsauth/OptionsOptometra";
 import VendedorDashBoard from "../components/optionsauth/OptionsVendedor.jsx";
 import ListPatients from "../components/Optometra/ListPatients"
-import Inventario from "../components/Admin/Inventory/Inventario.jsx";
-import InventarioList from "../components/Admin/Inventory/InventarioList.jsx";
+import Armazones from "../components/Admin/Inventory/Armazones.jsx";
+import InventoryHistory from "../components/Admin/Inventory/InventoryHistory.jsx";
+import Treatments from "../components/Admin/Inventory/Treatments.jsx";
 import Branch from "../components/Admin/Branch.jsx";
 import ListBranch from "../components/Admin/ListBranch.jsx";
 import Lab from "../components/Admin/Labs.jsx";
 import ListLab from "../components/Admin/ListLab.jsx";
 import CashClousure from "../components/Admin/cierres/CashClousure.jsx";
-import RegisterLens from "../components/Admin/RegisterLens.jsx";
+import Lunas from "../components/Admin/Lunas.jsx";
 import MeasuresFinal from "../components/Admin/MeasuresFinal.jsx"
 import PatientRecords from "../components/Admin/CierreDiario/PatientRecords.jsx"
 import Egresos from "../components/Admin/Egresos.jsx"
@@ -30,7 +31,6 @@ import Retreats from "../components/Admin/Retreats.jsx"
 import Balance from "../components/Admin/Balance.jsx"
 import HistoryMeasureList from "../components/Admin/HistoryMeasureList.jsx";
 import HistoryMeasures from "../components/Admin/HistoryMeasures.jsx";
-import ListLens from "../components/Admin/ListLens.jsx";
 import ListBalance from "../components/Admin/ListBalance.jsx";
 import ListSales from "../components/Admin/ListSales.jsx";
 import Sales from "../components/Admin/Sales/Sales.jsx";
@@ -66,7 +66,8 @@ const AppRouter = () => {
             <Route path="/delivery-settings" element={<DeliverySettings />} />
             <Route path="/user-management" element={<UserManagement />} />
             <Route path="/optometrist-settings" element={<OptometristSettings />} />
-            <Route path="/inventory" element={<Inventario />}></Route>
+            <Route path="/inventory" element={<Armazones />}></Route>
+            <Route path="/inventory-history" element={<InventoryHistory />}></Route>
             <Route path="/login-form" element={<LoginForm />} />
             <Route path="/admin" element={<AdminDashBoard />} />
             <Route path="/super-admin" element={<SuperAdminDashBoard />} />
@@ -75,7 +76,8 @@ const AppRouter = () => {
             <Route path="/vendedor" element={<VendedorDashBoard />} />
             <Route path="/optometra" element={<OptometraDashBoard />} />
             <Route path="/list-patients" element={<ListPatients />} />
-            <Route path="/list-inventory" element={<InventarioList />}></Route>
+            <Route path="/list-inventory" element={<Armazones />}></Route>
+            <Route path="/treatments" element={<Treatments />}></Route>
             <Route path="/branch" element={<Branch />}></Route>
             <Route path="/list-branch" element={<ListBranch />}></Route>
             <Route path="/labs" element={<Lab />}></Route>
@@ -83,7 +85,7 @@ const AppRouter = () => {
             <Route path="/cash-closure" element={<CashClousure />} ></Route>
             <Route path="/sales" element={<Sales />}></Route>
             <Route path="/sales/:id" element={<Sales />}></Route>
-            <Route path="/register-lens" element={<RegisterLens />}></Route>
+            <Route path="/register-lens" element={<Lunas />}></Route>
             <Route path="/patient-records" element={<PatientRecords />}> </Route>
             <Route path="/measures-final" element={<MeasuresFinal />}></Route>
             <Route path="/measures-final/:id" element={<MeasuresFinal />} />
@@ -98,7 +100,7 @@ const AppRouter = () => {
             <Route path="/retreats-patients" element={<RetreatsPatients />}></Route>
             <Route path="/retreats-patients/retreats/:saleId" element={<Retreats />}></Route>
             <Route path="/balance" element={<Balance />}></Route>
-            <Route path="/list-lens" element={<ListLens />}></Route>
+            <Route path="/list-lens" element={<Lunas />}></Route>
             <Route path="/list-balance" element={<ListBalance />}></Route>
             <Route path="/list-sales" element={<ListSales />}></Route>
             <Route path="/history-clinic" element={<HistoryClinic />} />

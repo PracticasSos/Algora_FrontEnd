@@ -7,10 +7,11 @@ import {
 } from "@chakra-ui/react";
 import {
   DollarSign, Banknote, ArrowLeftRight, CreditCard, TrendingDown,
-  Scale, CheckCircle2,
+  Scale, CheckCircle2, List, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import SmartHeader from "../../header/SmartHeader";
 
+const PAGE_SIZE = 10;
 const ACCENT = "#00A88E";
 const METHODS = [
   { key: "efectivo", label: "Efectivo", icon: Banknote, color: "#00A88E" },
@@ -38,6 +39,12 @@ const PatientRecords = () => {
   const [egresos, setEgresos] = useState([]);
   const [settlement, setSettlement] = useState(null); // conciliación de datafast ya guardada, si existe
 
+  // --- Detalle de ventas de hoy (paginado, independiente del resumen) ---
+  const [detailRecords, setDetailRecords] = useState([]);
+  const [detailPage, setDetailPage] = useState(1);
+  const [detailCount, setDetailCount] = useState(0);
+  const [detailLoading, setDetailLoading] = useState(false);
+
   const toast = useToast();
   const today = todayStr();
 
@@ -49,6 +56,40 @@ const PatientRecords = () => {
     if (selectedBranch) fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBranch]);
+
+  useEffect(() => {
+    setDetailPage(1);
+  }, [selectedBranch]);
+
+  useEffect(() => {
+    const fetchDetailPage = async () => {
+      if (!selectedBranch) return;
+      setDetailLoading(true);
+      const from = (detailPage - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      const { data, count } = await supabase
+        .from("sales")
+        .select(`
+          id, total, credit, balance, payment_in, is_refund,
+          patients (pt_firstname, pt_lastname),
+          inventario (brand),
+          lens (lens_type)
+        `, { count: "exact" })
+        .eq("branchs_id", selectedBranch)
+        .eq("date", today)
+        .eq("is_refund", false)
+        .order("id", { ascending: false })
+        .range(from, to);
+
+      setDetailRecords(data || []);
+      setDetailCount(count || 0);
+      setDetailLoading(false);
+    };
+    fetchDetailPage();
+  }, [selectedBranch, today, detailPage]);
+
+  const detailTotalPages = Math.max(1, Math.ceil(detailCount / PAGE_SIZE));
 
   const fetchBranches = async () => {
     const { data, error } = await supabase.from("branchs").select("id, name");
@@ -272,6 +313,82 @@ const PatientRecords = () => {
                     isDatafast
                   />
                 </SimpleGrid>
+
+                <SectionTitle icon={List}>Detalle de ventas de hoy</SectionTitle>
+                <Box overflowX="auto" borderRadius="14px" border={`1px solid ${borderColor}`} mb={3}>
+                  <Table size="sm">
+                    <Thead>
+                      <Tr bg={inputBg}>
+                        <Th color={subtitleColor}>Orden</Th>
+                        <Th color={subtitleColor}>Paciente</Th>
+                        <Th color={subtitleColor}>Armazón</Th>
+                        <Th color={subtitleColor}>Luna</Th>
+                        <Th color={subtitleColor} isNumeric>Total</Th>
+                        <Th color={subtitleColor} isNumeric>Abono</Th>
+                        <Th color={subtitleColor} isNumeric>Saldo</Th>
+                        <Th color={subtitleColor}>Pago</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {detailLoading ? (
+                        <Tr>
+                          <Td colSpan={8} textAlign="center" py={8}><Spinner size="sm" color={ACCENT} /></Td>
+                        </Tr>
+                      ) : detailRecords.length === 0 ? (
+                        <Tr>
+                          <Td colSpan={8} textAlign="center" py={8} color={subtitleColor}>Todavía no hay ventas registradas hoy.</Td>
+                        </Tr>
+                      ) : (
+                        detailRecords.map((r) => (
+                          <Tr key={r.id}>
+                            <Td>{r.id}</Td>
+                            <Td>{r.patients?.pt_firstname || "Sin nombre"} {r.patients?.pt_lastname || ""}</Td>
+                            <Td>{r.inventario?.brand || "—"}</Td>
+                            <Td>{r.lens?.lens_type || "—"}</Td>
+                            <Td isNumeric>{formatMoney(r.total)}</Td>
+                            <Td isNumeric>{formatMoney(r.balance)}</Td>
+                            <Td isNumeric>{formatMoney(r.credit)}</Td>
+                            <Td>
+                              <Badge colorScheme={r.payment_in === "efectivo" ? "green" : r.payment_in === "transferencia" ? "blue" : "purple"} fontSize="10px">
+                                {r.payment_in}
+                              </Badge>
+                            </Td>
+                          </Tr>
+                        ))
+                      )}
+                    </Tbody>
+                  </Table>
+                </Box>
+
+                {detailCount > 0 && (
+                  <Flex justify="space-between" align="center" mb={8} flexWrap="wrap" gap={2}>
+                    <Text fontSize="xs" color={subtitleColor}>
+                      {detailCount} venta{detailCount !== 1 ? "s" : ""} hoy — página {detailPage} de {detailTotalPages}
+                    </Text>
+                    <HStack spacing={2}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        borderRadius="10px"
+                        leftIcon={<Icon as={ChevronLeft} boxSize="14px" />}
+                        onClick={() => setDetailPage((p) => Math.max(1, p - 1))}
+                        isDisabled={detailPage <= 1 || detailLoading}
+                      >
+                        Anterior
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        borderRadius="10px"
+                        rightIcon={<Icon as={ChevronRight} boxSize="14px" />}
+                        onClick={() => setDetailPage((p) => Math.min(detailTotalPages, p + 1))}
+                        isDisabled={detailPage >= detailTotalPages || detailLoading}
+                      >
+                        Siguiente
+                      </Button>
+                    </HStack>
+                  </Flex>
+                )}
 
                 {/* Estado de Datafast — la conciliación real puede tardar días o meses,
                     así que aquí solo se informa el estado; el registro del monto

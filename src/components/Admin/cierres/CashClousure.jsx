@@ -3,11 +3,15 @@ import { supabase } from "../../../api/supabase";
 import {
   Box, Container, Heading, Text, Flex, HStack, VStack, Icon, Badge, Select,
   SimpleGrid, useColorModeValue, Spinner, Input, FormControl, FormLabel,
+  Table, Thead, Tbody, Tr, Th, Td, Button,
 } from "@chakra-ui/react";
 import {
   DollarSign, Banknote, ArrowLeftRight, CreditCard, TrendingDown, Scale, CheckCircle2, AlertTriangle,
+  List, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import SmartHeader from "../../header/SmartHeader";
+
+const PAGE_SIZE = 10;
 
 const ACCENT = "#00A88E";
 const METHODS = [
@@ -49,6 +53,12 @@ const CashClousure = () => {
   const [egresos, setEgresos] = useState([]);
   const [settlements, setSettlements] = useState([]);
 
+  // --- Detalle de ventas (paginado, independiente de los totales de arriba) ---
+  const [detailRecords, setDetailRecords] = useState([]);
+  const [detailPage, setDetailPage] = useState(1);
+  const [detailCount, setDetailCount] = useState(0);
+  const [detailLoading, setDetailLoading] = useState(false);
+
   useEffect(() => {
     fetchBranches();
   }, []);
@@ -57,6 +67,42 @@ const CashClousure = () => {
     if (selectedBranch && since && till) fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBranch, since, till]);
+
+  // Si cambian sucursal o fechas, se reinicia a la página 1 del detalle.
+  useEffect(() => {
+    setDetailPage(1);
+  }, [selectedBranch, since, till]);
+
+  useEffect(() => {
+    const fetchDetailPage = async () => {
+      if (!selectedBranch || !since || !till) return;
+      setDetailLoading(true);
+      const from = (detailPage - 1) * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
+      const { data, count } = await supabase
+        .from("sales")
+        .select(`
+          id, date, total, credit, balance, payment_in, is_refund,
+          patients (pt_firstname, pt_lastname),
+          inventario (brand),
+          lens (lens_type)
+        `, { count: "exact" })
+        .eq("branchs_id", selectedBranch)
+        .eq("is_refund", false)
+        .gte("date", since)
+        .lte("date", till)
+        .order("date", { ascending: false })
+        .range(from, to);
+
+      setDetailRecords(data || []);
+      setDetailCount(count || 0);
+      setDetailLoading(false);
+    };
+    fetchDetailPage();
+  }, [selectedBranch, since, till, detailPage]);
+
+  const detailTotalPages = Math.max(1, Math.ceil(detailCount / PAGE_SIZE));
 
   const fetchBranches = async () => {
     const { data, error } = await supabase.from("branchs").select("id, name");
@@ -302,11 +348,87 @@ const CashClousure = () => {
                 </SimpleGrid>
 
                 <SectionTitle icon={DollarSign}>Por método de pago</SectionTitle>
-                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4}>
+                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mb={8}>
                   <MethodCard method={METHODS[0]} ingresos={ingresosPorMetodo.efectivo} abonosVal={abonosPorMetodo.efectivo} egresosVal={egresosPorMetodo.efectivo} balance={balancePorMetodo.efectivo} />
                   <MethodCard method={METHODS[1]} ingresos={ingresosPorMetodo.transferencia} abonosVal={abonosPorMetodo.transferencia} egresosVal={egresosPorMetodo.transferencia} balance={balancePorMetodo.transferencia} />
                   <MethodCard method={METHODS[2]} ingresos={ingresosPorMetodo.datafast} abonosVal={abonosPorMetodo.datafast} egresosVal={egresosPorMetodo.datafast} balance={balancePorMetodo.datafast} isDatafast />
                 </SimpleGrid>
+
+                <SectionTitle icon={List}>Detalle de ventas</SectionTitle>
+                <Box overflowX="auto" borderRadius="14px" border={`1px solid ${borderColor}`}>
+                  <Table size="sm">
+                    <Thead>
+                      <Tr bg={inputBg}>
+                        <Th color={subtitleColor}>Fecha</Th>
+                        <Th color={subtitleColor}>Paciente</Th>
+                        <Th color={subtitleColor}>Armazón</Th>
+                        <Th color={subtitleColor}>Luna</Th>
+                        <Th color={subtitleColor} isNumeric>Total</Th>
+                        <Th color={subtitleColor} isNumeric>Abono</Th>
+                        <Th color={subtitleColor} isNumeric>Saldo</Th>
+                        <Th color={subtitleColor}>Pago</Th>
+                      </Tr>
+                    </Thead>
+                    <Tbody>
+                      {detailLoading ? (
+                        <Tr>
+                          <Td colSpan={8} textAlign="center" py={8}><Spinner size="sm" color={ACCENT} /></Td>
+                        </Tr>
+                      ) : detailRecords.length === 0 ? (
+                        <Tr>
+                          <Td colSpan={8} textAlign="center" py={8} color={subtitleColor}>No hay ventas en este rango.</Td>
+                        </Tr>
+                      ) : (
+                        detailRecords.map((r) => (
+                          <Tr key={r.id}>
+                            <Td>{r.date}</Td>
+                            <Td>{r.patients?.pt_firstname || "Sin nombre"} {r.patients?.pt_lastname || ""}</Td>
+                            <Td>{r.inventario?.brand || "—"}</Td>
+                            <Td>{r.lens?.lens_type || "—"}</Td>
+                            <Td isNumeric>{formatMoney(r.total)}</Td>
+                            <Td isNumeric>{formatMoney(r.balance)}</Td>
+                            <Td isNumeric>{formatMoney(r.credit)}</Td>
+                            <Td>
+                              <Badge colorScheme={r.payment_in === "efectivo" ? "green" : r.payment_in === "transferencia" ? "blue" : "purple"} fontSize="10px">
+                                {r.payment_in}
+                              </Badge>
+                            </Td>
+                          </Tr>
+                        ))
+                      )}
+                    </Tbody>
+                  </Table>
+                </Box>
+
+                {detailCount > 0 && (
+                  <Flex justify="space-between" align="center" mt={3} flexWrap="wrap" gap={2}>
+                    <Text fontSize="xs" color={subtitleColor}>
+                      {detailCount} venta{detailCount !== 1 ? "s" : ""} en total — página {detailPage} de {detailTotalPages}
+                    </Text>
+                    <HStack spacing={2}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        borderRadius="10px"
+                        leftIcon={<Icon as={ChevronLeft} boxSize="14px" />}
+                        onClick={() => setDetailPage((p) => Math.max(1, p - 1))}
+                        isDisabled={detailPage <= 1 || detailLoading}
+                      >
+                        Anterior
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        borderRadius="10px"
+                        rightIcon={<Icon as={ChevronRight} boxSize="14px" />}
+                        onClick={() => setDetailPage((p) => Math.min(detailTotalPages, p + 1))}
+                        isDisabled={detailPage >= detailTotalPages || detailLoading}
+                      >
+                        Siguiente
+                      </Button>
+                    </HStack>
+                  </Flex>
+                )}
               </>
             )}
           </Box>

@@ -4,7 +4,7 @@ import {
     Box, Button, Heading, Table, Thead, Tbody, Tr, Th, Td, Input, useToast, Text, HStack, IconButton, useColorModeValue, Flex, Spacer, Badge
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
-import { BiEdit, BiTrash, BiCheck, BiX } from 'react-icons/bi';
+import { BiEdit, BiTrash, BiCheck, BiX, BiPowerOff, BiRefresh } from 'react-icons/bi';
 import ConfirmDialog from '../../components/UI/ConfirmDialog';
 import { FaEye } from 'react-icons/fa';
 import SmartHeader from '../header/SmartHeader';
@@ -16,6 +16,8 @@ const ListBranch = () => {
     const [editableData, setEditableData] = useState({});
     const [isOpen, setIsOpen] = useState(false);
     const [selectedId, setSelectedId] = useState(null);
+    const [confirmMode, setConfirmMode] = useState('deactivate'); // 'deactivate' | 'delete'
+    const [showInactive, setShowInactive] = useState(false);
     const toast = useToast();
     const navigate = useNavigate();
 
@@ -55,17 +57,42 @@ const ListBranch = () => {
         }
     };
 
-    const openConfirm = (id) => {
+    const openConfirm = (id, mode = 'deactivate') => {
         setSelectedId(id);
+        setConfirmMode(mode);
         setIsOpen(true);
     };
 
     const handleConfirm = () => {
         setIsOpen(false);
-        handleDelete(selectedId);
+        if (confirmMode === 'delete') {
+            handleDelete(selectedId);
+        } else {
+            handleDeactivate(selectedId);
+        }
     };
 
     const handleCancel = () => setIsOpen(false);
+
+    const handleDeactivate = async (id) => {
+        const { error } = await supabase.from('branchs').update({ active: false }).match({ id });
+        if (!error) {
+            toast({ title: 'Sucursal desactivada', description: 'Ya no aparecerá en el listado principal. Puedes reactivarla cuando quieras.', status: 'info' });
+            fetchBranch();
+        } else {
+            toast({ title: 'Error', description: 'No se pudo desactivar la sucursal.', status: 'error' });
+        }
+    };
+
+    const handleReactivate = async (id) => {
+        const { error } = await supabase.from('branchs').update({ active: true }).match({ id });
+        if (!error) {
+            toast({ title: 'Sucursal reactivada', status: 'success' });
+            fetchBranch();
+        } else {
+            toast({ title: 'Error', description: 'No se pudo reactivar la sucursal.', status: 'error' });
+        }
+    };
 
     const handleDelete = async (id) => {
         const { error } = await supabase.from('branchs').delete().match({ id });
@@ -73,15 +100,28 @@ const ListBranch = () => {
             toast({ title: 'Éxito', description: 'Sucursal eliminada correctamente.', status: 'success' });
             fetchBranch();
         } else {
-            toast({ title: 'Error', description: 'No se pudo eliminar la sucursal.', status: 'error' });
+            // Si la sucursal tiene ventas, gastos u otros registros asociados, la
+            // base de datos rechaza el borrado — mostramos un mensaje claro en
+            // vez del error técnico de Postgres.
+            const isReferenced = error.code === '23503' || error.code === '23502' || /constraint/i.test(error.message || '');
+            toast({
+                title: 'No se puede eliminar',
+                description: isReferenced
+                    ? 'Esta sucursal tiene ventas, gastos u otros registros asociados. Déjala desactivada en vez de eliminarla.'
+                    : 'No se pudo eliminar la sucursal.',
+                status: 'warning',
+                duration: 6000,
+            });
         }
     };
 
-    const filteredBranches = branch.filter((branch) =>
-        [branch.name].some((field) =>
-            field.toLowerCase().includes(search.toLowerCase())
+    const searchedBranches = branch.filter((b) =>
+        [b.name].some((field) =>
+            (field || '').toLowerCase().includes(search.toLowerCase())
         )
     );
+    const activeBranches = searchedBranches.filter((b) => b.active !== false);
+    const inactiveBranches = searchedBranches.filter((b) => b.active === false);
 
     const handleNavigate = (route = null) => {
         const user = JSON.parse(localStorage.getItem('user'));
@@ -181,6 +221,18 @@ const ListBranch = () => {
                     Lista de Sucursales
                 </Heading>
                 <Spacer />
+                {inactiveBranches.length > 0 && (
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        colorScheme="orange"
+                        borderRadius="full"
+                        mr={3}
+                        onClick={() => setShowInactive((prev) => !prev)}
+                    >
+                        {showInactive ? 'Ocultar' : 'Ver'} inactivas ({inactiveBranches.length})
+                    </Button>
+                )}
                 <Input
                     placeholder="Buscar sucursal..."
                     value={search}
@@ -223,7 +275,7 @@ const ListBranch = () => {
                         </Tr>
                     </Thead>
                     <Tbody>
-                        {filteredBranches.length === 0 ? (
+                        {activeBranches.length === 0 ? (
                             <Tr>
                                 <Td colSpan={6} textAlign="center" py={8}>
                                     <Badge colorScheme="red" fontSize="lg" px={4} py={2} borderRadius="md">
@@ -232,7 +284,7 @@ const ListBranch = () => {
                                 </Td>
                             </Tr>
                         ) : (
-                            filteredBranches.map((branch) => (
+                            activeBranches.map((branch) => (
                                 <Tr
                                     key={branch.id}
                                     cursor="pointer"
@@ -296,11 +348,12 @@ const ListBranch = () => {
                                                     aria-label="Editar"
                                                 />
                                                 <IconButton
-                                                    icon={<BiTrash />}
-                                                    colorScheme="red"
-                                                    onClick={() => openConfirm(branch.id)}
+                                                    icon={<BiPowerOff />}
+                                                    colorScheme="orange"
+                                                    onClick={() => openConfirm(branch.id, 'deactivate')}
                                                     size="sm"
-                                                    aria-label="Eliminar"
+                                                    aria-label="Desactivar"
+                                                    title="Desactivar"
                                                 />
                                             </HStack>
                                         )}
@@ -311,12 +364,65 @@ const ListBranch = () => {
                     </Tbody>
                 </Table>
             </Box>
+
+            {/* Sucursales inactivas — se reactivan o se eliminan definitivamente aquí */}
+            {showInactive && inactiveBranches.length > 0 && (
+                <Box width="100%" overflowX="auto" borderRadius="xl" boxShadow="lg" mt={6} opacity={0.85}>
+                    <Text fontWeight="bold" color="orange.400" mb={2} px={2}>Sucursales inactivas</Text>
+                    <Table bg={tableBg} borderRadius="md" overflow="hidden" variant="striped" colorScheme="White">
+                        <Thead>
+                            <Tr bg={useColorModeValue('orange.100', 'orange.900')}>
+                                {['Nombre', 'Dirección', 'Correo', 'Teléfono', 'RUC', 'Acciones'].map((header) => (
+                                    <Th key={header} color={textColor} borderColor={borderColor} fontWeight="bold" fontSize="md" py={3} textAlign="center" letterSpacing="wide">
+                                        {header}
+                                    </Th>
+                                ))}
+                            </Tr>
+                        </Thead>
+                        <Tbody>
+                            {inactiveBranches.map((branch) => (
+                                <Tr key={branch.id} borderColor={borderColor}>
+                                    {['name', 'address', 'email', 'cell', 'ruc'].map((field) => (
+                                        <Td key={field} color={textColor} borderColor={borderColor} textAlign="center" fontSize="md" py={3}>
+                                            {branch[field] || <Badge colorScheme="yellow">N/A</Badge>}
+                                        </Td>
+                                    ))}
+                                    <Td textAlign="center" color={textColor} borderColor={borderColor} py={3}>
+                                        <HStack spacing={2} justify="center">
+                                            <IconButton
+                                                icon={<BiRefresh />}
+                                                colorScheme="teal"
+                                                onClick={() => handleReactivate(branch.id)}
+                                                size="sm"
+                                                aria-label="Reactivar"
+                                                title="Reactivar"
+                                            />
+                                            <IconButton
+                                                icon={<BiTrash />}
+                                                colorScheme="red"
+                                                onClick={() => openConfirm(branch.id, 'delete')}
+                                                size="sm"
+                                                aria-label="Eliminar definitivamente"
+                                                title="Eliminar definitivamente"
+                                            />
+                                        </HStack>
+                                    </Td>
+                                </Tr>
+                            ))}
+                        </Tbody>
+                    </Table>
+                </Box>
+            )}
             <ConfirmDialog
                 isOpen={isOpen}
                 onClose={handleCancel}
                 onConfirm={handleConfirm}
-                title="¿Eliminar sucursal?"
-                body="¿Estás seguro de que deseas eliminar esta sucursal?"
+                title={confirmMode === 'delete' ? '¿Eliminar definitivamente?' : '¿Desactivar sucursal?'}
+                body={
+                    confirmMode === 'delete'
+                        ? 'Esta acción no se puede deshacer. Si la sucursal tiene ventas, gastos u otros registros asociados, el sistema no permitirá eliminarla.'
+                        : 'La sucursal dejará de aparecer en el listado principal, pero conserva todo su historial. Puedes reactivarla cuando quieras.'
+                }
             />
         </Box>
         </Box>

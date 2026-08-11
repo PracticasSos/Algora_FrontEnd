@@ -40,6 +40,7 @@ import SaleDetail from "../components/Admin/SaleDetail.jsx";
 import PrintCertificate from "../components/Admin/certificate/PrintCertificate.jsx";
 import UploadLogo from "../components/Admin/certificate/UploadLogo.jsx";
 import SuperAdminDashBoard from "../components/optionsauth/OptionsSuperAdmin.jsx";
+import SuperAdminOpticas from "../components/Admin/SuperAdminOpticas.jsx";
 import FormInitial from '../components/ExperienceModule/pages/FormInitial.jsx';
 import QuestionnairePage from '../components/ExperienceModule/pages/QuestionnairePage.jsx'
 import Results from '../components/ExperienceModule/pages/Results.jsx'
@@ -119,6 +120,7 @@ const AppRouter = () => {
             <Route path="/loader" element={<Loader />} />
             <Route path="/mensajeria" element={<MessageClients />} />
             <Route path="/super-admin/tenants" element={<Tenants />} />
+            <Route path="/super-admin/opticas" element={<SuperAdminOpticas />} />
         </Routes>
     )
 }

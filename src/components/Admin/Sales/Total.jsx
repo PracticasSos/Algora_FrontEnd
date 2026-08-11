@@ -31,10 +31,20 @@ const Total = ({ formData, setFormData, grandTotal }) => {
   const balance = formData.balance === "" ? 0 : parseFloat(formData.balance);
   const credit = isNaN(balance) ? total : Math.max(0, total - balance);
 
+  // Solo actualizamos 'credit' (saldo pendiente). NUNCA escribimos 'total'
+  // de vuelta aquí: 'total' que llega como 'grandTotal' ya se calculó en
+  // Sales.jsx sumando formData.total + accesorios + tratamientos. Si lo
+  // volviéramos a guardar en formData.total, en el siguiente render
+  // Sales.jsx sumaría accesorios/tratamientos OTRA VEZ sobre ese valor ya
+  // combinado, y así en cada render — un ciclo que hace crecer el saldo
+  // sin límite (ese fue el bug del saldo pendiente subiendo solo).
   React.useEffect(() => {
-    setFormData({ ...formData, total, credit });
+    setFormData((prev) => {
+      if (prev.credit === credit) return prev; // evita renders innecesarios
+      return { ...prev, credit };
+    });
     // eslint-disable-next-line
-  }, [total, credit]);
+  }, [credit]);
 
   const handleBalanceChange = (e) => {
     const value = e.target.value;

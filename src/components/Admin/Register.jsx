@@ -13,6 +13,45 @@ import SmartHeader from '../header/SmartHeader';
 
 const ACCENT = '#00A88E';
 
+// SectionTitle y Field viven AQUÍ, fuera de Register, a propósito. Antes
+// estaban declarados dentro del cuerpo de Register — eso significa que en
+// cada render (cada tecla presionada) React creaba una función NUEVA para
+// <Field>, y al ser una función distinta, React la trata como un
+// componente de tipo diferente: desmonta el <Input> anterior y monta uno
+// nuevo desde cero. Esto vacía el DOM del campo (pierde el foco) después
+// de cada letra — por eso solo entraba un carácter a la vez. Al vivir
+// fuera del componente, la función es siempre la misma referencia entre
+// renders, así que React reutiliza el mismo <Input> del DOM sin
+// desmontarlo, y el foco (y el cursor) se mantienen intactos.
+const SectionTitle = ({ icon, children, sectionIconBg }) => (
+  <Flex align="center" gap={3} mb={4}>
+    <Flex align="center" justify="center" boxSize="30px" borderRadius="10px" bg={sectionIconBg} color={ACCENT} flexShrink={0}>
+      <Icon as={icon} boxSize="15px" />
+    </Flex>
+    <Text fontWeight="bold" fontSize="sm" letterSpacing="wide" textTransform="uppercase" color={ACCENT} whiteSpace="nowrap">
+      {children}
+    </Text>
+    <Box flex="1" h="1px" bgGradient={`linear(to-r, ${sectionIconBg}, transparent)`} />
+  </Flex>
+);
+
+const Field = ({ label, name, type = "text", isRequired = true, value, onChange, error, inputBg, borderColor, subtitleColor }) => (
+  <FormControl isRequired={isRequired} isInvalid={!!error}>
+    <FormLabel fontSize="xs" color={subtitleColor} mb={1}>{label}</FormLabel>
+    <Input
+      type={type}
+      name={name}
+      value={value}
+      onChange={onChange}
+      borderRadius="10px"
+      bg={inputBg}
+      borderColor={borderColor}
+      _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+    />
+    <FormErrorMessage fontSize="xs">{error}</FormErrorMessage>
+  </FormControl>
+);
+
 // Solo estos 3 roles se pueden asignar al crear un usuario — "Superusuario"
 // (u otro rol especial) se deja fuera a propósito por ahora.
 const ALLOWED_ROLE_NAMES = ['Admin', 'Optometra', 'Vendedor'];
@@ -244,34 +283,6 @@ const Register = () => {
   const subtitleColor = useColorModeValue('gray.500', 'gray.400');
   const sectionIconBg = useColorModeValue('#E6FBF6', 'rgba(0,168,142,0.15)');
 
-  const SectionTitle = ({ icon, children }) => (
-    <Flex align="center" gap={3} mb={4}>
-      <Flex align="center" justify="center" boxSize="30px" borderRadius="10px" bg={sectionIconBg} color={ACCENT} flexShrink={0}>
-        <Icon as={icon} boxSize="15px" />
-      </Flex>
-      <Text fontWeight="bold" fontSize="sm" letterSpacing="wide" textTransform="uppercase" color={ACCENT} whiteSpace="nowrap">
-        {children}
-      </Text>
-      <Box flex="1" h="1px" bgGradient={`linear(to-r, ${sectionIconBg}, transparent)`} />
-    </Flex>
-  );
-
-  const Field = ({ label, name, type = "text", isRequired = true }) => (
-    <FormControl isRequired={isRequired} isInvalid={!!errors[name]}>
-      <FormLabel fontSize="xs" color={subtitleColor} mb={1}>{label}</FormLabel>
-      <Input
-        type={type}
-        name={name}
-        value={formData[name]}
-        onChange={handleChange}
-        borderRadius="10px"
-        bg={inputBg}
-        borderColor={borderColor}
-        _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
-      />
-      <FormErrorMessage fontSize="xs">{errors[name]}</FormErrorMessage>
-    </FormControl>
-  );
 
   return (
     <Box minHeight="100vh" bgGradient={useColorModeValue('linear(to-br, gray.50, teal.50)', 'linear(to-br, gray.900, #0d1f1c)')}>
@@ -301,31 +312,31 @@ const Register = () => {
 
             {/* --- Datos personales --- */}
             <Box mb={8}>
-              <SectionTitle icon={User}>Datos personales</SectionTitle>
+              <SectionTitle icon={User} sectionIconBg={sectionIconBg}>Datos personales</SectionTitle>
               <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
-                <Field label="Nombre" name="firstname" />
-                <Field label="Apellido" name="lastname" />
-                <Field label="C.I." name="ci" />
-                <Field label="Fecha de nacimiento" name="birthdate" type="date" />
-                <Field label="Edad" name="age" type="number" />
-                <Field label="Celular" name="phone_number" />
+                <Field label="Nombre" name="firstname" value={formData.firstname} onChange={handleChange} error={errors.firstname} inputBg={inputBg} borderColor={borderColor} subtitleColor={subtitleColor} />
+                <Field label="Apellido" name="lastname" value={formData.lastname} onChange={handleChange} error={errors.lastname} inputBg={inputBg} borderColor={borderColor} subtitleColor={subtitleColor} />
+                <Field label="C.I." name="ci" value={formData.ci} onChange={handleChange} error={errors.ci} inputBg={inputBg} borderColor={borderColor} subtitleColor={subtitleColor} />
+                <Field label="Fecha de nacimiento" name="birthdate" type="date" value={formData.birthdate} onChange={handleChange} error={errors.birthdate} inputBg={inputBg} borderColor={borderColor} subtitleColor={subtitleColor} />
+                <Field label="Edad" name="age" type="number" value={formData.age} onChange={handleChange} error={errors.age} inputBg={inputBg} borderColor={borderColor} subtitleColor={subtitleColor} />
+                <Field label="Celular" name="phone_number" value={formData.phone_number} onChange={handleChange} error={errors.phone_number} inputBg={inputBg} borderColor={borderColor} subtitleColor={subtitleColor} />
               </SimpleGrid>
             </Box>
 
             {/* --- Cuenta --- */}
             <Box mb={8}>
-              <SectionTitle icon={ShieldCheck}>Cuenta de acceso</SectionTitle>
+              <SectionTitle icon={ShieldCheck} sectionIconBg={sectionIconBg}>Cuenta de acceso</SectionTitle>
               <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} spacing={4}>
-                <Field label="Nombre de usuario" name="username" />
-                <Field label="Correo" name="email" type="email" />
-                <Field label="Contraseña" name="password" type="password" />
-                <Field label="Fecha de ingreso" name="check_in_date" type="date" isRequired={false} />
+                <Field label="Nombre de usuario" name="username" value={formData.username} onChange={handleChange} error={errors.username} inputBg={inputBg} borderColor={borderColor} subtitleColor={subtitleColor} />
+                <Field label="Correo" name="email" type="email" value={formData.email} onChange={handleChange} error={errors.email} inputBg={inputBg} borderColor={borderColor} subtitleColor={subtitleColor} />
+                <Field label="Contraseña" name="password" type="password" value={formData.password} onChange={handleChange} error={errors.password} inputBg={inputBg} borderColor={borderColor} subtitleColor={subtitleColor} />
+                <Field label="Fecha de ingreso" name="check_in_date" type="date" isRequired={false} value={formData.check_in_date} onChange={handleChange} error={errors.check_in_date} inputBg={inputBg} borderColor={borderColor} subtitleColor={subtitleColor} />
               </SimpleGrid>
             </Box>
 
             {/* --- Sucursal y rol --- */}
             <Box mb={8}>
-              <SectionTitle icon={MapPin}>Sucursal y rol</SectionTitle>
+              <SectionTitle icon={MapPin} sectionIconBg={sectionIconBg}>Sucursal y rol</SectionTitle>
               <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4}>
                 <FormControl isRequired isInvalid={!!errors.branch_id}>
                   <FormLabel fontSize="xs" color={subtitleColor} mb={1}>Sucursal</FormLabel>
@@ -364,7 +375,7 @@ const Register = () => {
 
             {/* --- Sello (opcional, para optómetras) --- */}
             <Box mb={8}>
-              <SectionTitle icon={Stamp}>Sello profesional (opcional)</SectionTitle>
+              <SectionTitle icon={Stamp} sectionIconBg={sectionIconBg}>Sello profesional (opcional)</SectionTitle>
               <Input
                 type="file"
                 accept="image/*"
@@ -385,7 +396,7 @@ const Register = () => {
             {/* --- Permisos --- */}
             {formData.role_id && (
               <Box mb={8}>
-                <SectionTitle icon={ShieldCheck}>Permisos de acceso</SectionTitle>
+                <SectionTitle icon={ShieldCheck} sectionIconBg={sectionIconBg}>Permisos de acceso</SectionTitle>
                 <Text fontSize="xs" color={subtitleColor} mb={3}>
                   Se marcaron automáticamente los permisos típicos de este rol — puedes ajustar cuáles verá.
                 </Text>

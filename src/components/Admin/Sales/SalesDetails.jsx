@@ -199,14 +199,22 @@ const SalesDetails = ({
   // % de descuento solo, reutilizando exactamente la misma lógica de arriba.
   const handleFinalPriceChange = (type) => (val) => {
     const base = type === "frame" ? calculatedData.p_frame : calculatedData.p_lens;
-    const fieldName = type === "frame" ? "discount_frame" : "discount_lens";
+    const discountKey = type === "frame" ? "discount_frame" : "discount_lens";
+    const totalKey = type === "frame" ? "total_p_frame" : "total_p_lens";
+
     if (val === "" || Number(base) <= 0) {
-      handleDiscountChange({ target: { name: fieldName, value: "" } });
+      handleDiscountChange({ target: { name: discountKey, value: "" } });
       return;
     }
-    const finalNum = Math.max(0, Number(val) || 0);
-    const pct = Math.max(0, Math.min(100, (1 - finalNum / base) * 100));
-    handleDiscountChange({ target: { name: fieldName, value: pct.toFixed(2) } });
+
+    // Se guarda el valor EXACTO que se escribió (no uno recalculado desde
+    // el % con redondeo) — el % se calcula aparte, solo para mostrarlo.
+    const finalNum = formatMoney(Math.max(0, Number(val) || 0));
+    const pct = base > 0 ? Math.max(0, Math.min(100, (1 - finalNum / base) * 100)) : 0;
+
+    setDiscountInput((prev) => ({ ...prev, [discountKey]: pct.toFixed(2) }));
+    setCalculatedData((prev) => ({ ...prev, [discountKey]: pct, [totalKey]: finalNum }));
+    setFormData((prev) => ({ ...prev, [discountKey]: pct, [totalKey]: finalNum }));
   };
 
   useEffect(() => {

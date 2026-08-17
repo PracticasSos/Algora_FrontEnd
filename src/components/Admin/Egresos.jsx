@@ -4,10 +4,12 @@ import {
   Box, Container, Heading, Table, Thead, Tbody, Tr, Th, Td,
   Select, Button, Badge, SimpleGrid, Input,
   useColorModeValue, useToast, Flex, HStack, VStack, Icon, Text, Spinner,
+  IconButton,
 } from "@chakra-ui/react";
-import { TrendingDown, Plus, User, MapPin } from "lucide-react";
+import { TrendingDown, Plus, User, MapPin, Pencil, Trash2, Check, X } from "lucide-react";
 import SmartHeader from "../header/SmartHeader";
 import { useAuth } from "../AuthContext";
+import ConfirmDialog from "../UI/ConfirmDialog";
 
 const ACCENT = "#00A88E";
 const todayStr = () => new Date().toLocaleDateString("en-CA");
@@ -24,6 +26,13 @@ const Egresos = () => {
   // La sucursal y el encargado ya no se preguntan — se toman directo de
   // la sesión de quien inició sesión, así no hay margen de error.
   const myBranchId = user?.branch_id || "";
+  const isAdmin = user?.role_id === 1;
+
+  const [editingId, setEditingId] = useState(null);
+  const [editableData, setEditableData] = useState({});
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState(null);
 
   const [newEgreso, setNewEgreso] = useState({
     lab_id: "",
@@ -106,6 +115,48 @@ const Egresos = () => {
     fetchEgresos();
   };
 
+  const handleEditStart = (r) => {
+    setEditingId(r.id);
+    setEditableData({ value: r.value, specification: r.specification || "", payment_in: r.payment_in || "" });
+  };
+
+  const handleEditSave = async (id) => {
+    setIsSavingEdit(true);
+    const { error } = await supabase
+      .from("egresos")
+      .update({
+        value: Number(editableData.value) || 0,
+        specification: editableData.specification,
+        payment_in: editableData.payment_in,
+      })
+      .eq("id", id);
+    setIsSavingEdit(false);
+
+    if (error) {
+      toast({ title: "Error", description: "No se pudo actualizar el egreso.", status: "error", duration: 5000, isClosable: true });
+    } else {
+      toast({ title: "Egreso actualizado", status: "success", duration: 3000, isClosable: true });
+      setEditingId(null);
+      fetchEgresos();
+    }
+  };
+
+  const openDeleteConfirm = (id) => {
+    setSelectedId(id);
+    setIsConfirmOpen(true);
+  };
+
+  const handleDelete = async () => {
+    setIsConfirmOpen(false);
+    const { error } = await supabase.from("egresos").delete().eq("id", selectedId);
+    if (error) {
+      toast({ title: "Error", description: "No se pudo eliminar el egreso.", status: "error", duration: 5000, isClosable: true });
+    } else {
+      toast({ title: "Egreso eliminado", status: "success", duration: 3000, isClosable: true });
+      fetchEgresos();
+    }
+  };
+
   const cardBg = useColorModeValue("white", "gray.700");
   const inputBg = useColorModeValue("gray.50", "gray.700");
   const borderColor = useColorModeValue("gray.200", "gray.600");
@@ -185,23 +236,82 @@ const Egresos = () => {
                             <Th color={subtitleColor}>Especificación</Th>
                             <Th color={subtitleColor}>Método</Th>
                             <Th color={subtitleColor} textAlign="right">Valor</Th>
+                            {isAdmin && <Th color={subtitleColor} textAlign="right">Acciones</Th>}
                           </Tr>
                         </Thead>
                         <Tbody>
                           {records.length === 0 ? (
-                            <Tr><Td colSpan={5} textAlign="center" py={8} color={subtitleColor}>No hay egresos registrados hoy.</Td></Tr>
+                            <Tr><Td colSpan={isAdmin ? 6 : 5} textAlign="center" py={8} color={subtitleColor}>No hay egresos registrados hoy.</Td></Tr>
                           ) : (
                             records.map((r) => (
                               <Tr key={r.id} _hover={{ bg: rowHoverBg }}>
                                 <Td>{r.users?.firstname || "—"}</Td>
                                 <Td>{r.labs?.name || "—"}</Td>
-                                <Td>{r.specification || "—"}</Td>
                                 <Td>
-                                  <Badge colorScheme={r.payment_in === "efectivo" ? "teal" : r.payment_in === "transferencia" ? "blue" : "purple"} borderRadius="full" px={2} textTransform="capitalize">
-                                    {r.payment_in}
-                                  </Badge>
+                                  {editingId === r.id ? (
+                                    <Input
+                                      value={editableData.specification}
+                                      onChange={(e) => setEditableData((prev) => ({ ...prev, specification: e.target.value }))}
+                                      size="sm"
+                                      borderRadius="8px"
+                                      bg={inputBg}
+                                      borderColor={borderColor}
+                                    />
+                                  ) : (
+                                    r.specification || "—"
+                                  )}
                                 </Td>
-                                <Td textAlign="right" fontWeight="semibold">${Number(r.value).toFixed(2)}</Td>
+                                <Td>
+                                  {editingId === r.id ? (
+                                    <Select
+                                      value={editableData.payment_in}
+                                      onChange={(e) => setEditableData((prev) => ({ ...prev, payment_in: e.target.value }))}
+                                      size="sm"
+                                      borderRadius="8px"
+                                      bg={inputBg}
+                                      borderColor={borderColor}
+                                    >
+                                      <option value="efectivo">Efectivo</option>
+                                      <option value="datafast">Datafast</option>
+                                      <option value="transferencia">Transferencia</option>
+                                    </Select>
+                                  ) : (
+                                    <Badge colorScheme={r.payment_in === "efectivo" ? "teal" : r.payment_in === "transferencia" ? "blue" : "purple"} borderRadius="full" px={2} textTransform="capitalize">
+                                      {r.payment_in}
+                                    </Badge>
+                                  )}
+                                </Td>
+                                <Td textAlign="right" fontWeight="semibold">
+                                  {editingId === r.id ? (
+                                    <Input
+                                      type="number"
+                                      value={editableData.value}
+                                      onChange={(e) => setEditableData((prev) => ({ ...prev, value: e.target.value }))}
+                                      size="sm"
+                                      borderRadius="8px"
+                                      bg={inputBg}
+                                      borderColor={borderColor}
+                                      textAlign="right"
+                                    />
+                                  ) : (
+                                    `$${Number(r.value).toFixed(2)}`
+                                  )}
+                                </Td>
+                                {isAdmin && (
+                                  <Td textAlign="right">
+                                    {editingId === r.id ? (
+                                      <HStack justify="flex-end" spacing={1}>
+                                        <IconButton icon={<Check size={15} />} size="sm" variant="ghost" colorScheme="teal" aria-label="Guardar" onClick={() => handleEditSave(r.id)} isLoading={isSavingEdit} />
+                                        <IconButton icon={<X size={15} />} size="sm" variant="ghost" colorScheme="gray" aria-label="Cancelar" onClick={() => setEditingId(null)} />
+                                      </HStack>
+                                    ) : (
+                                      <HStack justify="flex-end" spacing={1}>
+                                        <IconButton icon={<Pencil size={15} />} size="sm" variant="ghost" colorScheme="teal" aria-label="Editar" onClick={() => handleEditStart(r)} />
+                                        <IconButton icon={<Trash2 size={15} />} size="sm" variant="ghost" colorScheme="red" aria-label="Eliminar" onClick={() => openDeleteConfirm(r.id)} />
+                                      </HStack>
+                                    )}
+                                  </Td>
+                                )}
                               </Tr>
                             ))
                           )}
@@ -284,6 +394,14 @@ const Egresos = () => {
           </Box>
         </Box>
       </Container>
+
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        onClose={() => setIsConfirmOpen(false)}
+        onConfirm={handleDelete}
+        title="¿Eliminar egreso?"
+        body="Esta acción no se puede deshacer."
+      />
     </Box>
   );
 };

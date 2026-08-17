@@ -77,6 +77,7 @@ export const contractTemplate = `
         
         <div class="totals">
             <p><strong>Total General:</strong> {{totalGeneral}}</p>
+            <p><strong>Descuento Total:</strong> {{totalDiscount}}</p>
             <p><strong>Abono Realizado:</strong> {{balance}}</p>
             <p><strong>Saldo Pendiente:</strong> {{credit}}</p>
             <p><strong>Forma de Pago:</strong> {{paymentMethod}}</p>

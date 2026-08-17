@@ -5,11 +5,12 @@ import {
   Box, Container, Heading, Text, Flex, HStack, VStack, Icon, Badge, Spinner,
   useColorModeValue, Button, SimpleGrid, Input, FormControl, FormLabel, useToast,
   AlertDialog, AlertDialogOverlay, AlertDialogContent, AlertDialogHeader,
-  AlertDialogBody, AlertDialogFooter,
+  AlertDialogBody, AlertDialogFooter, Image as ChakraImage,
 } from "@chakra-ui/react";
-import { ArrowLeft, ShoppingBag, User, CreditCard, FileText, MessageCircle, Package, Pencil, PackageCheck, FlaskConical, RotateCcw, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ShoppingBag, User, CreditCard, FileText, MessageCircle, Package, Pencil, PackageCheck, FlaskConical, RotateCcw, AlertTriangle, Wrench, Camera, RefreshCw, X } from "lucide-react";
 import SmartHeader from "../header/SmartHeader";
 import { useAuth } from "../AuthContext";
+import { generateContractPDF } from "./Sales/pdf/pdfGenerator.js";
 
 const ACCENT = "#00A88E";
 
@@ -41,10 +42,36 @@ const SaleDetail = () => {
   const [lensResults, setLensResults] = useState([]);
   const [editData, setEditData] = useState(null);
 
+  // --- Tratamientos ---
+  const [treatmentsCatalog, setTreatmentsCatalog] = useState([]);
+  const [saleTreatments, setSaleTreatments] = useState([]);
+  const [selectedTreatmentIds, setSelectedTreatmentIds] = useState([]);
+  const [treatmentSearch, setTreatmentSearch] = useState("");
+  const [isTreatmentFocused, setIsTreatmentFocused] = useState(false);
+
+  // --- Foto de armazón (por si no se tomó al momento de vender) ---
+  const [framePhotoFile, setFramePhotoFile] = useState(null);
+  const [framePhotoPreview, setFramePhotoPreview] = useState(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  // --- Regenerar comprobante ---
+  const [isRegeneratingPdf, setIsRegeneratingPdf] = useState(false);
+
   useEffect(() => {
     fetchSale();
+    fetchTreatmentsCatalog();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saleId]);
+
+  const fetchTreatmentsCatalog = async () => {
+    const { data, error } = await supabase.from("treatments").select("*").eq("active", true).order("name");
+    if (!error) setTreatmentsCatalog(data || []);
+  };
+
+  const fetchSaleTreatments = async () => {
+    const { data, error } = await supabase.from("sale_treatments").select("*").eq("sale_id", saleId);
+    if (!error) setSaleTreatments(data || []);
+  };
 
   const fetchSale = async () => {
     setLoading(true);
@@ -53,7 +80,7 @@ const SaleDetail = () => {
       .select(`
         *,
         patients (pt_firstname, pt_lastname, pt_ci, pt_phone),
-        branchs (name),
+        branchs (name, address),
         inventario (id, brand, price),
         lens:lens_id (id, lens_type, lens_price)
       `)
@@ -65,6 +92,7 @@ const SaleDetail = () => {
     } else {
       setSale(data);
     }
+    fetchSaleTreatments();
     setLoading(false);
   };
 
@@ -99,6 +127,9 @@ const SaleDetail = () => {
     });
     setSearchFrame(sale.inventario?.brand || "");
     setSearchLens(sale.lens?.lens_type || "");
+    setSelectedTreatmentIds(saleTreatments.map((t) => t.treatment_id));
+    setFramePhotoFile(null);
+    setFramePhotoPreview(sale.frame_photo_url || null);
     setIsEditing(true);
   };
 
@@ -107,6 +138,9 @@ const SaleDetail = () => {
     setEditData(null);
     setFrameResults([]);
     setLensResults([]);
+    setFramePhotoFile(null);
+    setFramePhotoPreview(null);
+    setTreatmentSearch("");
   };
 
   const handleFrameSearch = async (value) => {
@@ -170,6 +204,23 @@ const SaleDetail = () => {
     const newBalance = Math.max(0, Number(editData.balance) || 0);
     const newCredit = Math.max(0, total - newBalance);
 
+    // Si se eligió una foto nueva del armazón, se sube primero.
+    let framePhotoUrl = sale.frame_photo_url || null;
+    if (framePhotoFile) {
+      setIsUploadingPhoto(true);
+      const ext = framePhotoFile.name.split(".").pop();
+      const fileName = `frame-${saleId}-${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("sales").upload(fileName, framePhotoFile, { upsert: true });
+      setIsUploadingPhoto(false);
+      if (uploadError) {
+        setIsSaving(false);
+        toast({ title: "Error subiendo la foto", description: uploadError.message, status: "error", duration: 5000, isClosable: true });
+        return;
+      }
+      const { data: urlData } = supabase.storage.from("sales").getPublicUrl(fileName);
+      framePhotoUrl = urlData?.publicUrl || framePhotoUrl;
+    }
+
     const { error } = await supabase
       .from("sales")
       .update({
@@ -182,17 +233,93 @@ const SaleDetail = () => {
         total,
         balance: newBalance,
         credit: newCredit,
+        frame_photo_url: framePhotoUrl,
       })
       .eq("id", saleId);
 
-    setIsSaving(false);
-
     if (error) {
+      setIsSaving(false);
       toast({ title: "Error", description: "No se pudo actualizar la venta.", status: "error", duration: 4000, isClosable: true });
-    } else {
-      toast({ title: "Venta actualizada", status: "success", duration: 3000, isClosable: true });
-      setIsEditing(false);
+      return;
+    }
+
+    // Tratamientos: se reemplazan por completo (borra los que había, mete
+    // los que quedaron marcados) — más simple y seguro que comparar cuáles
+    // cambiaron uno por uno.
+    const { error: deleteTreatmentsError } = await supabase.from("sale_treatments").delete().eq("sale_id", saleId);
+    if (deleteTreatmentsError) {
+      console.error("Error limpiando tratamientos:", deleteTreatmentsError);
+    }
+    if (selectedTreatmentIds.length > 0) {
+      const rows = selectedTreatmentIds.map((tId) => {
+        const t = treatmentsCatalog.find((tr) => tr.id === tId);
+        return {
+          sale_id: saleId,
+          treatment_id: tId,
+          treatment_name: t?.name || "Tratamiento",
+          price: Number(t?.price) || 0,
+        };
+      });
+      const { error: insertTreatmentsError } = await supabase.from("sale_treatments").insert(rows);
+      if (insertTreatmentsError) {
+        console.error("Error guardando tratamientos:", insertTreatmentsError);
+      }
+    }
+
+    setIsSaving(false);
+    toast({ title: "Venta actualizada", status: "success", duration: 3000, isClosable: true });
+    setIsEditing(false);
+    fetchSale();
+  };
+
+  const handleRegeneratePdf = async () => {
+    setIsRegeneratingPdf(true);
+    try {
+      let measureData = null;
+      if (sale.measure_id) {
+        const { data } = await supabase.from("rx_final").select("*").eq("id", sale.measure_id).single();
+        measureData = data;
+      }
+
+      const patientData = {
+        pt_firstname: sale.patients?.pt_firstname,
+        pt_lastname: sale.patients?.pt_lastname,
+        pt_phone: sale.patients?.pt_phone,
+      };
+      const branchData = { name: sale.branchs?.name, address: sale.branchs?.address };
+
+      const formData = {
+        id: sale.id,
+        date: sale.date,
+        // Se usa el precio que quedó GUARDADO en la venta (sale.p_frame /
+        // sale.p_lens) — no el precio actual del inventario, que puede
+        // haber cambiado desde que se hizo esta venta.
+        p_frame: sale.p_frame ?? sale.inventario?.price ?? 0,
+        discount_frame: sale.discount_frame || 0,
+        total_p_frame: sale.total_p_frame ?? sale.p_frame ?? sale.inventario?.price ?? 0,
+        p_lens: sale.p_lens ?? sale.lens?.lens_price ?? 0,
+        discount_lens: sale.discount_lens || 0,
+        total_p_lens: sale.total_p_lens ?? sale.p_lens ?? sale.lens?.lens_price ?? 0,
+        total: sale.total,
+        credit: sale.credit,
+        balance: sale.balance,
+        payment_in: sale.payment_in,
+        delivery_time: sale.delivery_time,
+        branch_name: sale.branchs?.name,
+        observation_img: sale.frame_photo_url || null,
+        // Se regenera con los términos ya aceptados — la venta ya se
+        // había completado con esa confirmación la primera vez.
+        termsAccepted: true,
+      };
+
+      const result = await generateContractPDF(formData, measureData, patientData, branchData);
+      toast({ title: "Comprobante regenerado", description: "El PDF se actualizó con los datos más recientes.", status: "success", duration: 4000, isClosable: true });
       fetchSale();
+    } catch (err) {
+      console.error("Error regenerando el comprobante:", err);
+      toast({ title: "Error", description: err.message || "No se pudo regenerar el comprobante.", status: "error", duration: 6000, isClosable: true });
+    } finally {
+      setIsRegeneratingPdf(false);
     }
   };
 
@@ -320,19 +447,34 @@ const SaleDetail = () => {
                     <Text fontWeight="semibold">{sale.inventario?.brand || "No registrado"}</Text>
                     <Text fontSize="sm" color={subtitleColor}>
                       {sale.discount_frame > 0
-                        ? <>{formatMoney(sale.inventario?.price)} → <Text as="span" color={ACCENT} fontWeight="bold">{formatMoney(sale.total_p_frame)}</Text> ({sale.discount_frame}% desc.)</>
-                        : formatMoney(sale.inventario?.price)}
+                        ? <>{formatMoney(sale.p_frame ?? sale.inventario?.price)} → <Text as="span" color={ACCENT} fontWeight="bold">{formatMoney(sale.total_p_frame)}</Text> ({sale.discount_frame}% desc.)</>
+                        : formatMoney(sale.p_frame ?? sale.inventario?.price)}
                     </Text>
+                    {sale.frame_photo_url && (
+                      <ChakraImage src={sale.frame_photo_url} alt="Armazón" mt={2} boxSize="60px" objectFit="cover" borderRadius="8px" border={`1px solid ${borderColor}`} />
+                    )}
                   </Box>
                   <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
                     <Text fontSize="xs" color={subtitleColor} mb={1}>Luna</Text>
                     <Text fontWeight="semibold">{sale.lens?.lens_type || "No registrada"}</Text>
                     <Text fontSize="sm" color={subtitleColor}>
                       {sale.discount_lens > 0
-                        ? <>{formatMoney(sale.lens?.lens_price)} → <Text as="span" color={ACCENT} fontWeight="bold">{formatMoney(sale.total_p_lens)}</Text> ({sale.discount_lens}% desc.)</>
-                        : formatMoney(sale.lens?.lens_price)}
+                        ? <>{formatMoney(sale.p_lens ?? sale.lens?.lens_price)} → <Text as="span" color={ACCENT} fontWeight="bold">{formatMoney(sale.total_p_lens)}</Text> ({sale.discount_lens}% desc.)</>
+                        : formatMoney(sale.p_lens ?? sale.lens?.lens_price)}
                     </Text>
                   </Box>
+                  {saleTreatments.length > 0 && (
+                    <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`} gridColumn={{ sm: "span 2" }}>
+                      <Text fontSize="xs" color={subtitleColor} mb={2}>Tratamientos</Text>
+                      <HStack flexWrap="wrap" spacing={2}>
+                        {saleTreatments.map((t) => (
+                          <Badge key={t.id} colorScheme="teal" borderRadius="full" px={2} py={1}>
+                            {t.treatment_name} · {formatMoney(t.price)}
+                          </Badge>
+                        ))}
+                      </HStack>
+                    </Box>
+                  )}
                 </SimpleGrid>
               ) : (
                 <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${ACCENT}`} mb={6}>
@@ -408,6 +550,107 @@ const SaleDetail = () => {
                       />
                     </FormControl>
                   </SimpleGrid>
+
+                  <Box mt={4} pt={4} borderTop={`1px solid ${borderColor}`}>
+                    <HStack spacing={2} mb={2}>
+                      <Icon as={Wrench} boxSize="14px" color={ACCENT} />
+                      <Text fontSize="xs" fontWeight="bold" color={ACCENT} textTransform="uppercase">
+                        Tratamientos
+                      </Text>
+                    </HStack>
+
+                    {selectedTreatmentIds.length > 0 && (
+                      <HStack flexWrap="wrap" spacing={2} mb={2}>
+                        {selectedTreatmentIds.map((id) => {
+                          const t = treatmentsCatalog.find((tr) => tr.id === id);
+                          if (!t) return null;
+                          return (
+                            <HStack key={id} spacing={1} bg="rgba(0,168,142,0.12)" border={`1px solid ${ACCENT}`} borderRadius="full" pl={3} pr={1} py={1}>
+                              <Text fontSize="xs" fontWeight="semibold">{t.name}</Text>
+                              <Text fontSize="xs" color={ACCENT} fontWeight="bold">${Number(t.price).toFixed(2)}</Text>
+                              <Icon
+                                as={X}
+                                boxSize="12px"
+                                cursor="pointer"
+                                onClick={() => setSelectedTreatmentIds((prev) => prev.filter((tid) => tid !== id))}
+                              />
+                            </HStack>
+                          );
+                        })}
+                      </HStack>
+                    )}
+
+                    <Box position="relative" maxW="320px">
+                      <Input
+                        placeholder="Buscar tratamiento para agregar..."
+                        size="sm"
+                        value={treatmentSearch}
+                        onChange={(e) => setTreatmentSearch(e.target.value)}
+                        onFocus={() => setIsTreatmentFocused(true)}
+                        onBlur={() => setTimeout(() => setIsTreatmentFocused(false), 150)}
+                        borderRadius="10px"
+                        bg={cardBg}
+                        borderColor={borderColor}
+                      />
+                      {isTreatmentFocused && treatmentSearch.trim().length > 0 && (
+                        <Box position="absolute" zIndex={10} w="100%" mt={1} bg={cardBg} border={`1px solid ${borderColor}`} borderRadius="10px" boxShadow="md" maxH="180px" overflowY="auto">
+                          {treatmentsCatalog
+                            .filter((t) => t.name.toLowerCase().includes(treatmentSearch.toLowerCase()))
+                            .map((t) => {
+                              const isSelected = selectedTreatmentIds.includes(t.id);
+                              return (
+                                <HStack
+                                  key={t.id}
+                                  justify="space-between"
+                                  p={2}
+                                  cursor="pointer"
+                                  _hover={{ bg: inputBg }}
+                                  onMouseDown={() => {
+                                    setSelectedTreatmentIds((prev) => (isSelected ? prev.filter((id) => id !== t.id) : [...prev, t.id]));
+                                    setTreatmentSearch("");
+                                  }}
+                                >
+                                  <Text fontSize="sm">{isSelected ? "✓ " : ""}{t.name}</Text>
+                                  <Text fontSize="sm" fontWeight="bold" color={ACCENT}>${Number(t.price).toFixed(2)}</Text>
+                                </HStack>
+                              );
+                            })}
+                        </Box>
+                      )}
+                    </Box>
+                  </Box>
+
+                  <Box mt={4} pt={4} borderTop={`1px solid ${borderColor}`}>
+                    <HStack spacing={2} mb={2}>
+                      <Icon as={Camera} boxSize="14px" color={ACCENT} />
+                      <Text fontSize="xs" fontWeight="bold" color={ACCENT} textTransform="uppercase">
+                        Foto del armazón (por si no se tomó al vender)
+                      </Text>
+                    </HStack>
+                    <HStack align="flex-start" spacing={4}>
+                      {framePhotoPreview && (
+                        <ChakraImage src={framePhotoPreview} alt="Armazón" boxSize="70px" objectFit="cover" borderRadius="10px" border={`1px solid ${borderColor}`} />
+                      )}
+                      <VStack align="start" spacing={1}>
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          size="sm"
+                          p={1}
+                          borderRadius="10px"
+                          bg={cardBg}
+                          borderColor={borderColor}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setFramePhotoFile(file);
+                            setFramePhotoPreview(URL.createObjectURL(file));
+                          }}
+                        />
+                        <Text fontSize="10px" color={subtitleColor}>Se guarda al hacer clic en "Guardar cambios".</Text>
+                      </VStack>
+                    </HStack>
+                  </Box>
 
                   <Box mt={4} pt={4} borderTop={`1px solid ${borderColor}`}>
                     <HStack spacing={2} mb={2}>
@@ -511,11 +754,40 @@ const SaleDetail = () => {
                       Enviar por WhatsApp
                     </Button>
                   )}
+                  {isAdmin && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      colorScheme="orange"
+                      leftIcon={<RefreshCw size={14} />}
+                      onClick={handleRegeneratePdf}
+                      isLoading={isRegeneratingPdf}
+                      loadingText="Regenerando..."
+                    >
+                      Regenerar comprobante
+                    </Button>
+                  )}
                 </HStack>
               ) : (
-                <Text fontSize="sm" color={subtitleColor}>
-                  No se generó un comprobante en PDF para esta venta.
-                </Text>
+                <VStack align="start" spacing={3}>
+                  <Text fontSize="sm" color={subtitleColor}>
+                    No se generó un comprobante en PDF para esta venta.
+                  </Text>
+                  {isAdmin && (
+                    <Button
+                      size="sm"
+                      bg={ACCENT}
+                      color="white"
+                      _hover={{ bg: "#00967f" }}
+                      leftIcon={<RefreshCw size={14} />}
+                      onClick={handleRegeneratePdf}
+                      isLoading={isRegeneratingPdf}
+                      loadingText="Generando..."
+                    >
+                      Generar comprobante ahora
+                    </Button>
+                  )}
+                </VStack>
               )}
               {isEditing && (
                 <Text fontSize="xs" color={subtitleColor} mt={3}>

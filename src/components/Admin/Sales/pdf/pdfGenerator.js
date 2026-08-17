@@ -104,6 +104,16 @@ export const generateContractPDF = async (formData, measureData, patientData, br
       deliveryText = formData.delivery_time;
     }
 
+    // Descuento total combinado (armazón + luna) — cuánto se ahorró en
+    // total, no solo el % de cada ítem por separado.
+    const frameSavings = formData?.discount_frame > 0
+      ? Math.max(0, Number(formData?.p_frame || 0) - Number(formData?.total_p_frame || 0))
+      : 0;
+    const lensSavings = formData?.discount_lens > 0
+      ? Math.max(0, Number(formData?.p_lens || 0) - Number(formData?.total_p_lens || 0))
+      : 0;
+    const totalDiscountAmount = frameSavings + lensSavings;
+
     // Reemplazar todas las variables en la plantilla
     let finalHtml = contractTemplate
       .replace(/{{clientName}}/g, fullName || '-')
@@ -118,6 +128,7 @@ export const generateContractPDF = async (formData, measureData, patientData, br
       .replace(/{{lensDiscount}}/g, formData?.discount_lens || 0)
       .replace(/{{lensTotalPrice}}/g, '$' + Number(formData?.total_p_lens || 0).toLocaleString())
       .replace(/{{totalGeneral}}/g, '$' + Number(formData?.total || 0).toLocaleString())
+      .replace(/{{totalDiscount}}/g, '$' + totalDiscountAmount.toLocaleString())
       .replace(/{{credit}}/g, '$' + Number(formData?.credit || 0).toLocaleString())
       .replace(/{{balance}}/g, '$' + Number(formData?.balance || 0).toLocaleString())
       .replace(/{{paymentMethod}}/g, formData?.payment_in || '-')

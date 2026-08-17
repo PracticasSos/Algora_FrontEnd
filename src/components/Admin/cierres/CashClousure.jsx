@@ -3,15 +3,12 @@ import { supabase } from "../../../api/supabase";
 import {
   Box, Container, Heading, Text, Flex, HStack, VStack, Icon, Badge, Select,
   SimpleGrid, useColorModeValue, Spinner, Input, FormControl, FormLabel,
-  Table, Thead, Tbody, Tr, Th, Td, Button,
+  Table, Thead, Tbody, Tr, Th, Td,
 } from "@chakra-ui/react";
 import {
   DollarSign, Banknote, ArrowLeftRight, CreditCard, TrendingDown, Scale, CheckCircle2, AlertTriangle,
-  List, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import SmartHeader from "../../header/SmartHeader";
-
-const PAGE_SIZE = 10;
 
 const ACCENT = "#00A88E";
 const METHODS = [
@@ -52,12 +49,7 @@ const CashClousure = () => {
   const [abonos, setAbonos] = useState([]);
   const [egresos, setEgresos] = useState([]);
   const [settlements, setSettlements] = useState([]);
-
-  // --- Detalle de ventas (paginado, independiente de los totales de arriba) ---
-  const [detailRecords, setDetailRecords] = useState([]);
-  const [detailPage, setDetailPage] = useState(1);
-  const [detailCount, setDetailCount] = useState(0);
-  const [detailLoading, setDetailLoading] = useState(false);
+  const [refunds, setRefunds] = useState([]);
 
   useEffect(() => {
     fetchBranches();
@@ -67,42 +59,6 @@ const CashClousure = () => {
     if (selectedBranch && since && till) fetchAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBranch, since, till]);
-
-  // Si cambian sucursal o fechas, se reinicia a la página 1 del detalle.
-  useEffect(() => {
-    setDetailPage(1);
-  }, [selectedBranch, since, till]);
-
-  useEffect(() => {
-    const fetchDetailPage = async () => {
-      if (!selectedBranch || !since || !till) return;
-      setDetailLoading(true);
-      const from = (detailPage - 1) * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-
-      const { data, count } = await supabase
-        .from("sales")
-        .select(`
-          id, date, total, credit, balance, payment_in, is_refund,
-          patients (pt_firstname, pt_lastname),
-          inventario (brand),
-          lens (lens_type)
-        `, { count: "exact" })
-        .eq("branchs_id", selectedBranch)
-        .eq("is_refund", false)
-        .gte("date", since)
-        .lte("date", till)
-        .order("date", { ascending: false })
-        .range(from, to);
-
-      setDetailRecords(data || []);
-      setDetailCount(count || 0);
-      setDetailLoading(false);
-    };
-    fetchDetailPage();
-  }, [selectedBranch, since, till, detailPage]);
-
-  const detailTotalPages = Math.max(1, Math.ceil(detailCount / PAGE_SIZE));
 
   const fetchBranches = async () => {
     const { data, error } = await supabase.from("branchs").select("id, name");
@@ -122,22 +78,22 @@ const CashClousure = () => {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [salesRes, abonosRes, egresosRes, settlementsRes] = await Promise.all([
+      const [salesRes, abonosRes, egresosRes, settlementsRes, refundsRes] = await Promise.all([
         supabase
           .from("sales")
-          .select("id, total, payment_in, is_refund, date")
+          .select("id, total, balance, credit, payment_in, is_refund, date, patients(pt_firstname, pt_lastname)")
           .eq("branchs_id", selectedBranch)
           .gte("date", since)
           .lte("date", till),
         supabase
           .from("abono_payments")
-          .select("id, amount, payment_method, paid_at, sales!inner(branchs_id)")
+          .select("id, amount, payment_method, paid_at, sales!inner(branchs_id, patients(pt_firstname, pt_lastname))")
           .eq("sales.branchs_id", selectedBranch)
           .gte("paid_at", `${since}T00:00:00`)
           .lte("paid_at", `${till}T23:59:59`),
         supabase
           .from("egresos")
-          .select("id, value, payment_in, date")
+          .select("id, value, payment_in, date, specification")
           .eq("branchs_id", selectedBranch)
           .gte("date", since)
           .lte("date", till),
@@ -147,12 +103,19 @@ const CashClousure = () => {
           .eq("branchs_id", selectedBranch)
           .gte("settlement_date", since)
           .lte("settlement_date", till),
+        supabase
+          .from("refunds")
+          .select("id, refund_amount, payment_method, refund_date, sales!inner(branchs_id, patients(pt_firstname, pt_lastname))")
+          .eq("sales.branchs_id", selectedBranch)
+          .gte("refund_date", `${since}T00:00:00`)
+          .lte("refund_date", `${till}T23:59:59`),
       ]);
 
       setSales(salesRes.data || []);
       setAbonos(abonosRes.data || []);
       setEgresos(egresosRes.data || []);
       setSettlements(settlementsRes.data || []);
+      setRefunds(refundsRes.data || []);
     } catch (err) {
       console.error("Error cargando el consultar cierre:", err);
     } finally {
@@ -160,10 +123,14 @@ const CashClousure = () => {
     }
   }, [selectedBranch, since, till]);
 
+  // Mismo criterio que en Cierre Diario: el ingreso real es lo que
+  // efectivamente se cobró en cada venta (balance), no el total facturado.
   const ingresosPorMetodo = emptyMethods();
+  let ventasTotalSinCobrar = 0;
   sales.filter((s) => !s.is_refund).forEach((s) => {
     const method = (s.payment_in || "").toLowerCase();
-    if (method in ingresosPorMetodo) ingresosPorMetodo[method] += Number(s.total) || 0;
+    if (method in ingresosPorMetodo) ingresosPorMetodo[method] += Number(s.balance) || 0;
+    ventasTotalSinCobrar += Number(s.total) || 0;
   });
 
   const abonosPorMetodo = emptyMethods();
@@ -178,6 +145,12 @@ const CashClousure = () => {
     if (method in egresosPorMetodo) egresosPorMetodo[method] += Number(e.value) || 0;
   });
 
+  const refundsPorMetodo = emptyMethods();
+  refunds.forEach((r) => {
+    const method = (r.payment_method || "").toLowerCase();
+    if (method in refundsPorMetodo) refundsPorMetodo[method] += Number(r.refund_amount) || 0;
+  });
+
   const datafastGross = ingresosPorMetodo.datafast + abonosPorMetodo.datafast;
   // El valor real de Datafast en un rango es la suma de todas las
   // conciliaciones guardadas día por día — esto es lo que de verdad llegó
@@ -189,15 +162,16 @@ const CashClousure = () => {
   const datafastNet = daysReconciled > 0 ? datafastNetReconciled : datafastGross;
 
   const balancePorMetodo = {
-    efectivo: ingresosPorMetodo.efectivo + abonosPorMetodo.efectivo - egresosPorMetodo.efectivo,
-    transferencia: ingresosPorMetodo.transferencia + abonosPorMetodo.transferencia - egresosPorMetodo.transferencia,
-    datafast: datafastNet - egresosPorMetodo.datafast,
+    efectivo: ingresosPorMetodo.efectivo + abonosPorMetodo.efectivo - egresosPorMetodo.efectivo - refundsPorMetodo.efectivo,
+    transferencia: ingresosPorMetodo.transferencia + abonosPorMetodo.transferencia - egresosPorMetodo.transferencia - refundsPorMetodo.transferencia,
+    datafast: datafastNet - egresosPorMetodo.datafast - refundsPorMetodo.datafast,
   };
   const balanceTotal = balancePorMetodo.efectivo + balancePorMetodo.transferencia + balancePorMetodo.datafast;
 
   const totalIngresos = ingresosPorMetodo.efectivo + ingresosPorMetodo.transferencia + ingresosPorMetodo.datafast;
   const totalAbonos = abonosPorMetodo.efectivo + abonosPorMetodo.transferencia + abonosPorMetodo.datafast;
   const totalEgresos = egresosPorMetodo.efectivo + egresosPorMetodo.transferencia + egresosPorMetodo.datafast;
+  const totalRefunds = refundsPorMetodo.efectivo + refundsPorMetodo.transferencia + refundsPorMetodo.datafast;
 
   const cardBg = useColorModeValue("white", "gray.700");
   const inputBg = useColorModeValue("gray.50", "gray.700");
@@ -217,16 +191,19 @@ const CashClousure = () => {
     </Flex>
   );
 
-  const MethodCard = ({ method, ingresos, abonosVal, egresosVal, balance, isDatafast }) => (
+  const MethodCard = ({ method, ingresos, abonosVal, egresosVal, refundsVal, balance, isDatafast }) => (
     <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
       <HStack spacing={2} mb={2}>
         <Icon as={method.icon} boxSize="16px" color={method.color} />
         <Text fontWeight="bold" fontSize="sm">{method.label}</Text>
       </HStack>
       <VStack align="stretch" spacing={1} fontSize="xs" color={subtitleColor} mb={2}>
-        <Flex justify="space-between"><Text>Ventas</Text><Text fontWeight="medium">{formatMoney(ingresos)}</Text></Flex>
+        <Flex justify="space-between"><Text>Cobrado en ventas</Text><Text fontWeight="medium">{formatMoney(ingresos)}</Text></Flex>
         <Flex justify="space-between"><Text>Abonos</Text><Text fontWeight="medium">{formatMoney(abonosVal)}</Text></Flex>
         <Flex justify="space-between"><Text>Egresos</Text><Text fontWeight="medium" color="red.400">-{formatMoney(egresosVal)}</Text></Flex>
+        {refundsVal > 0 && (
+          <Flex justify="space-between"><Text>Reembolsos</Text><Text fontWeight="medium" color="red.400">-{formatMoney(refundsVal)}</Text></Flex>
+        )}
         {isDatafast && (
           <Flex justify="space-between"><Text>Comisión banco</Text><Text fontWeight="medium" color="orange.400">-{formatMoney(datafastGross - datafastNet)}</Text></Flex>
         )}
@@ -328,10 +305,13 @@ const CashClousure = () => {
                   </HStack>
                 )}
 
-                <SimpleGrid columns={{ base: 2, md: 4 }} spacing={4} mb={6}>
+                <SimpleGrid columns={{ base: 2, md: totalRefunds > 0 ? 5 : 4 }} spacing={4} mb={6}>
                   <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
-                    <Text fontSize="xs" color={subtitleColor} textTransform="uppercase" mb={1}>Ventas</Text>
+                    <Text fontSize="xs" color={subtitleColor} textTransform="uppercase" mb={1}>Cobrado en ventas</Text>
                     <Text fontWeight="800" fontSize="xl" color={ACCENT}>{formatMoney(totalIngresos)}</Text>
+                    {ventasTotalSinCobrar > totalIngresos && (
+                      <Text fontSize="10px" color={subtitleColor} mt={1}>de {formatMoney(ventasTotalSinCobrar)} vendidos</Text>
+                    )}
                   </Box>
                   <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
                     <Text fontSize="xs" color={subtitleColor} textTransform="uppercase" mb={1}>Abonos</Text>
@@ -341,6 +321,12 @@ const CashClousure = () => {
                     <Text fontSize="xs" color={subtitleColor} textTransform="uppercase" mb={1}>Egresos</Text>
                     <Text fontWeight="800" fontSize="xl" color="red.400">{formatMoney(totalEgresos)}</Text>
                   </Box>
+                  {totalRefunds > 0 && (
+                    <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
+                      <Text fontSize="xs" color={subtitleColor} textTransform="uppercase" mb={1}>Reembolsos</Text>
+                      <Text fontWeight="800" fontSize="xl" color="red.400">{formatMoney(totalRefunds)}</Text>
+                    </Box>
+                  )}
                   <Box p={4} borderRadius="14px" bgGradient="linear(to-br, #00A88E, #00786A)" color="white">
                     <Text fontSize="xs" textTransform="uppercase" mb={1} opacity={0.9}>Balance real</Text>
                     <Text fontWeight="800" fontSize="xl">{formatMoney(balanceTotal)}</Text>
@@ -349,85 +335,145 @@ const CashClousure = () => {
 
                 <SectionTitle icon={DollarSign}>Por método de pago</SectionTitle>
                 <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mb={8}>
-                  <MethodCard method={METHODS[0]} ingresos={ingresosPorMetodo.efectivo} abonosVal={abonosPorMetodo.efectivo} egresosVal={egresosPorMetodo.efectivo} balance={balancePorMetodo.efectivo} />
-                  <MethodCard method={METHODS[1]} ingresos={ingresosPorMetodo.transferencia} abonosVal={abonosPorMetodo.transferencia} egresosVal={egresosPorMetodo.transferencia} balance={balancePorMetodo.transferencia} />
-                  <MethodCard method={METHODS[2]} ingresos={ingresosPorMetodo.datafast} abonosVal={abonosPorMetodo.datafast} egresosVal={egresosPorMetodo.datafast} balance={balancePorMetodo.datafast} isDatafast />
+                  <MethodCard method={METHODS[0]} ingresos={ingresosPorMetodo.efectivo} abonosVal={abonosPorMetodo.efectivo} egresosVal={egresosPorMetodo.efectivo} refundsVal={refundsPorMetodo.efectivo} balance={balancePorMetodo.efectivo} />
+                  <MethodCard method={METHODS[1]} ingresos={ingresosPorMetodo.transferencia} abonosVal={abonosPorMetodo.transferencia} egresosVal={egresosPorMetodo.transferencia} refundsVal={refundsPorMetodo.transferencia} balance={balancePorMetodo.transferencia} />
+                  <MethodCard method={METHODS[2]} ingresos={ingresosPorMetodo.datafast} abonosVal={abonosPorMetodo.datafast} egresosVal={egresosPorMetodo.datafast} refundsVal={refundsPorMetodo.datafast} balance={balancePorMetodo.datafast} isDatafast />
                 </SimpleGrid>
 
-                <SectionTitle icon={List}>Detalle de ventas</SectionTitle>
-                <Box overflowX="auto" borderRadius="14px" border={`1px solid ${borderColor}`}>
-                  <Table size="sm">
-                    <Thead>
-                      <Tr bg={inputBg}>
-                        <Th color={subtitleColor}>Fecha</Th>
-                        <Th color={subtitleColor}>Paciente</Th>
-                        <Th color={subtitleColor}>Armazón</Th>
-                        <Th color={subtitleColor}>Luna</Th>
-                        <Th color={subtitleColor} isNumeric>Total</Th>
-                        <Th color={subtitleColor} isNumeric>Abono</Th>
-                        <Th color={subtitleColor} isNumeric>Saldo</Th>
-                        <Th color={subtitleColor}>Pago</Th>
-                      </Tr>
-                    </Thead>
-                    <Tbody>
-                      {detailLoading ? (
-                        <Tr>
-                          <Td colSpan={8} textAlign="center" py={8}><Spinner size="sm" color={ACCENT} /></Td>
-                        </Tr>
-                      ) : detailRecords.length === 0 ? (
-                        <Tr>
-                          <Td colSpan={8} textAlign="center" py={8} color={subtitleColor}>No hay ventas en este rango.</Td>
-                        </Tr>
-                      ) : (
-                        detailRecords.map((r) => (
-                          <Tr key={r.id}>
-                            <Td>{r.date}</Td>
-                            <Td>{r.patients?.pt_firstname || "Sin nombre"} {r.patients?.pt_lastname || ""}</Td>
-                            <Td>{r.inventario?.brand || "—"}</Td>
-                            <Td>{r.lens?.lens_type || "—"}</Td>
-                            <Td isNumeric>{formatMoney(r.total)}</Td>
-                            <Td isNumeric>{formatMoney(r.balance)}</Td>
-                            <Td isNumeric>{formatMoney(r.credit)}</Td>
-                            <Td>
-                              <Badge colorScheme={r.payment_in === "efectivo" ? "green" : r.payment_in === "transferencia" ? "blue" : "purple"} fontSize="10px">
-                                {r.payment_in}
-                              </Badge>
-                            </Td>
+                {/* Desglose de ventas del rango */}
+                {sales.filter((s) => !s.is_refund).length > 0 && (
+                  <>
+                    <SectionTitle icon={DollarSign}>Ventas del período</SectionTitle>
+                    <Box overflowX="auto" borderRadius="14px" border={`1px solid ${borderColor}`} mb={8}>
+                      <Table variant="simple" size="sm">
+                        <Thead>
+                          <Tr>
+                            <Th color={subtitleColor}>Fecha</Th>
+                            <Th color={subtitleColor}>Paciente</Th>
+                            <Th color={subtitleColor}>Método</Th>
+                            <Th color={subtitleColor} textAlign="right">Total venta</Th>
+                            <Th color={subtitleColor} textAlign="right">Cobrado</Th>
+                            <Th color={subtitleColor} textAlign="right">Pendiente</Th>
                           </Tr>
-                        ))
-                      )}
-                    </Tbody>
-                  </Table>
-                </Box>
+                        </Thead>
+                        <Tbody>
+                          {sales.filter((s) => !s.is_refund).map((s) => (
+                            <Tr key={s.id}>
+                              <Td>{new Date(`${s.date}T00:00:00`).toLocaleDateString("es-EC", { day: "2-digit", month: "short" })}</Td>
+                              <Td>{s.patients?.pt_firstname} {s.patients?.pt_lastname}</Td>
+                              <Td>
+                                <Badge colorScheme={s.payment_in === "efectivo" ? "teal" : s.payment_in === "transferencia" ? "blue" : "purple"} borderRadius="full" px={2} textTransform="capitalize">
+                                  {s.payment_in}
+                                </Badge>
+                              </Td>
+                              <Td textAlign="right" color={subtitleColor}>{formatMoney(s.total)}</Td>
+                              <Td textAlign="right" fontWeight="semibold" color={ACCENT}>{formatMoney(s.balance)}</Td>
+                              <Td textAlign="right" color={Number(s.credit) > 0 ? "orange.400" : subtitleColor}>{formatMoney(s.credit)}</Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </Box>
+                  </>
+                )}
 
-                {detailCount > 0 && (
-                  <Flex justify="space-between" align="center" mt={3} flexWrap="wrap" gap={2}>
-                    <Text fontSize="xs" color={subtitleColor}>
-                      {detailCount} venta{detailCount !== 1 ? "s" : ""} en total — página {detailPage} de {detailTotalPages}
-                    </Text>
-                    <HStack spacing={2}>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        borderRadius="10px"
-                        leftIcon={<Icon as={ChevronLeft} boxSize="14px" />}
-                        onClick={() => setDetailPage((p) => Math.max(1, p - 1))}
-                        isDisabled={detailPage <= 1 || detailLoading}
-                      >
-                        Anterior
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        borderRadius="10px"
-                        rightIcon={<Icon as={ChevronRight} boxSize="14px" />}
-                        onClick={() => setDetailPage((p) => Math.min(detailTotalPages, p + 1))}
-                        isDisabled={detailPage >= detailTotalPages || detailLoading}
-                      >
-                        Siguiente
-                      </Button>
-                    </HStack>
-                  </Flex>
+                {/* Desglose de abonos del rango */}
+                {abonos.length > 0 && (
+                  <>
+                    <SectionTitle icon={Banknote}>Abonos del período</SectionTitle>
+                    <Box overflowX="auto" borderRadius="14px" border={`1px solid ${borderColor}`} mb={8}>
+                      <Table variant="simple" size="sm">
+                        <Thead>
+                          <Tr>
+                            <Th color={subtitleColor}>Fecha</Th>
+                            <Th color={subtitleColor}>Paciente</Th>
+                            <Th color={subtitleColor}>Método</Th>
+                            <Th color={subtitleColor} textAlign="right">Monto</Th>
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          {abonos.map((a) => (
+                            <Tr key={a.id}>
+                              <Td>{new Date(a.paid_at).toLocaleDateString("es-EC", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</Td>
+                              <Td>{a.sales?.patients?.pt_firstname} {a.sales?.patients?.pt_lastname}</Td>
+                              <Td>
+                                <Badge colorScheme={a.payment_method === "efectivo" ? "teal" : a.payment_method === "transferencia" ? "blue" : "purple"} borderRadius="full" px={2} textTransform="capitalize">
+                                  {a.payment_method}
+                                </Badge>
+                              </Td>
+                              <Td textAlign="right" fontWeight="semibold" color={ACCENT}>{formatMoney(a.amount)}</Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </Box>
+                  </>
+                )}
+
+                {/* Desglose de reembolsos del rango */}
+                {refunds.length > 0 && (
+                  <>
+                    <SectionTitle icon={TrendingDown}>Reembolsos del período</SectionTitle>
+                    <Box overflowX="auto" borderRadius="14px" border={`1px solid ${borderColor}`} mb={8}>
+                      <Table variant="simple" size="sm">
+                        <Thead>
+                          <Tr>
+                            <Th color={subtitleColor}>Fecha</Th>
+                            <Th color={subtitleColor}>Paciente</Th>
+                            <Th color={subtitleColor}>Método</Th>
+                            <Th color={subtitleColor} textAlign="right">Monto</Th>
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          {refunds.map((r) => (
+                            <Tr key={r.id}>
+                              <Td>{new Date(r.refund_date).toLocaleDateString("es-EC", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</Td>
+                              <Td>{r.sales?.patients?.pt_firstname} {r.sales?.patients?.pt_lastname}</Td>
+                              <Td>
+                                <Badge colorScheme={r.payment_method === "efectivo" ? "teal" : r.payment_method === "transferencia" ? "blue" : "purple"} borderRadius="full" px={2} textTransform="capitalize">
+                                  {r.payment_method}
+                                </Badge>
+                              </Td>
+                              <Td textAlign="right" fontWeight="semibold" color="red.400">-{formatMoney(r.refund_amount)}</Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </Box>
+                  </>
+                )}
+
+                {/* Desglose de egresos del rango */}
+                {egresos.length > 0 && (
+                  <>
+                    <SectionTitle icon={TrendingDown}>Egresos del período</SectionTitle>
+                    <Box overflowX="auto" borderRadius="14px" border={`1px solid ${borderColor}`}>
+                      <Table variant="simple" size="sm">
+                        <Thead>
+                          <Tr>
+                            <Th color={subtitleColor}>Fecha</Th>
+                            <Th color={subtitleColor}>Especificación</Th>
+                            <Th color={subtitleColor}>Método</Th>
+                            <Th color={subtitleColor} textAlign="right">Valor</Th>
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          {egresos.map((e) => (
+                            <Tr key={e.id}>
+                              <Td>{new Date(`${e.date}T00:00:00`).toLocaleDateString("es-EC", { day: "2-digit", month: "short" })}</Td>
+                              <Td>{e.specification || "—"}</Td>
+                              <Td>
+                                <Badge colorScheme={e.payment_in === "efectivo" ? "teal" : e.payment_in === "transferencia" ? "blue" : "purple"} borderRadius="full" px={2} textTransform="capitalize">
+                                  {e.payment_in}
+                                </Badge>
+                              </Td>
+                              <Td textAlign="right" fontWeight="semibold" color="red.400">-{formatMoney(e.value)}</Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </Box>
+                  </>
                 )}
               </>
             )}

@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "../../api/supabase";
 import {
   Box, Container, Heading, Text, Flex, HStack, VStack, Icon, Badge, Spinner,
   useColorModeValue, Button, SimpleGrid, Input, FormControl, FormLabel, useToast,
+  AlertDialog, AlertDialogOverlay, AlertDialogContent, AlertDialogHeader,
+  AlertDialogBody, AlertDialogFooter,
 } from "@chakra-ui/react";
-import { ArrowLeft, ShoppingBag, User, CreditCard, FileText, MessageCircle, Package, Pencil, PackageCheck, FlaskConical } from "lucide-react";
+import { ArrowLeft, ShoppingBag, User, CreditCard, FileText, MessageCircle, Package, Pencil, PackageCheck, FlaskConical, RotateCcw, AlertTriangle } from "lucide-react";
 import SmartHeader from "../header/SmartHeader";
 import { useAuth } from "../AuthContext";
 
@@ -25,6 +27,9 @@ const SaleDetail = () => {
   const isAdmin = user?.role_id === 1;
 
   const [sale, setSale] = useState(null);
+  const [isRevertingPickup, setIsRevertingPickup] = useState(false);
+  const [isRevertConfirmOpen, setIsRevertConfirmOpen] = useState(false);
+  const cancelRevertRef = useRef();
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -63,6 +68,23 @@ const SaleDetail = () => {
     setLoading(false);
   };
 
+  const handleRevertPickup = async () => {
+    setIsRevertConfirmOpen(false);
+    setIsRevertingPickup(true);
+    const { error } = await supabase
+      .from("sales")
+      .update({ is_completed: false, pickup_receipt_url: null, pickup_completed_at: null })
+      .eq("id", saleId);
+    setIsRevertingPickup(false);
+
+    if (error) {
+      toast({ title: "Error", description: "No se pudo revertir el retiro.", status: "error", duration: 5000, isClosable: true });
+    } else {
+      toast({ title: "Retiro revertido", description: "El producto vuelve a aparecer como pendiente en Retiros.", status: "success", duration: 4000, isClosable: true });
+      fetchSale();
+    }
+  };
+
   const startEditing = () => {
     setEditData({
       inventario_id: sale.inventario_id,
@@ -73,6 +95,7 @@ const SaleDetail = () => {
       p_lens: sale.lens?.lens_price || 0,
       discount_frame: sale.discount_frame || 0,
       discount_lens: sale.discount_lens || 0,
+      balance: sale.balance || 0,
     });
     setSearchFrame(sale.inventario?.brand || "");
     setSearchLens(sale.lens?.lens_type || "");
@@ -141,9 +164,11 @@ const SaleDetail = () => {
   const handleSave = async () => {
     setIsSaving(true);
     const { total_p_frame, total_p_lens, total } = computeTotals();
-    // El saldo pendiente nuevo = el total nuevo menos lo que YA se pagó
-    // (sale.balance). El campo "credit" es el que guarda ese pendiente.
-    const newCredit = Math.max(0, total - Number(sale.balance || 0));
+    // El abono ahora también es editable (solo admin) — por si se
+    // equivocaron al registrarlo. El saldo pendiente siempre se recalcula
+    // a partir de ESE abono, no del que tenía guardado originalmente.
+    const newBalance = Math.max(0, Number(editData.balance) || 0);
+    const newCredit = Math.max(0, total - newBalance);
 
     const { error } = await supabase
       .from("sales")
@@ -155,6 +180,7 @@ const SaleDetail = () => {
         total_p_frame,
         total_p_lens,
         total,
+        balance: newBalance,
         credit: newCredit,
       })
       .eq("id", saleId);
@@ -383,13 +409,34 @@ const SaleDetail = () => {
                     </FormControl>
                   </SimpleGrid>
 
+                  <Box mt={4} pt={4} borderTop={`1px solid ${borderColor}`}>
+                    <HStack spacing={2} mb={2}>
+                      <Icon as={CreditCard} boxSize="14px" color="orange.400" />
+                      <Text fontSize="xs" fontWeight="bold" color="orange.400" textTransform="uppercase">
+                        Corregir abono (solo si se equivocaron al registrarlo)
+                      </Text>
+                    </HStack>
+                    <FormControl maxW="220px">
+                      <FormLabel fontSize="xs" color={subtitleColor}>Abono ya pagado</FormLabel>
+                      <Input
+                        type="number"
+                        value={editData.balance}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, balance: e.target.value }))}
+                        size="sm"
+                        borderRadius="10px"
+                        bg={cardBg}
+                        borderColor={borderColor}
+                      />
+                    </FormControl>
+                  </Box>
+
                   {previewTotals && (
                     <Box mt={4} p={3} borderRadius="10px" bg={sectionIconBg}>
                       <Text fontSize="sm" fontWeight="bold" color={ACCENT}>
                         Nuevo total: {formatMoney(previewTotals.total)}
                       </Text>
                       <Text fontSize="xs" color={subtitleColor}>
-                        El saldo pendiente se recalcula automáticamente restando el abono ya registrado ({formatMoney(sale.balance)}).
+                        Abono: {formatMoney(editData.balance)} · Saldo pendiente nuevo: {formatMoney(Math.max(0, previewTotals.total - (Number(editData.balance) || 0)))}
                       </Text>
                     </Box>
                   )}
@@ -480,7 +527,7 @@ const SaleDetail = () => {
                 <SectionTitle icon={PackageCheck}>Retiro</SectionTitle>
                 {sale.is_completed ? (
                   <Box p={4} borderRadius="14px" bg={sectionIconBg}>
-                    <HStack spacing={2} mb={sale.pickup_receipt_url ? 3 : 0}>
+                    <HStack spacing={2} mb={3}>
                       <Badge colorScheme="teal" borderRadius="full" px={3} py={1}>Retirado</Badge>
                       {sale.pickup_completed_at && (
                         <Text fontSize="xs" color={subtitleColor}>
@@ -488,6 +535,7 @@ const SaleDetail = () => {
                         </Text>
                       )}
                     </HStack>
+
                     {sale.pickup_receipt_url && (
                       <Button
                         as="a"
@@ -502,6 +550,23 @@ const SaleDetail = () => {
                         Ver comprobante de retiro
                       </Button>
                     )}
+
+                    {isAdmin && (
+                      <Box mt={4} pt={4} borderTop={`1px solid ${borderColor}`}>
+                        <Text fontSize="xs" color={subtitleColor} mb={2}>
+                          ¿Se entregó por error a otra persona? Esto lo regresa a "pendiente de retirar".
+                        </Text>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          colorScheme="red"
+                          leftIcon={<RotateCcw size={14} />}
+                          onClick={() => setIsRevertConfirmOpen(true)}
+                        >
+                          Deshacer retiro
+                        </Button>
+                      </Box>
+                    )}
                   </Box>
                 ) : (
                   <HStack p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
@@ -514,6 +579,42 @@ const SaleDetail = () => {
           )}
         </Box>
       </Container>
+
+      {/* Confirmación para deshacer un retiro */}
+      <AlertDialog isOpen={isRevertConfirmOpen} leastDestructiveRef={cancelRevertRef} onClose={() => setIsRevertConfirmOpen(false)} isCentered>
+        <AlertDialogOverlay backdropFilter="blur(2px)">
+          <AlertDialogContent borderRadius="20px" mx={4} overflow="hidden">
+            <Box h="4px" bg="red.400" />
+            <AlertDialogHeader pb={2}>
+              <HStack spacing={3}>
+                <Flex align="center" justify="center" boxSize="40px" borderRadius="12px" bg={useColorModeValue("red.50", "rgba(229,62,62,0.15)")} color="red.500">
+                  <Icon as={AlertTriangle} boxSize="18px" />
+                </Flex>
+                <Text fontSize="md" fontWeight="bold">Deshacer retiro</Text>
+              </HStack>
+            </AlertDialogHeader>
+            <AlertDialogBody>
+              <Text fontSize="sm" color={subtitleColor}>
+                Esto marca la venta como <b>"pendiente de retirar"</b> otra vez — vuelve a aparecer en la lista de Retiros, y el comprobante generado se elimina.
+              </Text>
+            </AlertDialogBody>
+            <AlertDialogFooter gap={2}>
+              <Button ref={cancelRevertRef} variant="ghost" size="sm" onClick={() => setIsRevertConfirmOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                colorScheme="red"
+                size="sm"
+                borderRadius="10px"
+                onClick={handleRevertPickup}
+                isLoading={isRevertingPickup}
+              >
+                Sí, deshacer
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </Box>
   );
 };

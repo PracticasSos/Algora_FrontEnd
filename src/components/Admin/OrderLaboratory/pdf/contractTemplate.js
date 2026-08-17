@@ -14,7 +14,7 @@ export const contractTemplate = `
         }
         body {
             font-family: 'Helvetica', Arial, sans-serif;
-            font-size: 8.5px;
+            font-size: 8px;
             color: #2B2F36;
             background: #fff;
         }
@@ -25,21 +25,25 @@ export const contractTemplate = `
             --border-color: #DCE2EA;
             --bg-light: #F3F7FB;
         }
-        /* Reducido a aproximadamente la mitad del tamaño anterior en todos
-           los espaciados y tipografías, para gastar mucho menos papel. */
+        /* Todo el contenido cabe en máximo 6cm de alto, en una hoja A4 —
+           así se puede imprimir sin desperdiciar papel. La caja de la foto
+           tiene una altura FIJA (no proporcional al ancho), que era lo que
+           antes la hacía crecer demasiado y desbalanceaba todo lo demás. */
         .sheet {
-            padding: 4mm 4mm;
+            padding: 4mm 5mm;
+            max-height: 60mm;
+            overflow: hidden;
         }
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 4px;
+            padding-bottom: 3px;
             border-bottom: 1.5px solid var(--primary-color);
-            margin-bottom: 7px;
+            margin-bottom: 5px;
         }
         .brand {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 800;
             color: var(--primary-dark);
         }
@@ -47,35 +51,32 @@ export const contractTemplate = `
             text-align: right;
         }
         .doc-label .title {
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 700;
             color: var(--primary-color);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
         }
         .doc-label .ref {
-            font-size: 7.5px;
+            font-size: 7px;
             color: var(--secondary-color);
-            margin-top: 1px;
         }
         .patient-box {
-            margin-bottom: 8px;
+            margin-bottom: 5px;
         }
         .patient-box .label {
-            font-size: 6.5px;
+            font-size: 6px;
             text-transform: uppercase;
-            letter-spacing: 0.3px;
             color: var(--secondary-color);
-            margin-bottom: 1px;
         }
         .patient-box .value {
-            font-size: 10.5px;
+            font-size: 10px;
             font-weight: 700;
             color: #1A1D22;
         }
         .columns {
             display: flex;
-            gap: 10px;
+            gap: 8px;
         }
         .col-left {
             flex: 1.4;
@@ -84,33 +85,31 @@ export const contractTemplate = `
             flex: 1;
         }
         .col-title {
-            font-size: 7px;
+            font-size: 6.5px;
             font-weight: 700;
             color: var(--primary-color);
             text-transform: uppercase;
             letter-spacing: 0.3px;
-            margin-bottom: 3px;
-            padding-bottom: 2px;
-            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 2px;
         }
         table.rx {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
         table.rx th {
-            font-size: 8px;
+            font-size: 7px;
             text-transform: uppercase;
             color: var(--secondary-color);
             text-align: center;
-            padding: 3px 2px;
+            padding: 2px 1px;
             border-bottom: 1px solid var(--border-color);
         }
         table.rx td {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             text-align: center;
-            padding: 3px 2px;
+            padding: 2px 1px;
             border-bottom: 1px solid var(--border-color);
         }
         table.rx td.eye {
@@ -121,81 +120,89 @@ export const contractTemplate = `
         .lens-type-box {
             background: var(--bg-light);
             border: 1px solid var(--border-color);
-            border-radius: 5px;
-            padding: 4px 6px;
-            margin-bottom: 8px;
+            border-radius: 4px;
+            padding: 3px 5px;
+            margin-bottom: 4px;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         .lens-type-box .label-cell {
-            font-size: 7px;
+            font-size: 6.5px;
             color: var(--secondary-color);
             text-transform: uppercase;
         }
         .lens-type-box .value-cell {
-            font-size: 9px;
+            font-size: 8.5px;
             font-weight: 700;
             color: #1A1D22;
         }
         .observations {
-            font-size: 8px;
+            font-size: 7px;
             color: #1A1D22;
-            line-height: 1.35;
-            min-height: 26px;
+            line-height: 1.25;
+            max-height: 12mm;
+            overflow: hidden;
         }
         .product-box {
             background: var(--bg-light);
             border: 1px solid var(--border-color);
-            border-radius: 5px;
-            padding: 5px 7px;
-            margin-bottom: 7px;
+            border-radius: 4px;
+            padding: 4px 6px;
+            margin-bottom: 4px;
         }
         .product-box .label-cell {
-            font-size: 6.5px;
+            font-size: 6px;
             text-transform: uppercase;
             color: var(--secondary-color);
-            margin-bottom: 1px;
         }
         .product-box .value-cell {
-            font-size: 9.5px;
+            font-size: 9px;
             font-weight: 700;
             color: #1A1D22;
         }
+        /* Altura FIJA (no crece con el ancho de la columna) — así siempre
+           queda horizontal y no se come el resto del espacio disponible. */
         .image-box {
-            border: 1px dashed var(--border-color);
-            border-radius: 5px;
-            padding: 5px;
-            text-align: center;
-            min-height: 55px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            width: 100%;
+            height: 22mm;
+            background: var(--bg-light);
             display: flex;
             align-items: center;
             justify-content: center;
+            text-align: center;
         }
         .image-box img {
             max-width: 100%;
-            max-height: 75px;
-            border-radius: 4px;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            display: block;
+            margin: 0 auto;
         }
         .image-box .placeholder {
-            font-size: 7px;
+            font-size: 6.5px;
             color: var(--secondary-color);
+            text-align: center;
+            width: 100%;
         }
         .footer {
-            margin-top: 10px;
-            padding-top: 5px;
+            margin-top: 4px;
+            padding-top: 2px;
             border-top: 1px solid var(--border-color);
             display: flex;
             justify-content: space-between;
-            font-size: 6.5px;
+            font-size: 6px;
             color: var(--secondary-color);
         }
         .signature-line {
-            width: 90px;
+            width: 80px;
             border-top: 1px solid #9AA3AF;
             text-align: center;
-            padding-top: 2px;
-            font-size: 6.5px;
+            font-size: 6px;
             color: var(--secondary-color);
         }
     </style>
@@ -283,7 +290,7 @@ export const contractTemplate = `
         </div>
 
         <div class="footer">
-            <span>Documento generado automáticamente.</span>
+            <span>Generado automáticamente.</span>
             <div class="signature-line">Firma / Sello del laboratorio</div>
         </div>
     </div>

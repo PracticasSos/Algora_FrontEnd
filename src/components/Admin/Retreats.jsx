@@ -4,11 +4,14 @@ import { supabase } from "../../api/supabase";
 import {
   Box, Container, Heading, Text, Flex, HStack, VStack, Icon, Badge, Spinner,
   useColorModeValue, Button, SimpleGrid, useToast, Table, Thead, Tbody, Tr, Th, Td,
+  Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, ModalFooter,
+  RadioGroup, Radio, Input, Select,
 } from "@chakra-ui/react";
-import { ArrowLeft, PackageCheck, User, Package, CreditCard, Eye, MessageCircle, PenTool } from "lucide-react";
+import { ArrowLeft, PackageCheck, User, Package, CreditCard, Eye, MessageCircle, PenTool, DollarSign } from "lucide-react";
 import SmartHeader from "../header/SmartHeader";
 import SignaturePadComponent from "./Sales/SignaturePadComponent";
 import { generatePickupReceiptPDF } from "./receipts/pickupReceiptGenerator.js";
+import { useAuth } from "../AuthContext";
 
 const ACCENT = "#00A88E";
 
@@ -34,6 +37,7 @@ const Retreats = () => {
   const { saleId } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
 
   const [salesData, setSalesData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,6 +45,12 @@ const Retreats = () => {
   const [isCompleting, setIsCompleting] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [receiptResult, setReceiptResult] = useState(null);
+
+  // --- Modal de confirmación de retiro + pago opcional ---
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [paymentChoice, setPaymentChoice] = useState("none"); // "none" | "partial" | "full"
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
 
   useEffect(() => {
     if (saleId) fetchSale();
@@ -72,14 +82,71 @@ const Retreats = () => {
     }
   };
 
+  const openConfirmModal = () => {
+    setPaymentChoice("none");
+    setPaymentAmount("");
+    setPaymentMethod("");
+    setIsConfirmOpen(true);
+  };
+
   const handleCompletePickup = async () => {
     if (!salesData) return;
 
+    const credit = Number(salesData.credit) || 0;
+    let paidNow = 0;
+
+    if (paymentChoice === "full") {
+      paidNow = credit;
+    } else if (paymentChoice === "partial") {
+      paidNow = Math.min(credit, Math.max(0, Number(paymentAmount) || 0));
+      if (paidNow <= 0) {
+        toast({ title: "Monto inválido", description: "Escribe un abono mayor a 0.", status: "warning", duration: 4000, isClosable: true });
+        return;
+      }
+    }
+    if ((paymentChoice === "full" || paymentChoice === "partial") && !paymentMethod) {
+      toast({ title: "Falta el método de pago", status: "warning", duration: 4000, isClosable: true });
+      return;
+    }
+
     setIsCompleting(true);
+    setIsConfirmOpen(false);
+
+    // Si se recibió algo de dinero en este momento, se actualiza el saldo
+    // ANTES de marcar el retiro, para que el comprobante ya salga con los
+    // números correctos.
+    let newBalance = Number(salesData.balance) || 0;
+    let newCredit = credit;
+    if (paidNow > 0) {
+      newBalance += paidNow;
+      newCredit = Math.max(0, credit - paidNow);
+
+      const { error: payError } = await supabase
+        .from("sales")
+        .update({ balance: newBalance, credit: newCredit, payment_balance: paymentMethod })
+        .eq("id", salesData.id);
+
+      if (payError) {
+        setIsCompleting(false);
+        toast({ title: "Error", description: "No se pudo registrar el pago.", status: "error", duration: 5000, isClosable: true });
+        return;
+      }
+
+      const userName = user ? `${user.firstname || ""} ${user.lastname || ""}`.trim() || user.email : "Desconocido";
+      await supabase.from("abono_payments").insert([{
+        sale_id: salesData.id,
+        patient_id: salesData.patients?.id || null,
+        amount: paidNow,
+        payment_method: paymentMethod,
+      }]);
+      // Se deja registro de quién cobró, aparte del monto — útil para el
+      // historial de abonos que ya se ve en Créditos.
+      console.info(`Pago de ${paidNow} recibido en el retiro por ${userName}`);
+    }
 
     // Retirar el producto y liquidar el saldo son cosas independientes —
-    // el saldo pendiente se sigue manejando aparte en Créditos. Aquí solo
-    // se marca que el lente ya salió de la óptica, sin tocar credit/balance.
+    // si no se cobró nada aquí, el saldo pendiente se sigue manejando
+    // aparte en Créditos, sin bloquear el retiro.
     const { error } = await supabase
       .from("sales")
       .update({ is_completed: true })
@@ -91,6 +158,7 @@ const Retreats = () => {
       return;
     }
 
+    setSalesData((prev) => ({ ...prev, balance: newBalance, credit: newCredit, is_completed: true }));
     toast({ title: "Retiro completado", status: "success", duration: 3000, isClosable: true });
     setCompleted(true);
 
@@ -103,8 +171,8 @@ const Retreats = () => {
         frameName: salesData.inventario?.brand,
         lensName: salesData.lens?.lens_type,
         saleTotal: salesData.total,
-        paidSoFar: salesData.balance,
-        pendingBalance: salesData.credit,
+        paidSoFar: newBalance,
+        pendingBalance: newCredit,
         signatureDataUrl: signature,
       });
       setReceiptResult({ pdfUrl });
@@ -274,11 +342,11 @@ const Retreats = () => {
                     size="lg"
                     borderRadius="12px"
                     w="full"
-                    onClick={handleCompletePickup}
+                    onClick={openConfirmModal}
                     isLoading={isCompleting}
                     loadingText="Completando..."
                   >
-                    Marcar como retirado y generar comprobante
+                    Confirmar retiro
                   </Button>
                 </>
               )}
@@ -305,6 +373,85 @@ const Retreats = () => {
           )}
         </Box>
       </Container>
+
+      {/* Modal: confirmar retiro + pago opcional */}
+      <Modal isOpen={isConfirmOpen} onClose={() => setIsConfirmOpen(false)} isCentered size="sm">
+        <ModalOverlay />
+        <ModalContent bg={cardBg} borderRadius="20px">
+          <ModalHeader fontSize="md">
+            <HStack>
+              <Icon as={PackageCheck} color={ACCENT} />
+              <Text>Confirmar retiro</Text>
+            </HStack>
+          </ModalHeader>
+          <ModalCloseButton />
+          <ModalBody>
+            <Text fontSize="sm" mb={4}>
+              ¿Confirmas que <b>{salesData?.patients?.pt_firstname} {salesData?.patients?.pt_lastname}</b> retira su pedido ahora?
+            </Text>
+
+            {Number(salesData?.credit) > 0 && (
+              <Box p={3} borderRadius="12px" bg={inputBg} border={`1px solid ${borderColor}`} mb={2}>
+                <Text fontSize="xs" color={subtitleColor} mb={2}>
+                  Saldo pendiente: <b>{formatMoney(salesData?.credit)}</b> — ¿recibe algún pago en este momento?
+                </Text>
+                <RadioGroup value={paymentChoice} onChange={setPaymentChoice}>
+                  <VStack align="stretch" spacing={2}>
+                    <Radio value="none" colorScheme="teal">No, retira sin pagar (se gestiona en Créditos)</Radio>
+                    <Radio value="full" colorScheme="teal">Sí, paga todo el saldo ({formatMoney(salesData?.credit)})</Radio>
+                    <Radio value="partial" colorScheme="teal">Sí, hace un abono parcial</Radio>
+                  </VStack>
+                </RadioGroup>
+
+                {paymentChoice === "partial" && (
+                  <Input
+                    type="number"
+                    mt={2}
+                    placeholder="Monto del abono"
+                    value={paymentAmount}
+                    onChange={(e) => setPaymentAmount(e.target.value)}
+                    borderRadius="10px"
+                    bg={cardBg}
+                    borderColor={borderColor}
+                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                  />
+                )}
+
+                {(paymentChoice === "full" || paymentChoice === "partial") && (
+                  <Select
+                    mt={2}
+                    placeholder="Método de pago"
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    borderRadius="10px"
+                    bg={cardBg}
+                    borderColor={borderColor}
+                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                  >
+                    <option value="efectivo">Efectivo</option>
+                    <option value="datafast">Datafast</option>
+                    <option value="transferencia">Transferencia</option>
+                  </Select>
+                )}
+              </Box>
+            )}
+          </ModalBody>
+          <ModalFooter gap={2}>
+            <Button variant="ghost" size="sm" onClick={() => setIsConfirmOpen(false)}>Cancelar</Button>
+            <Button
+              size="sm"
+              bg={ACCENT}
+              color="white"
+              _hover={{ bg: "#00967f" }}
+              onClick={handleCompletePickup}
+              isLoading={isCompleting}
+              leftIcon={<DollarSign size={14} />}
+            >
+              Confirmar retiro
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </Box>
   );
 };

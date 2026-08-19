@@ -100,6 +100,16 @@ const RegisterPatientForm = () => {
     }
   }, [user]);
 
+  // La sucursal tampoco se pregunta a mano — se detecta sola desde la
+  // sesión (igual que en Ventas y Egresos). Antes era obligatorio
+  // elegirla manualmente y, en el celular con el formulario tan largo,
+  // era fácil no verla y quedar bloqueado sin poder guardar.
+  useEffect(() => {
+    if (user?.branch_id) {
+      setFormData((prev) => ({ ...prev, branch_id: prev.branch_id || String(user.branch_id) }));
+    }
+  }, [user]);
+
   const fetchBranches = async () => {
     try {
       const { data, error } = await supabase.from('branchs').select('id, name');
@@ -136,6 +146,7 @@ const RegisterPatientForm = () => {
           ...data,
           date: getTodayDate(), // la fecha de esta visita sigue siendo hoy
           user_id: user?.id || data.user_id, // quien atiende hoy, no el de la vez pasada
+          branch_id: user?.branch_id ? String(user.branch_id) : data.branch_id, // la sucursal de hoy, no la de la vez pasada
         }));
         toast({
           title: "Paciente ya registrado",
@@ -168,7 +179,7 @@ const RegisterPatientForm = () => {
     if (!formData.pt_phone.trim()) newErrors.pt_phone = 'El teléfono es obligatorio.';
     if (!formData.pt_birthdate) newErrors.pt_birthdate = 'La fecha de nacimiento es obligatoria.';
     if (!formData.date) newErrors.date = 'La fecha es obligatoria.';
-    if (!formData.branch_id) newErrors.branch_id = 'La sucursal es obligatoria.';
+    if (!formData.branch_id) newErrors.branch_id = 'Tu usuario no tiene una sucursal asignada — pídele al admin que te la asigne en Configuración de Usuarios.';
 
     if (formData.pt_email && !/\S+@\S+\.\S+/.test(formData.pt_email)) {
       newErrors.pt_email = 'El formato del correo no es válido.';
@@ -693,9 +704,12 @@ const RegisterPatientForm = () => {
                 {renderInputField('Dirección', 'pt_address', 'text', false, errors.pt_address)}
                 {renderInputField('Ciudad', 'pt_city', 'text', false, errors.pt_city)}
                 {renderInputField('Ocupación', 'pt_occupation', 'text', false, errors.pt_occupation)}
-                {renderSelectField('Sucursal', 'branch_id', branches, 'name', true, errors.branch_id)}
                 {renderInputField('Fecha de registro', 'date', 'date', true, errors.date)}
               </SimpleGrid>
+              <Text fontSize="xs" color={errors.branch_id ? "red.400" : subtitleColor} mt={3}>
+                Sucursal: <b>{branches.find((b) => String(b.id) === String(formData.branch_id))?.name || (formData.branch_id ? "" : "Sin sucursal asignada a tu usuario")}</b>
+                {errors.branch_id && <> — {errors.branch_id}</>}
+              </Text>
             </Box>
 
             {/* --- Consulta --- */}

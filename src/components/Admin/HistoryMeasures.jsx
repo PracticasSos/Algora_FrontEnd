@@ -56,7 +56,7 @@ const HistoryMeasures = () => {
     try {
       const [measuresRes, patientRes] = await Promise.all([
         supabase.from("rx_final").select("*").eq("patient_id", patientId).order("created_at", { ascending: false }),
-        supabase.from("patients").select("*").eq("id", patientId).maybeSingle(),
+        supabase.from("patients").select("*, users(firstname, lastname), branchs(name)").eq("id", patientId).maybeSingle(),
       ]);
       if (measuresRes.error) throw measuresRes.error;
       setMeasures(measuresRes.data || []);
@@ -264,6 +264,16 @@ const HistoryMeasures = () => {
               <Badge colorScheme={patient?.pt_data_consent ? "teal" : "red"} borderRadius="full" px={3} py={1}>
                 {patient?.pt_data_consent ? "Consentimiento de datos ✓" : "Sin consentimiento de datos"}
               </Badge>
+              {patient?.branchs?.name && (
+                <Badge colorScheme="purple" borderRadius="full" px={3} py={1}>
+                  Registrado en {patient.branchs.name}
+                </Badge>
+              )}
+              {patient?.users && (
+                <Badge colorScheme="blue" borderRadius="full" px={3} py={1}>
+                  Por {patient.users.firstname} {patient.users.lastname}
+                </Badge>
+              )}
             </HStack>
           </ModalBody>
         </ModalContent>

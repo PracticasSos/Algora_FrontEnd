@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, Fragment } from "react";
 import { supabase } from "../../api/supabase";
 import {
   Box, Container, Heading, Text, Flex, HStack, VStack, Icon, Badge, Select,
   useColorModeValue, Spinner, Input, Button, useToast, Table, Thead, Tbody, Tr, Th, Td,
+  IconButton, Collapse,
 } from "@chakra-ui/react";
-import { CreditCard, Clock, CheckCircle2 } from "lucide-react";
+import { CreditCard, Clock, CheckCircle2, ChevronDown, ChevronRight, ChevronLeft, User } from "lucide-react";
 import SmartHeader from "../header/SmartHeader";
 
 const ACCENT = "#00A88E";
+const PAGE_SIZE = 8;
 
 const formatMoney = (value) => {
   const n = parseFloat(value);
@@ -23,6 +25,9 @@ const DatafastReconciliation = () => {
   const [reconciled, setReconciled] = useState([]); // ya conciliados
   const [inputs, setInputs] = useState({}); // valores que se están escribiendo
   const [savingKey, setSavingKey] = useState(null);
+  const [expandedKey, setExpandedKey] = useState(null); // qué fila muestra el detalle de ventas
+  const [pendingPage, setPendingPage] = useState(1);
+  const [reconciledPage, setReconciledPage] = useState(1);
   const toast = useToast();
 
   useEffect(() => {
@@ -31,6 +36,8 @@ const DatafastReconciliation = () => {
 
   useEffect(() => {
     fetchAll();
+    setPendingPage(1);
+    setReconciledPage(1);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedBranch]);
 
@@ -44,7 +51,7 @@ const DatafastReconciliation = () => {
     try {
       let salesQuery = supabase
         .from("sales")
-        .select("id, date, total, branchs_id, branchs(name)")
+        .select("id, date, total, branchs_id, branchs(name), patients(pt_firstname, pt_lastname)")
         .eq("payment_in", "datafast")
         .eq("is_refund", false);
       if (selectedBranch) salesQuery = salesQuery.eq("branchs_id", selectedBranch);
@@ -57,15 +64,21 @@ const DatafastReconciliation = () => {
       if (salesRes.error) throw salesRes.error;
       if (settlementsRes.error) throw settlementsRes.error;
 
-      // Agrupar ventas datafast por sucursal + día
+      // Agrupar ventas datafast por sucursal + día, guardando también cada
+      // venta individual (paciente y monto) para poder mostrar el detalle.
       const groups = {};
       (salesRes.data || []).forEach((s) => {
         const key = `${s.branchs_id}_${s.date}`;
         if (!groups[key]) {
-          groups[key] = { branchs_id: s.branchs_id, branchName: s.branchs?.name || "—", date: s.date, gross: 0, count: 0 };
+          groups[key] = { branchs_id: s.branchs_id, branchName: s.branchs?.name || "—", date: s.date, gross: 0, count: 0, sales: [] };
         }
         groups[key].gross += Number(s.total) || 0;
         groups[key].count += 1;
+        groups[key].sales.push({
+          id: s.id,
+          total: Number(s.total) || 0,
+          patientName: `${s.patients?.pt_firstname || ""} ${s.patients?.pt_lastname || ""}`.trim() || "Sin paciente",
+        });
       });
 
       const settlementsMap = {};
@@ -133,6 +146,7 @@ const DatafastReconciliation = () => {
   const subtitleColor = useColorModeValue("gray.500", "gray.400");
   const sectionIconBg = useColorModeValue("#E6FBF6", "rgba(0,168,142,0.15)");
   const rowHoverBg = useColorModeValue("gray.50", "whiteAlpha.100");
+  const detailBg = useColorModeValue("gray.50", "whiteAlpha.50");
 
   const SectionTitle = ({ icon, children }) => (
     <Flex align="center" gap={3} mb={4}>
@@ -146,7 +160,49 @@ const DatafastReconciliation = () => {
     </Flex>
   );
 
+  // Fila de detalle: lista de ventas/pacientes que componen ese día
+  const SalesDetailRow = ({ group, colSpan }) => (
+    <Tr>
+      <Td colSpan={colSpan} p={0} border="none">
+        <Collapse in={expandedKey === group.key} animateOpacity>
+          <Box p={3} bg={detailBg} borderTop={`1px dashed ${borderColor}`}>
+            <Text fontSize="10px" color={subtitleColor} textTransform="uppercase" mb={2}>
+              {group.count} venta{group.count !== 1 ? "s" : ""} ese día
+            </Text>
+            <VStack align="stretch" spacing={1}>
+              {group.sales.map((s) => (
+                <HStack key={s.id} justify="space-between" fontSize="xs">
+                  <HStack spacing={1}>
+                    <Icon as={User} boxSize="11px" color={subtitleColor} />
+                    <Text>{s.patientName}</Text>
+                  </HStack>
+                  <Text fontWeight="semibold">{formatMoney(s.total)}</Text>
+                </HStack>
+              ))}
+            </VStack>
+          </Box>
+        </Collapse>
+      </Td>
+    </Tr>
+  );
+
   const totalPendiente = pending.reduce((sum, g) => sum + g.gross, 0);
+
+  const pendingTotalPages = Math.max(1, Math.ceil(pending.length / PAGE_SIZE));
+  const pendingPageItems = pending.slice((pendingPage - 1) * PAGE_SIZE, pendingPage * PAGE_SIZE);
+  const reconciledTotalPages = Math.max(1, Math.ceil(reconciled.length / PAGE_SIZE));
+  const reconciledPageItems = reconciled.slice((reconciledPage - 1) * PAGE_SIZE, reconciledPage * PAGE_SIZE);
+
+  const PaginationBar = ({ page, totalPages, onChange, total }) => (
+    <Flex justify="space-between" align="center" mt={3} flexWrap="wrap" gap={3}>
+      <Text fontSize="xs" color={subtitleColor}>Página {page} de {totalPages} · {total} en total</Text>
+      <HStack>
+        <IconButton icon={<ChevronLeft size={16} />} size="sm" variant="outline" borderRadius="full" isDisabled={page <= 1} onClick={() => onChange((p) => Math.max(1, p - 1))} aria-label="Anterior" />
+        <Text fontSize="sm" fontWeight="semibold" minW="30px" textAlign="center">{page}</Text>
+        <IconButton icon={<ChevronRight size={16} />} size="sm" variant="outline" borderRadius="full" isDisabled={page >= totalPages} onClick={() => onChange((p) => Math.min(totalPages, p + 1))} aria-label="Siguiente" />
+      </HStack>
+    </Flex>
+  );
 
   return (
     <Box minHeight="100vh" bgGradient={useColorModeValue("linear(to-br, gray.50, teal.50)", "linear(to-br, gray.900, #0d1f1c)")}>
@@ -208,88 +264,125 @@ const DatafastReconciliation = () => {
                 {pending.length === 0 ? (
                   <Text fontSize="sm" color={subtitleColor} mb={8}>🎉 No hay días pendientes de conciliar.</Text>
                 ) : (
-                  <Box overflowX="auto" borderRadius="14px" border={`1px solid ${borderColor}`} mb={8}>
-                    <Table variant="simple" size="sm">
-                      <Thead>
-                        <Tr>
-                          <Th color={subtitleColor}>Fecha</Th>
-                          <Th color={subtitleColor}>Sucursal</Th>
-                          <Th color={subtitleColor} textAlign="center">Ventas</Th>
-                          <Th color={subtitleColor} textAlign="right">Bruto</Th>
-                          <Th color={subtitleColor}>Monto real</Th>
-                          <Th color={subtitleColor}></Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {pending.map((group) => (
-                          <Tr key={group.key} _hover={{ bg: rowHoverBg }}>
-                            <Td>{new Date(`${group.date}T00:00:00`).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" })}</Td>
-                            <Td>{group.branchName}</Td>
-                            <Td textAlign="center"><Badge borderRadius="full" px={2}>{group.count}</Badge></Td>
-                            <Td textAlign="right" fontWeight="semibold">{formatMoney(group.gross)}</Td>
-                            <Td>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                placeholder="0.00"
-                                size="sm"
-                                maxW="130px"
-                                value={inputs[group.key] || ""}
-                                onChange={(e) => setInputs((prev) => ({ ...prev, [group.key]: e.target.value }))}
-                                borderRadius="8px"
-                                bg={inputBg}
-                                borderColor={borderColor}
-                                _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
-                              />
-                            </Td>
-                            <Td>
-                              <Button
-                                size="sm"
-                                bg={ACCENT}
-                                color="white"
-                                _hover={{ bg: "#00967f" }}
-                                borderRadius="8px"
-                                onClick={() => handleSave(group)}
-                                isLoading={savingKey === group.key}
-                              >
-                                Guardar
-                              </Button>
-                            </Td>
+                  <>
+                    <Box overflowX="auto" borderRadius="14px" border={`1px solid ${borderColor}`}>
+                      <Table variant="simple" size="sm">
+                        <Thead>
+                          <Tr>
+                            <Th w="30px"></Th>
+                            <Th color={subtitleColor}>Fecha</Th>
+                            <Th color={subtitleColor}>Sucursal</Th>
+                            <Th color={subtitleColor} textAlign="center">Ventas</Th>
+                            <Th color={subtitleColor} textAlign="right">Bruto</Th>
+                            <Th color={subtitleColor}>Monto real</Th>
+                            <Th color={subtitleColor}></Th>
                           </Tr>
-                        ))}
-                      </Tbody>
-                    </Table>
-                  </Box>
+                        </Thead>
+                        <Tbody>
+                          {pendingPageItems.map((group) => (
+                            <Fragment key={group.key}>
+                              <Tr _hover={{ bg: rowHoverBg }}>
+                                <Td>
+                                  <IconButton
+                                    icon={expandedKey === group.key ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                    size="xs"
+                                    variant="ghost"
+                                    aria-label="Ver detalle"
+                                    onClick={() => setExpandedKey(expandedKey === group.key ? null : group.key)}
+                                  />
+                                </Td>
+                                <Td>{new Date(`${group.date}T00:00:00`).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" })}</Td>
+                                <Td>{group.branchName}</Td>
+                                <Td textAlign="center"><Badge borderRadius="full" px={2}>{group.count}</Badge></Td>
+                                <Td textAlign="right" fontWeight="semibold">{formatMoney(group.gross)}</Td>
+                                <Td>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="0.00"
+                                    size="sm"
+                                    maxW="130px"
+                                    value={inputs[group.key] || ""}
+                                    onChange={(e) => setInputs((prev) => ({ ...prev, [group.key]: e.target.value }))}
+                                    borderRadius="8px"
+                                    bg={inputBg}
+                                    borderColor={borderColor}
+                                    _focus={{ borderColor: ACCENT, boxShadow: `0 0 0 1px ${ACCENT}` }}
+                                  />
+                                </Td>
+                                <Td>
+                                  <Button
+                                    size="sm"
+                                    bg={ACCENT}
+                                    color="white"
+                                    _hover={{ bg: "#00967f" }}
+                                    borderRadius="8px"
+                                    onClick={() => handleSave(group)}
+                                    isLoading={savingKey === group.key}
+                                  >
+                                    Guardar
+                                  </Button>
+                                </Td>
+                              </Tr>
+                              <SalesDetailRow group={group} colSpan={7} />
+                            </Fragment>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </Box>
+                    {pendingTotalPages > 1 && (
+                      <PaginationBar page={pendingPage} totalPages={pendingTotalPages} onChange={setPendingPage} total={pending.length} />
+                    )}
+                    <Box mb={8} />
+                  </>
                 )}
 
                 <SectionTitle icon={CheckCircle2}>Ya conciliados</SectionTitle>
                 {reconciled.length === 0 ? (
                   <Text fontSize="sm" color={subtitleColor}>Todavía no hay días conciliados.</Text>
                 ) : (
-                  <Box overflowX="auto" borderRadius="14px" border={`1px solid ${borderColor}`}>
-                    <Table variant="simple" size="sm">
-                      <Thead>
-                        <Tr>
-                          <Th color={subtitleColor}>Fecha</Th>
-                          <Th color={subtitleColor}>Sucursal</Th>
-                          <Th color={subtitleColor} textAlign="right">Bruto</Th>
-                          <Th color={subtitleColor} textAlign="right">Real</Th>
-                          <Th color={subtitleColor} textAlign="right">Comisión</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {reconciled.map((group) => (
-                          <Tr key={group.key} _hover={{ bg: rowHoverBg }}>
-                            <Td>{new Date(`${group.date}T00:00:00`).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" })}</Td>
-                            <Td>{group.branchName}</Td>
-                            <Td textAlign="right">{formatMoney(group.gross)}</Td>
-                            <Td textAlign="right" fontWeight="bold" color={ACCENT}>{formatMoney(group.net)}</Td>
-                            <Td textAlign="right" color="orange.400">-{formatMoney(group.gross - group.net)}</Td>
+                  <>
+                    <Box overflowX="auto" borderRadius="14px" border={`1px solid ${borderColor}`}>
+                      <Table variant="simple" size="sm">
+                        <Thead>
+                          <Tr>
+                            <Th w="30px"></Th>
+                            <Th color={subtitleColor}>Fecha</Th>
+                            <Th color={subtitleColor}>Sucursal</Th>
+                            <Th color={subtitleColor} textAlign="right">Bruto</Th>
+                            <Th color={subtitleColor} textAlign="right">Real</Th>
+                            <Th color={subtitleColor} textAlign="right">Comisión</Th>
                           </Tr>
-                        ))}
-                      </Tbody>
-                    </Table>
-                  </Box>
+                        </Thead>
+                        <Tbody>
+                          {reconciledPageItems.map((group) => (
+                            <Fragment key={group.key}>
+                              <Tr _hover={{ bg: rowHoverBg }}>
+                                <Td>
+                                  <IconButton
+                                    icon={expandedKey === group.key ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                                    size="xs"
+                                    variant="ghost"
+                                    aria-label="Ver detalle"
+                                    onClick={() => setExpandedKey(expandedKey === group.key ? null : group.key)}
+                                  />
+                                </Td>
+                                <Td>{new Date(`${group.date}T00:00:00`).toLocaleDateString("es-EC", { day: "2-digit", month: "short", year: "numeric" })}</Td>
+                                <Td>{group.branchName}</Td>
+                                <Td textAlign="right">{formatMoney(group.gross)}</Td>
+                                <Td textAlign="right" fontWeight="bold" color={ACCENT}>{formatMoney(group.net)}</Td>
+                                <Td textAlign="right" color="orange.400">-{formatMoney(group.gross - group.net)}</Td>
+                              </Tr>
+                              <SalesDetailRow group={group} colSpan={6} />
+                            </Fragment>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </Box>
+                    {reconciledTotalPages > 1 && (
+                      <PaginationBar page={reconciledPage} totalPages={reconciledTotalPages} onChange={setReconciledPage} total={reconciled.length} />
+                    )}
+                  </>
                 )}
               </>
             )}

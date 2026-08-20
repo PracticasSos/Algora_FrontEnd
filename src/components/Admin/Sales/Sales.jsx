@@ -394,9 +394,9 @@ const Sales = () => {
       delivery_datetime: mergedFormData.delivery_datetime,
       p_frame: isNaN(parseFloat(mergedFormData.p_frame)) ? 0 : parseFloat(mergedFormData.p_frame),
       p_lens: isNaN(parseFloat(mergedFormData.p_lens)) ? 0 : parseFloat(mergedFormData.p_lens),
-      price: isNaN(grandTotal) ? 0 : grandTotal,
-      total: isNaN(grandTotal) ? 0 : grandTotal,
-      credit: isNaN(pendingBalance) ? 0 : pendingBalance,
+      price: isNaN(parseFloat(mergedFormData.total)) ? 0 : parseFloat(mergedFormData.total),
+      total: isNaN(parseFloat(mergedFormData.total)) ? 0 : parseFloat(mergedFormData.total),
+      credit: isNaN(parseFloat(mergedFormData.credit)) ? 0 : parseFloat(mergedFormData.credit),
       balance: isNaN(parseFloat(mergedFormData.balance)) ? 0 : parseFloat(mergedFormData.balance),
       payment_in: mergedFormData.payment_in,
       patient_id: mergedFormData.patient_id || null,
@@ -421,6 +421,38 @@ const Sales = () => {
         const newSaleId = data[0].id;
         setSaleId(newSaleId);
         setPdfGenerated(true);
+
+        // Se registra el abono inicial (si dejó algo pagado al momento de
+        // la venta) como su propio movimiento, igual que cualquier otro
+        // abono posterior. Así el dinero real de cada día se calcula
+        // siempre desde esta tabla — sin importar si se pagó al vender o
+        // después en un retiro — y nunca se cuenta dos veces.
+        //
+        // "paid_at" se fija explícitamente con la hora LOCAL de ahora, en
+        // vez de dejar que el servidor use su hora por defecto (UTC) —
+        // así el Cierre de "hoy" (calculado en hora local) siempre
+        // encuentra este abono, sin importar la hora del día en que se
+        // hizo la venta.
+        const initialBalance = Number(mergedFormData.balance) || 0;
+        if (initialBalance > 0) {
+          const { error: abonoError } = await supabase.from("abono_payments").insert([{
+            sale_id: newSaleId,
+            patient_id: mergedFormData.patient_id,
+            amount: initialBalance,
+            payment_method: mergedFormData.payment_in,
+            paid_at: new Date().toISOString(),
+          }]);
+          if (abonoError) {
+            console.error("Error registrando el abono inicial:", abonoError);
+            toast({
+              title: "Venta registrada, pero el abono no quedó en el Cierre",
+              description: abonoError.message || "Revisa la tabla abono_payments en Supabase.",
+              status: "warning",
+              duration: 8000,
+              isClosable: true,
+            });
+          }
+        }
 
         // Guardar accesorios (opcional) como partidas separadas, sin tocar sales.total
         if (accessories.length > 0) {

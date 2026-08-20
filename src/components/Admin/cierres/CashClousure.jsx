@@ -78,6 +78,12 @@ const CashClousure = () => {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
+      // Los límites se calculan en hora LOCAL y se convierten a UTC de
+      // verdad — así una venta/abono de la noche no se "escapa" al día
+      // siguiente al comparar contra la hora del servidor.
+      const rangeStartUTC = new Date(`${since}T00:00:00`).toISOString();
+      const rangeEndUTC = new Date(`${till}T23:59:59.999`).toISOString();
+
       const [salesRes, abonosRes, egresosRes, settlementsRes, refundsRes] = await Promise.all([
         supabase
           .from("sales")
@@ -87,10 +93,10 @@ const CashClousure = () => {
           .lte("date", till),
         supabase
           .from("abono_payments")
-          .select("id, amount, payment_method, paid_at, sales!inner(branchs_id, patients(pt_firstname, pt_lastname))")
+          .select("id, sale_id, amount, payment_method, paid_at, sales!inner(branchs_id, patients(pt_firstname, pt_lastname))")
           .eq("sales.branchs_id", selectedBranch)
-          .gte("paid_at", `${since}T00:00:00`)
-          .lte("paid_at", `${till}T23:59:59`),
+          .gte("paid_at", rangeStartUTC)
+          .lte("paid_at", rangeEndUTC),
         supabase
           .from("egresos")
           .select("id, value, payment_in, date, specification")
@@ -107,8 +113,8 @@ const CashClousure = () => {
           .from("refunds")
           .select("id, refund_amount, payment_method, refund_date, sales!inner(branchs_id, patients(pt_firstname, pt_lastname))")
           .eq("sales.branchs_id", selectedBranch)
-          .gte("refund_date", `${since}T00:00:00`)
-          .lte("refund_date", `${till}T23:59:59`),
+          .gte("refund_date", rangeStartUTC)
+          .lte("refund_date", rangeEndUTC),
       ]);
 
       setSales(salesRes.data || []);
@@ -125,11 +131,13 @@ const CashClousure = () => {
 
   // Mismo criterio que en Cierre Diario: el ingreso real es lo que
   // efectivamente se cobró en cada venta (balance), no el total facturado.
-  const ingresosPorMetodo = emptyMethods();
+  // Mismo criterio que en Cierre Diario: "Ventas" ahora es solo
+  // informativo, el dinero real (venga de cuando se vendió o de un
+  // retiro/abono posterior) viene únicamente de abono_payments.
+  let ventasCount = 0;
   let ventasTotalSinCobrar = 0;
   sales.filter((s) => !s.is_refund).forEach((s) => {
-    const method = (s.payment_in || "").toLowerCase();
-    if (method in ingresosPorMetodo) ingresosPorMetodo[method] += Number(s.balance) || 0;
+    ventasCount += 1;
     ventasTotalSinCobrar += Number(s.total) || 0;
   });
 
@@ -138,6 +146,23 @@ const CashClousure = () => {
     const method = (a.payment_method || "").toLowerCase();
     if (method in abonosPorMetodo) abonosPorMetodo[method] += Number(a.amount) || 0;
   });
+
+  // Abonos agrupados por venta — para mostrar, junto a cada venta, cuánto
+  // se pagó en cada método (en vez de un solo total con un solo método).
+  const abonosPorVenta = {};
+  abonos.forEach((a) => {
+    if (!a.sale_id) return;
+    if (!abonosPorVenta[a.sale_id]) abonosPorVenta[a.sale_id] = [];
+    abonosPorVenta[a.sale_id].push(a);
+  });
+  Object.values(abonosPorVenta).forEach((list) => list.sort((a, b) => new Date(a.paid_at) - new Date(b.paid_at)));
+
+  // IDs de los abonos "iniciales" (el primero de cada venta) — se usan
+  // para no repetirlos en la tabla de Abonos, ya que esos se muestran en
+  // Ventas del período.
+  const initialAbonoIds = new Set(
+    Object.values(abonosPorVenta).map((list) => list[0]?.id).filter(Boolean)
+  );
 
   const egresosPorMetodo = emptyMethods();
   egresos.forEach((e) => {
@@ -151,7 +176,7 @@ const CashClousure = () => {
     if (method in refundsPorMetodo) refundsPorMetodo[method] += Number(r.refund_amount) || 0;
   });
 
-  const datafastGross = ingresosPorMetodo.datafast + abonosPorMetodo.datafast;
+  const datafastGross = abonosPorMetodo.datafast;
   // El valor real de Datafast en un rango es la suma de todas las
   // conciliaciones guardadas día por día — esto es lo que de verdad llegó
   // al banco, no lo que muestran las ventas en bruto.
@@ -162,13 +187,12 @@ const CashClousure = () => {
   const datafastNet = daysReconciled > 0 ? datafastNetReconciled : datafastGross;
 
   const balancePorMetodo = {
-    efectivo: ingresosPorMetodo.efectivo + abonosPorMetodo.efectivo - egresosPorMetodo.efectivo - refundsPorMetodo.efectivo,
-    transferencia: ingresosPorMetodo.transferencia + abonosPorMetodo.transferencia - egresosPorMetodo.transferencia - refundsPorMetodo.transferencia,
+    efectivo: abonosPorMetodo.efectivo - egresosPorMetodo.efectivo - refundsPorMetodo.efectivo,
+    transferencia: abonosPorMetodo.transferencia - egresosPorMetodo.transferencia - refundsPorMetodo.transferencia,
     datafast: datafastNet - egresosPorMetodo.datafast - refundsPorMetodo.datafast,
   };
   const balanceTotal = balancePorMetodo.efectivo + balancePorMetodo.transferencia + balancePorMetodo.datafast;
 
-  const totalIngresos = ingresosPorMetodo.efectivo + ingresosPorMetodo.transferencia + ingresosPorMetodo.datafast;
   const totalAbonos = abonosPorMetodo.efectivo + abonosPorMetodo.transferencia + abonosPorMetodo.datafast;
   const totalEgresos = egresosPorMetodo.efectivo + egresosPorMetodo.transferencia + egresosPorMetodo.datafast;
   const totalRefunds = refundsPorMetodo.efectivo + refundsPorMetodo.transferencia + refundsPorMetodo.datafast;
@@ -191,15 +215,14 @@ const CashClousure = () => {
     </Flex>
   );
 
-  const MethodCard = ({ method, ingresos, abonosVal, egresosVal, refundsVal, balance, isDatafast }) => (
+  const MethodCard = ({ method, abonosVal, egresosVal, refundsVal, balance, isDatafast }) => (
     <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
       <HStack spacing={2} mb={2}>
         <Icon as={method.icon} boxSize="16px" color={method.color} />
         <Text fontWeight="bold" fontSize="sm">{method.label}</Text>
       </HStack>
       <VStack align="stretch" spacing={1} fontSize="xs" color={subtitleColor} mb={2}>
-        <Flex justify="space-between"><Text>Cobrado en ventas</Text><Text fontWeight="medium">{formatMoney(ingresos)}</Text></Flex>
-        <Flex justify="space-between"><Text>Abonos</Text><Text fontWeight="medium">{formatMoney(abonosVal)}</Text></Flex>
+        <Flex justify="space-between"><Text>Cobrado (venta + abonos)</Text><Text fontWeight="medium">{formatMoney(abonosVal)}</Text></Flex>
         <Flex justify="space-between"><Text>Egresos</Text><Text fontWeight="medium" color="red.400">-{formatMoney(egresosVal)}</Text></Flex>
         {refundsVal > 0 && (
           <Flex justify="space-between"><Text>Reembolsos</Text><Text fontWeight="medium" color="red.400">-{formatMoney(refundsVal)}</Text></Flex>
@@ -307,15 +330,14 @@ const CashClousure = () => {
 
                 <SimpleGrid columns={{ base: 2, md: totalRefunds > 0 ? 5 : 4 }} spacing={4} mb={6}>
                   <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
-                    <Text fontSize="xs" color={subtitleColor} textTransform="uppercase" mb={1}>Cobrado en ventas</Text>
-                    <Text fontWeight="800" fontSize="xl" color={ACCENT}>{formatMoney(totalIngresos)}</Text>
-                    {ventasTotalSinCobrar > totalIngresos && (
-                      <Text fontSize="10px" color={subtitleColor} mt={1}>de {formatMoney(ventasTotalSinCobrar)} vendidos</Text>
-                    )}
+                    <Text fontSize="xs" color={subtitleColor} textTransform="uppercase" mb={1}>Ventas realizadas</Text>
+                    <Text fontWeight="800" fontSize="xl">{ventasCount}</Text>
+                    <Text fontSize="10px" color={subtitleColor} mt={1}>{formatMoney(ventasTotalSinCobrar)} en total</Text>
                   </Box>
                   <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
-                    <Text fontSize="xs" color={subtitleColor} textTransform="uppercase" mb={1}>Abonos</Text>
-                    <Text fontWeight="800" fontSize="xl">{formatMoney(totalAbonos)}</Text>
+                    <Text fontSize="xs" color={subtitleColor} textTransform="uppercase" mb={1}>Dinero cobrado</Text>
+                    <Text fontWeight="800" fontSize="xl" color={ACCENT}>{formatMoney(totalAbonos)}</Text>
+                    <Text fontSize="10px" color={subtitleColor} mt={1}>al vender + retiros + abonos</Text>
                   </Box>
                   <Box p={4} borderRadius="14px" bg={inputBg} border={`1px solid ${borderColor}`}>
                     <Text fontSize="xs" color={subtitleColor} textTransform="uppercase" mb={1}>Egresos</Text>
@@ -335,9 +357,9 @@ const CashClousure = () => {
 
                 <SectionTitle icon={DollarSign}>Por método de pago</SectionTitle>
                 <SimpleGrid columns={{ base: 1, md: 3 }} spacing={4} mb={8}>
-                  <MethodCard method={METHODS[0]} ingresos={ingresosPorMetodo.efectivo} abonosVal={abonosPorMetodo.efectivo} egresosVal={egresosPorMetodo.efectivo} refundsVal={refundsPorMetodo.efectivo} balance={balancePorMetodo.efectivo} />
-                  <MethodCard method={METHODS[1]} ingresos={ingresosPorMetodo.transferencia} abonosVal={abonosPorMetodo.transferencia} egresosVal={egresosPorMetodo.transferencia} refundsVal={refundsPorMetodo.transferencia} balance={balancePorMetodo.transferencia} />
-                  <MethodCard method={METHODS[2]} ingresos={ingresosPorMetodo.datafast} abonosVal={abonosPorMetodo.datafast} egresosVal={egresosPorMetodo.datafast} refundsVal={refundsPorMetodo.datafast} balance={balancePorMetodo.datafast} isDatafast />
+                  <MethodCard method={METHODS[0]} abonosVal={abonosPorMetodo.efectivo} egresosVal={egresosPorMetodo.efectivo} refundsVal={refundsPorMetodo.efectivo} balance={balancePorMetodo.efectivo} />
+                  <MethodCard method={METHODS[1]} abonosVal={abonosPorMetodo.transferencia} egresosVal={egresosPorMetodo.transferencia} refundsVal={refundsPorMetodo.transferencia} balance={balancePorMetodo.transferencia} />
+                  <MethodCard method={METHODS[2]} abonosVal={abonosPorMetodo.datafast} egresosVal={egresosPorMetodo.datafast} refundsVal={refundsPorMetodo.datafast} balance={balancePorMetodo.datafast} isDatafast />
                 </SimpleGrid>
 
                 {/* Desglose de ventas del rango */}
@@ -350,35 +372,46 @@ const CashClousure = () => {
                           <Tr>
                             <Th color={subtitleColor}>Fecha</Th>
                             <Th color={subtitleColor}>Paciente</Th>
-                            <Th color={subtitleColor}>Método</Th>
                             <Th color={subtitleColor} textAlign="right">Total venta</Th>
-                            <Th color={subtitleColor} textAlign="right">Cobrado</Th>
-                            <Th color={subtitleColor} textAlign="right">Pendiente</Th>
+                            <Th color={subtitleColor}>Método</Th>
+                            <Th color={subtitleColor} textAlign="right">Abono al vender</Th>
                           </Tr>
                         </Thead>
                         <Tbody>
-                          {sales.filter((s) => !s.is_refund).map((s) => (
-                            <Tr key={s.id}>
-                              <Td>{new Date(`${s.date}T00:00:00`).toLocaleDateString("es-EC", { day: "2-digit", month: "short" })}</Td>
-                              <Td>{s.patients?.pt_firstname} {s.patients?.pt_lastname}</Td>
-                              <Td>
-                                <Badge colorScheme={s.payment_in === "efectivo" ? "teal" : s.payment_in === "transferencia" ? "blue" : "purple"} borderRadius="full" px={2} textTransform="capitalize">
-                                  {s.payment_in}
-                                </Badge>
-                              </Td>
-                              <Td textAlign="right" color={subtitleColor}>{formatMoney(s.total)}</Td>
-                              <Td textAlign="right" fontWeight="semibold" color={ACCENT}>{formatMoney(s.balance)}</Td>
-                              <Td textAlign="right" color={Number(s.credit) > 0 ? "orange.400" : subtitleColor}>{formatMoney(s.credit)}</Td>
-                            </Tr>
-                          ))}
+                          {sales.filter((s) => !s.is_refund).map((s) => {
+                            const initialPayment = (abonosPorVenta[s.id] || [])[0];
+                            return (
+                              <Tr key={s.id}>
+                                <Td>{new Date(`${s.date}T00:00:00`).toLocaleDateString("es-EC", { day: "2-digit", month: "short" })}</Td>
+                                <Td>{s.patients?.pt_firstname} {s.patients?.pt_lastname}</Td>
+                                <Td textAlign="right" color={subtitleColor}>{formatMoney(s.total)}</Td>
+                                <Td>
+                                  {initialPayment ? (
+                                    <Badge colorScheme={initialPayment.payment_method === "efectivo" ? "teal" : initialPayment.payment_method === "transferencia" ? "blue" : "purple"} borderRadius="full" px={2} textTransform="capitalize">
+                                      {initialPayment.payment_method}
+                                    </Badge>
+                                  ) : (
+                                    <Text fontSize="xs" color={subtitleColor}>—</Text>
+                                  )}
+                                </Td>
+                                <Td textAlign="right" fontWeight="semibold" color={ACCENT}>
+                                  {initialPayment ? formatMoney(initialPayment.amount) : formatMoney(0)}
+                                </Td>
+                              </Tr>
+                            );
+                          })}
                         </Tbody>
                       </Table>
+                      <Text fontSize="10px" color={subtitleColor} p={2}>
+                        "Abono al vender" es solo lo que se dio en el momento de la venta. Cualquier pago posterior (retiro, abono aparte) se ve únicamente en "Abonos del período" de abajo, para no repetir el mismo dinero dos veces.
+                      </Text>
                     </Box>
                   </>
                 )}
 
-                {/* Desglose de abonos del rango */}
-                {abonos.length > 0 && (
+                {/* Desglose de abonos del rango — solo los posteriores a
+                    la venta (el abono inicial ya se ve arriba, en Ventas). */}
+                {abonos.filter((a) => !initialAbonoIds.has(a.id)).length > 0 && (
                   <>
                     <SectionTitle icon={Banknote}>Abonos del período</SectionTitle>
                     <Box overflowX="auto" borderRadius="14px" border={`1px solid ${borderColor}`} mb={8}>
@@ -392,7 +425,7 @@ const CashClousure = () => {
                           </Tr>
                         </Thead>
                         <Tbody>
-                          {abonos.map((a) => (
+                          {abonos.filter((a) => !initialAbonoIds.has(a.id)).map((a) => (
                             <Tr key={a.id}>
                               <Td>{new Date(a.paid_at).toLocaleDateString("es-EC", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</Td>
                               <Td>{a.sales?.patients?.pt_firstname} {a.sales?.patients?.pt_lastname}</Td>
@@ -406,6 +439,9 @@ const CashClousure = () => {
                           ))}
                         </Tbody>
                       </Table>
+                      <Text fontSize="10px" color={subtitleColor} p={2}>
+                        El total de "Dinero cobrado" arriba sí suma todo — el abono inicial de cada venta, más estos pagos posteriores.
+                      </Text>
                     </Box>
                   </>
                 )}

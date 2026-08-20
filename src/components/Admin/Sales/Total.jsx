@@ -38,11 +38,15 @@ const Total = ({ formData, setFormData, grandTotal }) => {
   // Sales.jsx sumaría accesorios/tratamientos OTRA VEZ sobre ese valor ya
   // combinado, y así en cada render — un ciclo que hace crecer el saldo
   // sin límite (ese fue el bug del saldo pendiente subiendo solo).
+  //
+  // IMPORTANTE: "setFormData" aquí en realidad es handleFormDataChange de
+  // Sales.jsx, que espera un OBJETO para fusionar — no un actualizador de
+  // función como un useState normal. Llamarlo con una función (como se
+  // hacía antes) no rompía nada visiblemente, pero tampoco actualizaba
+  // nada: el saldo pendiente nunca llegaba a guardarse de verdad.
   React.useEffect(() => {
-    setFormData((prev) => {
-      if (prev.credit === credit) return prev; // evita renders innecesarios
-      return { ...prev, credit };
-    });
+    if (formData.credit === credit) return; // evita renders innecesarios
+    setFormData({ ...formData, credit });
     // eslint-disable-next-line
   }, [credit]);
 

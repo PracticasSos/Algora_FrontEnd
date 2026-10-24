@@ -24,11 +24,11 @@ const SmartHeader = ({ moduleSpecificButton = null }) => {
       // así que aquí ya no se renderiza nada para evitar duplicarlo.
       return null;
 
-    case 2: // Optometra
-      return <HeaderOptometra moduleSpecificButton={moduleSpecificButton} />;
+    case 2: // Optometra: su menú ahora vive también en AdminShell
+      return null;
     
     case 3: // Vendedor
-      return <HeaderVendedor moduleSpecificButton={moduleSpecificButton} />;
+      return null; // su menú vive en AdminShell
     
     default:
       return null;

@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import { Box, Flex, Text, VStack, Tooltip, useColorModeValue, Avatar, Badge, Icon } from "@chakra-ui/react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { FiHome, FiLogOut, FiChevronDown } from "react-icons/fi";
+import { FiHome, FiLogOut, FiChevronDown, FiLifeBuoy } from "react-icons/fi";
 import { useAuth } from "../AuthContext";
+import { supabase } from "../../api/supabase";
 import avataralgora from "../../assets/avataralgora.jpg";
-import { adminNavSections } from "../../config/adminNavConfig";
+import { adminNavSections, baseSectionsForRole, homePathForRole, isAdminRoleId } from "../../config/adminNavConfig";
 
 const COLLAPSED_W = "76px";
 const EXPANDED_W = "270px";
@@ -19,20 +20,38 @@ const AdminSidebar = () => {
   // (user.allowed_routes), el menú solo muestra esas rutas — las secciones
   // que se quedan sin ítems visibles simplemente no aparecen. Si no tiene
   // nada asignado (null/vacío), ve todo como siempre.
-  const hasCustomPermissions = Array.isArray(user?.allowed_routes) && user.allowed_routes.length > 0;
+  // Aviso de solicitudes de corrección pendientes (solo admin)
+  const [pendingCorrections, setPendingCorrections] = useState(0);
+  useEffect(() => {
+    if (Number(user?.role_id) !== 1) return;
+    let alive = true;
+    const loadPending = async () => {
+      const { count } = await supabase.from("correction_requests").select("id", { count: "exact", head: true }).eq("status", "pending");
+      if (alive) setPendingCorrections(count || 0);
+    };
+    loadPending();
+    const t = setInterval(loadPending, 60000);
+    return () => { alive = false; clearInterval(t); };
+  }, [user?.role_id, location.pathname]);
+
+  const baseSections = baseSectionsForRole(user?.role_id);
+  const homePath = homePathForRole(user?.role_id);
+  const hasCustomPermissions = Number(user?.role_id) !== 4 && Array.isArray(user?.allowed_routes) && user.allowed_routes.length > 0;
+  // Con permisos asignados, el catálogo completo manda: se muestra todo lo que el admin le dio.
+  const permissionSource = adminNavSections;
   const filteredSections = hasCustomPermissions
-    ? adminNavSections
+    ? permissionSource
         .map((section) => ({
           ...section,
           items: section.items.filter((item) => user.allowed_routes.includes(item.path)),
         }))
         .filter((section) => section.items.length > 0)
-    : adminNavSections;
+    : baseSections;
 
   // Seguro: si el filtrado deja el menú completamente vacío (por ejemplo,
   // permisos guardados que ya no coinciden con ninguna ruta actual), se
   // muestra todo en vez de dejar a alguien bloqueado sin poder navegar.
-  const visibleNavSections = filteredSections.length > 0 ? filteredSections : adminNavSections;
+  const visibleNavSections = filteredSections.length > 0 ? filteredSections : baseSections;
 
   // Sección que contiene la ruta activa: se abre sola al entrar
   const activeSectionId = visibleNavSections.find((s) => s.items.some((i) => i.path === location.pathname))?.id;
@@ -64,7 +83,7 @@ const AdminSidebar = () => {
   const userData = {
     name: user?.user_metadata?.firstname || user?.firstname || "Usuario",
     lastName: user?.user_metadata?.lastname || user?.lastname || "",
-    role: user?.role_name || "ADMIN",
+    role: user?.role_name || (Number(user?.role_id) === 4 ? "SUPERADMIN" : isAdminRoleId(user?.role_id) ? "ADMIN" : Number(user?.role_id) === 3 ? "VENDEDOR" : "OPTOMETRA"),
   };
 
   // Fila simple (Inicio, Cerrar sesión)
@@ -132,7 +151,7 @@ const AdminSidebar = () => {
           px={hovered ? 5 : 0}
           h="64px"
           cursor="pointer"
-          onClick={() => navigate("/admin")}
+          onClick={() => navigate(homePath)}
         >
           <Text fontSize="lg" fontWeight="bold" color={textColor}>
             {hovered ? "ALGORA" : "A"}
@@ -140,7 +159,10 @@ const AdminSidebar = () => {
         </Flex>
 
         <Box mt={2}>
-          <Row icon={FiHome} label="Inicio" active={isActive("/admin")} onClick={() => navigate("/admin")} />
+          <Row icon={FiHome} label="Inicio" active={isActive(homePath)} onClick={() => navigate(homePath)} />
+          {Number(user?.role_id) === 1 && (
+            <Row icon={FiLifeBuoy} label="Soporte" active={isActive("/support")} onClick={() => navigate("/support")} />
+          )}
         </Box>
 
         <VStack align="stretch" spacing={0.5} mt={3}>
@@ -212,6 +234,9 @@ const AdminSidebar = () => {
                         <Text fontSize="xs" fontWeight={isActive(item.path) ? "semibold" : "normal"} whiteSpace="nowrap" overflow="hidden">
                           {item.label}
                         </Text>
+                        {item.path === "/correction-requests" && pendingCorrections > 0 && (
+                          <Badge colorScheme="orange" borderRadius="full" px={2}>{pendingCorrections}</Badge>
+                        )}
                       </Flex>
                     ))}
                   </VStack>

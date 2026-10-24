@@ -1,10 +1,10 @@
 import { Box, Flex, Button, Menu, MenuButton, MenuList, MenuItem, Portal, Avatar, VStack, HStack, Text, Badge, useColorModeValue } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
-import { FiLogOut } from "react-icons/fi";
+import { FiLogOut, FiLifeBuoy } from "react-icons/fi";
 import ColorModeToggle from "../../Toggle";
 import { useAuth } from "../AuthContext";
 import avataralgora from "../../assets/avataralgora.jpg";
-import { quickAction } from "../../config/adminNavConfig";
+import { quickAction, canQuickSale } from "../../config/adminNavConfig";
 import { COLLAPSED_W } from "./AdminSidebar";
 
 const AdminTopbar = () => {
@@ -50,6 +50,7 @@ const AdminTopbar = () => {
       backdropFilter="blur(10px)"
       borderBottom={border}
     >
+      {canQuickSale(user) && (
       <Button
         leftIcon={<quickAction.icon />}
         bg="#00A88E"
@@ -62,6 +63,13 @@ const AdminTopbar = () => {
       >
         {quickAction.label}
       </Button>
+      )}
+
+      {Number(user?.role_id) === 1 && (
+        <Button size="sm" variant="ghost" leftIcon={<FiLifeBuoy />} borderRadius="full" onClick={() => navigate("/support")}>
+          Soporte
+        </Button>
+      )}
 
       <ColorModeToggle />
 

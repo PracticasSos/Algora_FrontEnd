@@ -28,6 +28,9 @@ import {
   FiList,
   FiHome,
   FiClock,
+  FiAlertCircle,
+  FiLifeBuoy,
+  FiLayers,
 } from "react-icons/fi";
 
 export const quickAction = {
@@ -46,6 +49,7 @@ export const adminNavSections = [
       { label: "Créditos", path: "/balance", icon: FiCreditCard },
       { label: "Saldos", path: "/balances-patient", icon: FiDollarSign },
       { label: "Retiros", path: "/retreats-patients", icon: FiRotateCcw },
+      { label: "Solicitudes de corrección", path: "/correction-requests", icon: FiAlertCircle },
     ],
   },
   {
@@ -116,3 +120,96 @@ export const mobileTabs = [
   { label: "Venta", path: "/sales", icon: FiShoppingCart },
   { label: "Pacientes", path: "/register-patient", icon: FiUserPlus },
 ];
+
+export const optometraMobileTabs = [
+  { label: "Inicio", path: "/optometra", icon: FiHome },
+  { label: "Pacientes", path: "/list-patients", icon: FiUsers },
+  { label: "Medidas", path: "/measures-final", icon: FiClipboard },
+];
+
+
+// ---- Navegación por rol (el Optometra no ve el menú completo de Admin) ----
+export const optometraNavSections = [
+  {
+    id: "pacientes",
+    title: "Pacientes",
+    items: [
+      { label: "Registrar Paciente", path: "/register-patient", icon: FiUserPlus },
+      { label: "Lista de Pacientes", path: "/list-patients", icon: FiUsers },
+      { label: "Registrar Medidas", path: "/measures-final", icon: FiClipboard },
+      { label: "Historial de Medidas", path: "/history-measure-list", icon: FiList },
+    ],
+  },
+  {
+    id: "documentos",
+    title: "Documentos",
+    items: [{ label: "Imprimir Certificado", path: "/print-certificate", icon: FiFileText }],
+  },
+  {
+    id: "caja",
+    title: "Caja",
+    items: [{ label: "Egresos", path: "/egresos", icon: FiUpload }],
+  },
+];
+
+export const vendedorNavSections = [
+  {
+    id: "ventas",
+    title: "Ventas",
+    items: [
+      { label: "Nueva Venta", path: "/sales", icon: FiShoppingCart },
+      { label: "Historial de Venta", path: "/history-clinic", icon: FiActivity },
+      { label: "Créditos", path: "/balance", icon: FiCreditCard },
+      { label: "Saldos", path: "/balances-patient", icon: FiDollarSign },
+      { label: "Retiros", path: "/retreats-patients", icon: FiRotateCcw },
+    ],
+  },
+  {
+    id: "pacientes",
+    title: "Pacientes",
+    items: [{ label: "Registrar Paciente", path: "/register-patient", icon: FiUserPlus }],
+  },
+  {
+    id: "documentos",
+    title: "Documentos",
+    items: [{ label: "Imprimir Certificado", path: "/print-certificate", icon: FiFileText }],
+  },
+  {
+    id: "caja",
+    title: "Caja",
+    items: [{ label: "Egresos", path: "/egresos", icon: FiUpload }],
+  },
+];
+
+export const vendedorMobileTabs = [
+  { label: "Inicio", path: "/vendedor", icon: FiHome },
+  { label: "Venta", path: "/sales", icon: FiShoppingCart },
+  { label: "Retiros", path: "/retreats-patients", icon: FiRotateCcw },
+];
+
+export const superadminNavSections = [
+  {
+    id: "plataforma",
+    title: "Plataforma",
+    items: [
+      { label: "Ópticas", path: "/super-admin/tenants", icon: FiLayers },
+      { label: "Planes", path: "/super-admin/plans", icon: FiPackage },
+      { label: "Pagos", path: "/super-admin/payments", icon: FiDollarSign },
+      { label: "Soporte", path: "/super-admin/support", icon: FiLifeBuoy },
+    ],
+  },
+];
+
+export const superadminMobileTabs = [
+  { label: "Inicio", path: "/super-admin", icon: FiHome },
+  { label: "Ópticas", path: "/super-admin/tenants", icon: FiLayers },
+  { label: "Pagos", path: "/super-admin/payments", icon: FiDollarSign },
+];
+
+export const isAdminRoleId = (roleId) => [1, 4].includes(Number(roleId));
+export const homePathForRole = (roleId) => (Number(roleId) === 4 ? "/super-admin" : isAdminRoleId(roleId) ? "/admin" : Number(roleId) === 2 ? "/optometra" : "/vendedor");
+export const baseSectionsForRole = (roleId) =>
+  Number(roleId) === 4 ? superadminNavSections : isAdminRoleId(roleId) ? adminNavSections : Number(roleId) === 3 ? vendedorNavSections : optometraNavSections;
+// Ventas solo si es admin o se le asignó /sales
+export const canQuickSale = (user) =>
+  Number(user?.role_id) === 1 || (Array.isArray(user?.allowed_routes) && user.allowed_routes.includes("/sales"));

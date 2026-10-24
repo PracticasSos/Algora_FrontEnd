@@ -65,6 +65,7 @@ const UserManagement = () => {
     const { data, error } = await supabase
       .from("users")
       .select("id, firstname, lastname, email, role_id, branch_id")
+      .neq("role_id", 4) // el SuperAdmin nunca se muestra ni se edita desde aquí
       .order("firstname", { ascending: true });
     if (error) {
       console.error("Error cargando usuarios:", error);
@@ -111,6 +112,7 @@ const UserManagement = () => {
 
   // --- Datos para la gráfica de distribución por rol ---
   const roleDistribution = roles
+    .filter((r) => ALLOWED_ROLE_NAMES.includes(r.role_name))
     .map((r) => ({
       name: r.role_name,
       value: users.filter((u) => String(u.role_id) === String(r.id)).length,

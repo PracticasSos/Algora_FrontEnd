@@ -23,11 +23,11 @@ import {
 } from "@chakra-ui/react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { HamburgerIcon } from "@chakra-ui/icons";
-import { FiLogOut, FiMoreHorizontal } from "react-icons/fi";
+import { FiLogOut, FiMoreHorizontal, FiLifeBuoy } from "react-icons/fi";
 import ColorModeToggle from "../../Toggle";
 import { useAuth } from "../AuthContext";
 import avataralgora from "../../assets/avataralgora.jpg";
-import { adminNavSections, quickAction, mobileTabs } from "../../config/adminNavConfig";
+import { adminNavSections, quickAction, mobileTabs, optometraMobileTabs, vendedorMobileTabs, superadminMobileTabs, baseSectionsForRole, homePathForRole, isAdminRoleId, canQuickSale } from "../../config/adminNavConfig";
 
 const AdminMobileNav = () => {
   const navigate = useNavigate();
@@ -43,6 +43,16 @@ const AdminMobileNav = () => {
   const drawerBg = useColorModeValue("white", "gray.800");
   const menuBorder = useColorModeValue("gray.200", "gray.600");
 
+  const isAdminRole = isAdminRoleId(user?.role_id);
+  const isSuper = Number(user?.role_id) === 4;
+  const tabs = isSuper ? superadminMobileTabs : isAdminRole ? mobileTabs : Number(user?.role_id) === 3 ? vendedorMobileTabs : optometraMobileTabs;
+  const homePath = homePathForRole(user?.role_id);
+  const allowed = !isSuper && Array.isArray(user?.allowed_routes) && user.allowed_routes.length > 0 ? user.allowed_routes : null;
+  const sections = (allowed ? adminNavSections : baseSectionsForRole(user?.role_id))
+    .map((sec) => ({ ...sec, items: allowed ? sec.items.filter((i) => allowed.includes(i.path)) : sec.items }))
+    .filter((sec) => sec.items.length > 0)
+    .concat(Number(user?.role_id) === 1 ? [{ id: "ayuda", title: "Ayuda", items: [{ label: "Soporte", path: "/support", icon: FiLifeBuoy }] }] : []);
+
   const isActive = (path) => location.pathname === path;
 
   const handleLogout = async () => {
@@ -57,7 +67,7 @@ const AdminMobileNav = () => {
   const userData = {
     name: user?.user_metadata?.firstname || user?.firstname || "Usuario",
     lastName: user?.user_metadata?.lastname || user?.lastname || "",
-    role: user?.role_name || "ADMIN",
+    role: user?.role_name || (isSuper ? "SUPERADMIN" : isAdminRole ? "ADMIN" : Number(user?.role_id) === 3 ? "VENDEDOR" : "OPTOMETRA"),
   };
 
   return (
@@ -75,7 +85,7 @@ const AdminMobileNav = () => {
         px={4}
         py={3}
       >
-        <Text fontSize="lg" fontWeight="bold" color={textColor} onClick={() => navigate("/admin")}>
+        <Text fontSize="lg" fontWeight="bold" color={textColor} onClick={() => navigate(homePath)}>
           ALGORA
         </Text>
         <Flex align="center" gap={1}>
@@ -117,7 +127,7 @@ const AdminMobileNav = () => {
           </DrawerHeader>
           <DrawerBody px={2}>
             <Accordion allowToggle defaultIndex={[0]}>
-              {adminNavSections.map((section) => (
+              {sections.map((section) => (
                 <AccordionItem key={section.id} border="none">
                   <AccordionButton borderRadius="md" _hover={{ bg: activeBg }}>
                     <Text flex="1" textAlign="left" fontWeight="semibold" fontSize="sm">
@@ -175,7 +185,7 @@ const AdminMobileNav = () => {
         align="center"
         py={2}
       >
-        {mobileTabs.map((tab) => (
+        {tabs.map((tab) => (
           <Flex
             key={tab.path}
             direction="column"

@@ -36,11 +36,15 @@ import ListSales from "../components/Admin/ListSales.jsx";
 import Sales from "../components/Admin/Sales/Sales.jsx";
 import Register from "../components/Admin/Register.jsx";
 import HistoryClinic from "../components/Admin/HistoryClinic.jsx";
+import CorrectionRequests from "../components/Admin/Corrections/CorrectionRequests.jsx";
+import SupportRequest from "../components/Admin/Support/SupportRequest.jsx";
+import TenantPayments from "../components/SuperAdmin/TenantPayments.jsx";
+import PlansManager from "../components/SuperAdmin/PlansManager.jsx";
+import SupportInbox from "../components/SuperAdmin/SupportInbox.jsx";
 import SaleDetail from "../components/Admin/SaleDetail.jsx";
 import PrintCertificate from "../components/Admin/certificate/PrintCertificate.jsx";
 import UploadLogo from "../components/Admin/certificate/UploadLogo.jsx";
 import SuperAdminDashBoard from "../components/optionsauth/OptionsSuperAdmin.jsx";
-import SuperAdminOpticas from "../components/Admin/SuperAdminOpticas.jsx";
 import FormInitial from '../components/ExperienceModule/pages/FormInitial.jsx';
 import QuestionnairePage from '../components/ExperienceModule/pages/QuestionnairePage.jsx'
 import Results from '../components/ExperienceModule/pages/Results.jsx'
@@ -65,6 +69,11 @@ const AppRouter = () => {
             <Route path="/change-password" element={<ChangePassword />} />
             <Route path="/terms-manager" element={<TermsManager />} />
             <Route path="/delivery-settings" element={<DeliverySettings />} />
+            <Route path="/correction-requests" element={<CorrectionRequests />} />
+            <Route path="/support" element={<SupportRequest />} />
+            <Route path="/super-admin/payments" element={<TenantPayments />} />
+            <Route path="/super-admin/plans" element={<PlansManager />} />
+            <Route path="/super-admin/support" element={<SupportInbox />} />
             <Route path="/user-management" element={<UserManagement />} />
             <Route path="/optometrist-settings" element={<OptometristSettings />} />
             <Route path="/inventory" element={<Armazones />}></Route>
@@ -120,7 +129,6 @@ const AppRouter = () => {
             <Route path="/loader" element={<Loader />} />
             <Route path="/mensajeria" element={<MessageClients />} />
             <Route path="/super-admin/tenants" element={<Tenants />} />
-            <Route path="/super-admin/opticas" element={<SuperAdminOpticas />} />
         </Routes>
     )
 }

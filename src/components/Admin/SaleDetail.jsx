@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../../api/supabase";
 import {
   Box, Container, Heading, Text, Flex, HStack, VStack, Icon, Badge, Spinner,
@@ -10,6 +10,7 @@ import {
 import { ArrowLeft, ShoppingBag, User, CreditCard, FileText, MessageCircle, Package, Pencil, PackageCheck, FlaskConical, RotateCcw, AlertTriangle, Wrench, Camera, RefreshCw, X } from "lucide-react";
 import SmartHeader from "../header/SmartHeader";
 import { useAuth } from "../AuthContext";
+import SaleCorrectionPanel from "./Corrections/SaleCorrectionPanel";
 import { generateContractPDF } from "./Sales/pdf/pdfGenerator.js";
 
 const ACCENT = "#00A88E";
@@ -23,6 +24,7 @@ const formatMoney = (value) => {
 const SaleDetail = () => {
   const { saleId, patientId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const { user } = useAuth();
   const isAdmin = user?.role_id === 1;
@@ -354,6 +356,15 @@ const SaleDetail = () => {
     </Box>
   );
 
+  // Si el admin llega desde "Aprobar y corregir", se abre directo la edición
+  useEffect(() => {
+    if (location.state?.startEditing && isAdmin && sale && !isEditing) {
+      startEditing();
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sale]);
+
   const previewTotals = isEditing && editData ? computeTotals() : null;
 
   return (
@@ -429,6 +440,8 @@ const SaleDetail = () => {
                   )}
                 </HStack>
               </Flex>
+
+              <SaleCorrectionPanel sale={sale} canReport={!isAdmin} />
 
               <SectionTitle icon={User}>Paciente y sucursal</SectionTitle>
               <SimpleGrid columns={{ base: 1, sm: 2 }} spacing={4} mb={6}>
